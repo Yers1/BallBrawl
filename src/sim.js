@@ -62,7 +62,10 @@ export function step(w, dt) {
   for (const e of w.ents) e.slow = 1;
   for (const e of w.ents) if (!e.dead) BALLS[e.kind].onTick?.(w, e, dt);
   for (const e of w.ents) if (!e.dead && !e.latch) move(w, e, dt);
-  for (const e of w.ents) if (e.latch) { e.x = e.latch.foe.x + e.latch.ox; e.y = e.latch.foe.y + e.latch.oy; }
+  for (const e of w.ents) if (e.latch) {
+    e.x = Math.min(W - e.r, Math.max(e.r, e.latch.foe.x + e.latch.ox));
+    e.y = Math.min(H - e.r, Math.max(e.r, e.latch.foe.y + e.latch.oy));
+  }
   collide(w);
   moveShots(w, dt);
   if (w.t > SUDDEN) {
