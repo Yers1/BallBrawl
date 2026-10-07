@@ -1,8 +1,10 @@
 // Deterministic battle simulation for one round. No DOM — runs under node --test.
 import { BALLS } from './balls.js';
 
-export const W = 400, H = 400, R = 28, SPEED = 220, DMG = 10, HIT_CD = 0.3, SUDDEN = 30;
+export const W = 400, H = 400, R = 30, SPEED = 300, DMG = 12, HIT_CD = 0.3, SUDDEN = 30;
 export const SPAWN = [[90, 310], [310, 90]];
+const JITTER = 0.3; // rad of random spin on each wall bounce
+const TURN = 1.2; // rad/s a ball curves toward its nearest enemy
 
 export function rng(seed) { // mulberry32
   let s = seed >>> 0;
@@ -78,14 +80,30 @@ export function step(w, dt) {
 }
 
 function move(w, e, dt) {
+  // gentle homing: curve toward the nearest enemy so fights don't stall
+  const f = w.ents.reduce((best, o) => (o.dead || o.side === e.side || (best && Math.hypot(o.x - e.x, o.y - e.y) >= Math.hypot(best.x - e.x, best.y - e.y)) ? best : o), null);
+  if (f && (e.vx || e.vy)) {
+    const cur = Math.atan2(e.vy, e.vx);
+    let diff = Math.atan2(f.y - e.y, f.x - e.x) - cur;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    const a = cur + Math.max(-TURN * dt, Math.min(TURN * dt, diff));
+    e.vx = Math.cos(a) * e.speed;
+    e.vy = Math.sin(a) * e.speed;
+  }
   e.x += e.vx * e.slow * dt;
   e.y += e.vy * e.slow * dt;
-  let wall = null;
-  if (e.x < e.r) { e.x = e.r; e.vx = Math.abs(e.vx); wall = [0, e.y]; }
-  else if (e.x > W - e.r) { e.x = W - e.r; e.vx = -Math.abs(e.vx); wall = [W, e.y]; }
-  if (e.y < e.r) { e.y = e.r; e.vy = Math.abs(e.vy); wall = [e.x, 0]; }
-  else if (e.y > H - e.r) { e.y = H - e.r; e.vy = -Math.abs(e.vy); wall = [e.x, H]; }
+  let wall = null, sx = 0, sy = 0;
+  if (e.x < e.r) { e.x = e.r; sx = 1; wall = [0, e.y]; }
+  else if (e.x > W - e.r) { e.x = W - e.r; sx = -1; wall = [W, e.y]; }
+  if (e.y < e.r) { e.y = e.r; sy = 1; wall = [e.x, 0]; }
+  else if (e.y > H - e.r) { e.y = H - e.r; sy = -1; wall = [e.x, H]; }
   if (!wall) return;
+  // reflect with a little random spin, so balls never lock into orbits that miss each other
+  const a = Math.atan2(sy ? sy * Math.abs(e.vy) : e.vy, sx ? sx * Math.abs(e.vx) : e.vx) + (w.rand() * 2 - 1) * JITTER;
+  e.vx = Math.cos(a) * e.speed;
+  e.vy = Math.sin(a) * e.speed;
+  if (sx) e.vx = sx * Math.max(Math.abs(e.vx), e.speed * 0.2);
+  if (sy) e.vy = sy * Math.max(Math.abs(e.vy), e.speed * 0.2);
   w.events.push({ type: 'wall', x: wall[0], y: wall[1] });
   BALLS[e.kind].onWallHit?.(w, e, wall[0], wall[1]);
 }
@@ -106,6 +124,8 @@ function collide(w) {
     const nx = dx / d, ny = dy / d, push = (min - d) / 2;
     a.x -= nx * push; a.y -= ny * push;
     b.x += nx * push; b.y += ny * push;
+    // how hard each ball drives into the other (0 = glancing/fleeing, 1 = full ram), before the bounce
+    const ramA = Math.max(0, (a.vx * nx + a.vy * ny) / a.speed), ramB = Math.max(0, -(b.vx * nx + b.vy * ny) / b.speed);
     const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
     if (rel < 0) { // equal-mass elastic: swap normal components, keep constant speed
       a.vx += rel * nx; a.vy += rel * ny;
@@ -117,8 +137,8 @@ function collide(w) {
     if ((w.hitCd[key] ?? -1) > w.t) continue;
     w.hitCd[key] = w.t + HIT_CD;
     w.events.push({ type: 'clash', x: a.x + nx * a.r, y: a.y + ny * a.r });
-    hurt(w, b, a.dmg);
-    hurt(w, a, b.dmg);
+    hurt(w, b, Math.round(a.dmg * (0.5 + ramA)));
+    hurt(w, a, Math.round(b.dmg * (0.5 + ramB)));
     if (!a.dead) BALLS[a.kind].onEnemyHit?.(w, a, b);
     if (!b.dead) BALLS[b.kind].onEnemyHit?.(w, b, a);
   }

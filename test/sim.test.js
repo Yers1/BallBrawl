@@ -2,14 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, launch, step, W, R, DMG } from '../src/sim.js';
 
+const HEAD_ON = Math.round(DMG * 1.5); // full-ram contact damage
+
 const DT = 1 / 60;
 const run = (w, secs) => { for (let i = 0; i < Math.round(secs / DT) && w.result == null; i++) step(w, DT); };
-const place = (e, x, y, vx, vy) => Object.assign(e, { x, y, vx, vy });
+const place = (e, x, y, vx = 0, vy = 0) => Object.assign(e, { x, y, vx, vy });
 
 test('ball reflects off walls and stays inside the arena', () => {
   const w = createWorld({ seed: 1, a: { id: 'basic' }, b: { id: 'basic' } });
   const [a, b] = w.ents;
-  place(a, 40, 100, -220, 0);
+  place(a, 40, 100, -300, 0);
   place(b, 360, 300, 0, 0);
   w.launched = true;
   run(w, 0.5);
@@ -20,20 +22,20 @@ test('ball reflects off walls and stays inside the arena', () => {
 test('head-on collision deals contact damage to both, once', () => {
   const w = createWorld({ seed: 1, a: { id: 'basic' }, b: { id: 'basic' } });
   const [a, b] = w.ents;
-  place(a, 140, 200, 220, 0);
-  place(b, 260, 200, -220, 0);
+  place(a, 140, 200, 300, 0);
+  place(b, 260, 200, -300, 0);
   w.launched = true;
-  run(w, 0.3);
-  assert.equal(a.hp, a.maxHp - DMG);
-  assert.equal(b.hp, b.maxHp - DMG);
+  run(w, 0.2);
+  assert.equal(a.hp, a.maxHp - HEAD_ON);
+  assert.equal(b.hp, b.maxHp - HEAD_ON);
   assert.ok(a.vx < 0 && b.vx > 0, 'bounced apart');
 });
 
 test('sudden death drains balls that never meet', () => {
   const w = createWorld({ seed: 1, a: { id: 'basic' }, b: { id: 'basic' } });
   const [a, b] = w.ents;
-  place(a, 100, 60, 220, 0);
-  place(b, 300, 340, 220, 0);
+  place(a, 100, 60); // parked balls never meet
+  place(b, 300, 340);
   w.launched = true;
   run(w, 29.9);
   assert.equal(a.hp, a.maxHp);
@@ -44,8 +46,8 @@ test('sudden death drains balls that never meet', () => {
 test('lethal hit ends the round with the survivor as winner', () => {
   const w = createWorld({ seed: 1, a: { id: 'basic' }, b: { id: 'basic', hp: 5 } });
   const [a, b] = w.ents;
-  place(a, 140, 200, 220, 0);
-  place(b, 260, 200, -220, 0);
+  place(a, 140, 200, 300, 0);
+  place(b, 260, 200, -300, 0);
   w.launched = true;
   run(w, 1);
   assert.equal(w.result, 0);
@@ -55,8 +57,8 @@ test('lethal hit ends the round with the survivor as winner', () => {
 test('simultaneous kill is a draw', () => {
   const w = createWorld({ seed: 1, a: { id: 'basic', hp: 5 }, b: { id: 'basic', hp: 5 } });
   const [a, b] = w.ents;
-  place(a, 140, 200, 220, 0);
-  place(b, 260, 200, -220, 0);
+  place(a, 140, 200, 300, 0);
+  place(b, 260, 200, -300, 0);
   w.launched = true;
   run(w, 1);
   assert.equal(w.result, 'draw');
@@ -75,4 +77,15 @@ test('same seed and angles produce identical worlds', () => {
     return w.ents.map(e => [e.x, e.y, e.hp]);
   };
   assert.deepEqual(make(), make());
+});
+
+test('balls curve toward their nearest enemy', () => {
+  const w = createWorld({ seed: 1, a: { id: 'basic' }, b: { id: 'basic' } });
+  const [a, b] = w.ents;
+  place(a, 100, 300, 0, -300); // flying straight up
+  place(b, 300, 300);
+  w.launched = true;
+  run(w, 0.2);
+  assert.ok(a.vx > 0, 'turned toward the enemy on the right');
+  assert.ok(Math.abs(Math.hypot(a.vx, a.vy) - a.speed) < 1e-6, 'speed unchanged');
 });
