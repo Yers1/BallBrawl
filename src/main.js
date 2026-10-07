@@ -1,0 +1,416 @@
+// Browser layer: screens, aiming, the battle loop, saving, ads wiring.
+import { createWorld, launch, step, rng, W, H, SUDDEN } from './sim.js';
+import { BALLS, ORDER } from './balls.js';
+import { LEVELS, LOSE_COINS, createMatch, roundWorld, endRound, revive, enemySquad, enemyHpMul, winCoins, aiAngle } from './match.js';
+import { draw, drawIcon, fitCanvas, resetFx } from './render.js';
+import { lang, t, ballName, ballAbout } from './i18n.js';
+import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
+
+const $ = s => document.querySelector(s);
+const el = (tag, cls = '', html) => {
+  const n = document.createElement(tag);
+  n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+};
+const icon = (kind, size) => { const c = document.createElement('canvas'); drawIcon(c, kind, size); return c; };
+const STEP = 1 / 60;
+
+// ---------- save (localStorage is user-editable: validate everything) ----------
+const KEY = 'ballbrawl.v1';
+const save = { coins: 0, owned: ['basic'], squad: ['basic', 'basic', 'basic'], level: 1, matches: 0 };
+try {
+  const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+  if (Number.isFinite(s.coins)) save.coins = Math.max(0, Math.floor(s.coins));
+  if (Array.isArray(s.owned)) save.owned = ['basic', ...new Set(s.owned.filter(id => BALLS[id] && id !== 'basic'))];
+  if (Array.isArray(s.squad) && s.squad.length === 3) save.squad = s.squad.map(id => (save.owned.includes(id) ? id : 'basic'));
+  if (Number.isInteger(s.level)) save.level = Math.min(LEVELS, Math.max(1, s.level));
+  if (Number.isInteger(s.matches)) save.matches = Math.max(0, s.matches);
+} catch { /* corrupt or blocked storage: start fresh */ }
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* private mode */ } };
+
+// ---------- state ----------
+const S = {
+  mode: 'menu', // menu | squad | aim | fight | ending | result | watch-pick | watch
+  world: null, match: null, demo: false, demoEnd: 0,
+  aim: 0, aiming: false, slot: 0,
+  trial: null, pendingTrial: null, tryPlay: null,
+  watch: ['leech', 'train'], launchAt: 0, watchDone: false,
+  endAt: 0, outcome: null, earned: 0, wonLevel: 1, adAfter: 0,
+};
+
+const canvas = $('#arena'), ctx = canvas.getContext('2d');
+let scale = 1;
+function layout() {
+  const reserved = 56 + 44 + 110; // header, hud, watch bar + footer
+  const size = Math.max(260, Math.floor(Math.min(innerWidth - 24, innerHeight - reserved, 560)));
+  document.documentElement.style.setProperty('--size', size + 'px');
+  scale = fitCanvas(canvas, size);
+}
+
+const SCREENS = ['menu', 'squad', 'result', 'watch'];
+function show(screen) {
+  for (const s of SCREENS) $('#scr-' + s).hidden = s !== screen;
+  $('#hud').hidden = !['aim', 'fight', 'ending', 'watch'].includes(S.mode);
+  $('#hint').hidden = S.mode !== 'aim';
+  $('#watch-bar').hidden = S.mode !== 'watch';
+  if (screen) $('#banner').className = 'banner';
+}
+
+function banner(text, stay = false) {
+  const b = $('#banner');
+  b.textContent = text;
+  b.className = 'banner';
+  void b.offsetWidth; // restart the CSS animation
+  b.className = 'banner ' + (stay ? 'stay' : 'show');
+}
+
+const coinsUI = () => { $('#coins').textContent = save.coins; };
+
+// A random AI-vs-AI fight that plays behind the menus.
+function demo() {
+  const r = Math.random, pick = () => ORDER[Math.floor(r() * ORDER.length)];
+  S.world = createWorld({ seed: Math.floor(r() * 1e9), a: { id: pick() }, b: { id: pick() } });
+  launch(S.world, r() * Math.PI * 2, r() * Math.PI * 2);
+  S.demo = true;
+  S.demoEnd = 0;
+  resetFx();
+}
+
+// ---------- menu ----------
+function goMenu() {
+  cancelReward();
+  S.mode = 'menu';
+  if (!S.demo) demo();
+  $('#m-level').textContent = t('level', { n: save.level, max: LEVELS });
+  show('menu');
+}
+
+// ---------- squad & shop ----------
+const enemyFor = level => enemySquad(level, rng(level * 101 + 7)); // fixed per level, so the preview is the real fight
+const has = id => save.owned.includes(id) || S.trial === id;
+
+function goSquad() {
+  S.mode = 'squad';
+  if (!S.demo) demo();
+  S.slot = 0;
+  S.tryPlay = null;
+  show('squad');
+  renderSquad();
+  if (!S.trial) offerReward('try-ball', {
+    onAvailable: play => { S.tryPlay = play; renderSquad(); },
+    onReward: () => { S.trial = S.pendingTrial; place(S.trial); },
+    onDone: () => { S.tryPlay = null; renderSquad(); },
+  });
+}
+
+function place(id) {
+  save.squad[S.slot] = id;
+  S.slot = (S.slot + 1) % 3;
+  persist();
+  renderSquad();
+}
+
+function purchase(id) {
+  const price = BALLS[id].price;
+  if (save.coins < price || save.owned.includes(id)) return;
+  save.coins -= price;
+  save.owned.push(id);
+  coinsUI();
+  place(id);
+}
+
+function renderSquad() {
+  $('#s-level').textContent = t('level', { n: save.level, max: LEVELS });
+
+  $('#s-slots').replaceChildren(...save.squad.map((id, i) => {
+    const b = el('button', 'slot' + (i === S.slot ? ' active' : ''));
+    b.append(el('b', '', String(i + 1)), icon(id, 46));
+    b.title = ballName(id);
+    b.onclick = () => { S.slot = i; renderSquad(); };
+    return b;
+  }));
+
+  const mul = enemyHpMul(save.level);
+  $('#s-enemy').replaceChildren(...enemyFor(save.level).map(id => icon(id, 34)));
+  $('#scr-squad .enemy small').textContent = t('enemy') + (mul > 1 ? ` · HP ×${mul.toFixed(2).replace(/0$/, '')}` : '');
+
+  $('#s-cards').replaceChildren(...ORDER.map(id => {
+    const d = BALLS[id], ok = has(id);
+    const card = el('div', 'ball-card' + (ok ? '' : ' locked'));
+    const top = el('div', 'top');
+    const head = el('div');
+    head.append(el('div', 'name', ballName(id)), el('div', 'hp', `${d.hp} ${t('hp')}`));
+    top.append(icon(id, 42), head);
+    const foot = el('div', 'foot-row');
+    if (ok) foot.append(el('span', 'tag', save.owned.includes(id) ? '✓ ' + t('owned') : '★ ' + t('trial')));
+    else {
+      const buy = el('button', 'btn sm primary', `<span class="price"><i class="coin"></i>${d.price}</span>`);
+      buy.disabled = save.coins < d.price;
+      buy.title = buy.disabled ? t('notEnough') : t('buy');
+      buy.onclick = e => { e.stopPropagation(); purchase(id); };
+      foot.append(buy);
+      if (S.tryPlay && !S.trial) {
+        const tr = el('button', 'btn sm ad', t('try'));
+        tr.onclick = e => { e.stopPropagation(); S.pendingTrial = id; S.tryPlay(); };
+        foot.append(tr);
+      }
+    }
+    card.append(top, el('p', '', ballAbout(id)), foot);
+    if (ok) card.onclick = () => place(id);
+    return card;
+  }));
+}
+
+// ---------- battle ----------
+function startMatch() {
+  cancelReward();
+  S.match = createMatch({
+    squadA: [...save.squad],
+    squadB: enemyFor(save.level),
+    hpMulB: enemyHpMul(save.level),
+    seed: Math.floor(Math.random() * 1e9),
+  });
+  S.demo = false;
+  nextRound();
+}
+
+function nextRound() {
+  S.world = roundWorld(S.match);
+  resetFx();
+  const [me, foe] = S.world.ents;
+  S.aim = Math.atan2(foe.y - me.y, foe.x - me.x);
+  S.mode = 'aim';
+  show(null);
+  hud();
+  banner(t('round', { n: S.match.round }));
+}
+
+function fire() {
+  if (S.mode !== 'aim') return;
+  const w = S.world, [me, foe] = w.ents;
+  launch(w, S.aim, aiAngle(foe.x, foe.y, me.x, me.y, save.level, w.rand));
+  S.mode = 'fight';
+  show(null);
+}
+
+function aimAt(e) {
+  const r = canvas.getBoundingClientRect(), me = S.world.ents[0];
+  const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
+  if (Math.hypot(x - me.x, y - me.y) > 6) S.aim = Math.atan2(y - me.y, x - me.x);
+}
+canvas.addEventListener('pointerdown', e => {
+  if (S.mode !== 'aim') return;
+  S.aiming = true;
+  canvas.setPointerCapture(e.pointerId);
+  aimAt(e);
+});
+canvas.addEventListener('pointermove', e => { if (S.mode === 'aim' && (S.aiming || e.pointerType === 'mouse')) aimAt(e); });
+canvas.addEventListener('pointerup', e => {
+  if (!S.aiming) return;
+  S.aiming = false;
+  aimAt(e);
+  fire();
+});
+canvas.addEventListener('pointercancel', () => { S.aiming = false; });
+addEventListener('keydown', e => {
+  if (S.mode !== 'aim') return;
+  if (e.key === 'ArrowLeft') S.aim -= 0.08;
+  else if (e.key === 'ArrowRight') S.aim += 0.08;
+  else if (e.key === ' ' || e.key === 'Enter') fire();
+  else return;
+  e.preventDefault();
+});
+
+function hud() {
+  const dot = (id, cls = '') => {
+    const d = el('span', 'dot ' + cls);
+    if (id) d.style.background = BALLS[id].color;
+    return d;
+  };
+  const you = $('#hud-you'), foe = $('#hud-foe');
+  if (S.mode === 'watch') {
+    you.replaceChildren(dot(S.watch[0], 'cur'));
+    foe.replaceChildren(dot(S.watch[1], 'cur'));
+    return;
+  }
+  const { a, b } = S.match, dead = n => Array.from({ length: Math.max(0, 3 - n) }, () => dot(null, 'dead'));
+  you.replaceChildren(...dead(a.length), ...a.slice(1).reverse().map(x => dot(x.id)), dot(a[0].id, 'cur'));
+  foe.replaceChildren(dot(b[0].id, 'cur'), ...b.slice(1).map(x => dot(x.id)), ...dead(b.length));
+}
+
+let midText = null;
+function mid() {
+  const w = S.world;
+  let txt = '';
+  if (S.mode === 'watch') txt = `${ballName(S.watch[0])} vs ${ballName(S.watch[1])}`;
+  else if (S.match && ['aim', 'fight', 'ending'].includes(S.mode)) {
+    const left = Math.ceil(SUDDEN - w.t);
+    txt = t('round', { n: S.match.round }) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
+  }
+  if (txt === midText) return;
+  midText = txt;
+  const m = $('#hud-mid');
+  m.textContent = txt;
+  m.classList.toggle('sudden', w.launched && w.t > SUDDEN);
+}
+
+function onRoundOver(now) {
+  if (S.demo) {
+    if (!S.demoEnd) S.demoEnd = now + 1.5;
+    else if (now >= S.demoEnd) demo();
+    return;
+  }
+  if (S.mode === 'fight') { S.mode = 'ending'; S.endAt = now + 1.2; return; }
+  if (S.mode === 'ending' && now >= S.endAt) {
+    const r = endRound(S.match, S.world);
+    r == null ? nextRound() : finishMatch(r);
+  } else if (S.mode === 'watch' && !S.watchDone) {
+    S.watchDone = true;
+    const r = S.world.result;
+    banner(r === 'draw' ? t('draw') : t('wins', { name: ballName(S.watch[r]) }), true);
+  }
+}
+
+// ---------- results ----------
+function finishMatch(r) {
+  const won = r === 0;
+  S.wonLevel = save.level;
+  S.outcome = r;
+  S.earned = won ? winCoins(save.level) : LOSE_COINS;
+  save.coins += S.earned;
+  save.matches++;
+  if (won && save.level < LEVELS) save.level++;
+  persist();
+  coinsUI();
+  S.mode = 'result';
+  showResult();
+}
+
+function showResult() {
+  const r = S.outcome, won = r === 0, title = $('#r-title');
+  title.textContent = won ? t('win') : r === 'draw' ? t('draw') : t('lose');
+  title.className = won ? 'win' : 'lose';
+  $('#r-sub').textContent = won && S.wonLevel === LEVELS ? t('allDone') : t('level', { n: S.wonLevel, max: LEVELS });
+  $('#r-coins').textContent = '+' + S.earned;
+  $('#r-next').textContent = won ? t('next') : t('retry');
+  const box = $('#r-ads');
+  box.replaceChildren();
+  show('result');
+
+  const offer = (name, label, onReward) => offerReward(name, {
+    onAvailable: play => {
+      const b = el('button', 'btn ad', `${label} <small>· ${t('adTag')}</small>`);
+      b.onclick = () => { b.disabled = true; play(); };
+      box.replaceChildren(b);
+    },
+    onReward,
+    onDone: () => box.replaceChildren(),
+  });
+  if (won) offer('double-coins', t('double'), () => {
+    save.coins += S.earned;
+    S.earned *= 2;
+    persist();
+    coinsUI();
+    $('#r-coins').textContent = '+' + S.earned;
+  });
+  else if (r === 1 && !S.match.revived) offer('revive', t('revive'), () => {
+    save.coins -= LOSE_COINS; // the match isn't over after all
+    save.matches--;
+    persist();
+    coinsUI();
+    revive(S.match);
+    nextRound();
+  });
+}
+
+async function leaveResult(next) {
+  cancelReward();
+  if (S.trial) { // trial balls go back after one match
+    S.trial = null;
+    save.squad = save.squad.map(id => (save.owned.includes(id) ? id : 'basic'));
+    persist();
+  }
+  if (save.matches >= 4 && save.matches % 2 === 0 && S.adAfter !== save.matches) {
+    S.adAfter = save.matches;
+    await interstitial('after-match');
+  }
+  next();
+}
+
+// ---------- spectator ----------
+function goWatch() {
+  cancelReward();
+  S.mode = 'watch-pick';
+  if (!S.demo) demo();
+  show('watch');
+  renderWatch();
+}
+
+function renderWatch() {
+  [['#w-left', 0], ['#w-right', 1]].forEach(([sel, i]) => {
+    $(sel).replaceChildren(...ORDER.map(id => {
+      const b = el('button', 'pick' + (S.watch[i] === id ? ' sel' : ''));
+      b.append(icon(id, 44), document.createTextNode(ballName(id)));
+      b.onclick = () => { S.watch[i] = id; renderWatch(); };
+      return b;
+    }));
+  });
+}
+
+function startWatch() {
+  S.world = createWorld({ seed: Math.floor(Math.random() * 1e9), a: { id: S.watch[0] }, b: { id: S.watch[1] } });
+  resetFx();
+  S.demo = false;
+  S.watchDone = false;
+  S.mode = 'watch';
+  S.launchAt = performance.now() / 1000 + 1.4;
+  show(null);
+  hud();
+  banner(`${ballName(S.watch[0])} VS ${ballName(S.watch[1])}`);
+}
+
+function watchLaunch() {
+  const w = S.world, [a, b] = w.ents;
+  launch(w, aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand));
+}
+
+// ---------- loop ----------
+let last = performance.now() / 1000, acc = 0;
+function frame(ms) {
+  const now = ms / 1000, dt = Math.min(0.05, Math.max(0, now - last));
+  last = now;
+  const w = S.world;
+  if (w) {
+    if (S.mode === 'watch' && !w.launched && now >= S.launchAt) watchLaunch();
+    if (S.demo || S.mode === 'fight' || S.mode === 'watch') {
+      acc += dt;
+      while (acc >= STEP) { step(w, STEP); acc -= STEP; }
+    } else acc = 0;
+    if (w.result != null) onRoundOver(now);
+    draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : null, now, dt });
+    mid();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------- boot ----------
+document.documentElement.lang = lang;
+if (lang === 'en') document.title = 'BallBrawl — ball battle';
+for (const n of document.querySelectorAll('[data-t]')) n.textContent = t(n.dataset.t);
+$('#m-play').onclick = goSquad;
+$('#m-watch').onclick = goWatch;
+$('#s-back').onclick = goMenu;
+$('#s-fight').onclick = startMatch;
+$('#r-next').onclick = () => leaveResult(goSquad);
+$('#r-menu').onclick = () => leaveResult(goMenu);
+$('#w-start').onclick = startWatch;
+$('#w-again').onclick = startWatch;
+$('#w-back').onclick = goWatch;
+$('#w-cancel').onclick = goMenu;
+addEventListener('resize', layout);
+initAds();
+layout();
+coinsUI();
+goMenu();
+requestAnimationFrame(frame);

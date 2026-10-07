@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>BallBrawl — битва шаров</title>
+  <meta name="description" content="Шары со суперсилами дерутся в арене: Пиявка, Клетка, Паук, Ниндзя, Поезд. Собери отряд, прицелься и пройди 30 уровней. Бесплатно, прямо в браузере.">
+  <meta name="theme-color" content="#0b1222">
+  <meta property="og:title" content="BallBrawl — битва шаров">
+  <meta property="og:description" content="Шары со суперсилами. Целься — и смотри, кто выживет.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='38' r='18' fill='%23d4374a'/%3E%3Ccircle cx='42' cy='24' r='16' fill='%23e09a2b'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- AdSense H5 Games Ads. Replace the id (also in ads.txt); remove data-adbreak-test once approved. -->
+  <script async data-ad-client="ca-pub-0000000000000000" data-adbreak-test="on"
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">Ball<b>Brawl</b></div>
+    <div class="pill" title="coins"><i class="coin"></i><span id="coins">0</span></div>
+  </header>
+
+  <main class="stage">
+    <div id="hud" class="hud" hidden>
+      <div id="hud-you" class="dots"></div>
+      <div id="hud-mid" class="hud-mid"></div>
+      <div id="hud-foe" class="dots foe"></div>
+    </div>
+    <div class="arena-wrap">
+      <canvas id="arena" aria-label="arena"></canvas>
+      <div id="banner" class="banner"></div>
+      <div id="hint" class="hint" hidden data-t="aimHint"></div>
+    </div>
+    <div id="watch-bar" class="watch-bar" hidden>
+      <button class="btn" id="w-again" data-t="again"></button>
+      <button class="btn ghost" id="w-back" data-t="back"></button>
+    </div>
+  </main>
+
+  <footer class="foot"><a href="privacy.html" data-t="privacy"></a></footer>
+
+  <section id="scr-menu" class="overlay">
+    <div class="card menu">
+      <h1 class="logo">Ball<span>Brawl</span></h1>
+      <p class="tagline" data-t="tagline"></p>
+      <div id="m-level" class="chip"></div>
+      <button class="btn primary big" id="m-play" data-t="play"></button>
+      <button class="btn" id="m-watch" data-t="watch"></button>
+    </div>
+  </section>
+
+  <section id="scr-squad" class="overlay" hidden>
+    <div class="card wide">
+      <div class="row between">
+        <h2 data-t="squadTitle"></h2>
+        <div id="s-level" class="chip"></div>
+      </div>
+      <div class="versus">
+        <div id="s-slots" class="slots"></div>
+        <span class="vs">VS</span>
+        <div class="enemy">
+          <small data-t="enemy"></small>
+          <div id="s-enemy" class="mini-row"></div>
+        </div>
+      </div>
+      <p class="muted" data-t="squadHint"></p>
+      <div id="s-cards" class="cards"></div>
+      <div class="row sticky">
+        <button class="btn ghost" id="s-back" data-t="back"></button>
+        <button class="btn primary grow" id="s-fight" data-t="fight"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-result" class="overlay" hidden>
+    <div class="card result">
+      <h2 id="r-title"></h2>
+      <p id="r-sub" class="muted"></p>
+      <div class="coins-big"><i class="coin"></i><span id="r-coins"></span></div>
+      <div id="r-ads" class="col"></div>
+      <div class="row">
+        <button class="btn ghost" id="r-menu" data-t="menu"></button>
+        <button class="btn primary grow" id="r-next"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-watch" class="overlay" hidden>
+    <div class="card wide">
+      <h2 data-t="watchTitle"></h2>
+      <p class="muted" data-t="watchHint"></p>
+      <small class="you-label" data-t="left"></small>
+      <div id="w-left" class="pick-row"></div>
+      <small class="foe-label" data-t="right"></small>
+      <div id="w-right" class="pick-row"></div>
+      <div class="row">
+        <button class="btn ghost" id="w-cancel" data-t="back"></button>
+        <button class="btn primary grow" id="w-start" data-t="start"></button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

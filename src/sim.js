@@ -48,7 +48,7 @@ export const foes = (w, e) => w.ents.filter(f => !f.dead && f.side !== e.side);
 export function hurt(w, e, amount, quiet = false) {
   if (e.dead || amount <= 0) return;
   e.hp -= amount;
-  if (!quiet) w.events.push({ type: 'hit', x: e.x, y: e.y, amount, side: e.side });
+  if (!quiet) w.events.push({ type: 'hit', id: e.id, x: e.x, y: e.y, amount, side: e.side });
   if (e.hp > 0) return;
   e.hp = 0;
   e.dead = true;
