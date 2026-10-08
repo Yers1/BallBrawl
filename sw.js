@@ -4,7 +4,7 @@ const CACHE = 'ballbrawl';
 const CORE = [
   './', 'index.html', 'style.css', 'privacy.html', 'manifest.webmanifest', 'icon.svg',
   'src/main.js', 'src/sim.js', 'src/balls.js', 'src/match.js', 'src/ai.js', 'src/render.js',
-  'src/i18n.js', 'src/ads.js', 'src/nick.js', 'src/challenge.js', 'src/sfx.js',
+  'src/i18n.js', 'src/ads.js', 'src/nick.js', 'src/challenge.js', 'src/sfx.js', 'src/progress.js', 'src/meta.js',
 ];
 
 self.addEventListener('install', e => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return; // ads, fonts: straight to network
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' }) // always revalidate, so a deploy reaches players on their next launch
       .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
         return res;

@@ -122,3 +122,13 @@ test('achievements unlock from stats and pay once', () => {
   assert.equal(claimAchievement(s, 'firstWin'), a.coins);
   assert.equal(claimAchievement(s, 'firstWin'), 0);
 });
+
+test('balls can also be bought early, at a fixed price', async () => {
+  const { buyBall } = await import('../src/progress.js');
+  const s = freshSave();
+  s.coins = BALLS.train.price;
+  assert.equal(buyBall(s, 'train'), true);
+  assert.equal(s.coins, 0);
+  assert.equal(buyBall(s, 'train'), false, 'once');
+  assert.equal(buyBall(s, 'ice'), false, 'not without coins');
+});

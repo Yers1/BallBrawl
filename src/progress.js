@@ -216,3 +216,11 @@ export function claimAchievement(s, id) {
   s.coins += a.coins;
   return a.coins;
 }
+
+// ---------- shop ----------
+export function buyBall(s, id) {
+  if (!BALLS[id] || s.owned.includes(id) || s.coins < BALLS[id].price) return false;
+  s.coins -= BALLS[id].price;
+  s.owned.push(id);
+  return true;
+}

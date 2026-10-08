@@ -2,6 +2,7 @@
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
 import { W, H, SUDDEN, METER } from './sim.js';
 import { BALLS, TRAIN } from './balls.js';
+import { SKINS } from './progress.js';
 
 export const SIDE = ['#4cc9f0', '#ff4d6d']; // you · opponent
 const SIDE_RGB = ['76,201,240', '255,77,109'];
@@ -55,6 +56,14 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 16, BALLS.cell.color, 200);
     } else if (ev.type === 'latch') {
       burst(ev.x, ev.y, 10, '#ff8fa3', 130);
+    } else if (ev.type === 'boom') {
+      burst(ev.x, ev.y, 26, '#ff9a3c', 300);
+      burst(ev.x, ev.y, 12, '#ffe08a', 180);
+      ring(ev.x, ev.y, ev.r * 0.4, 2.6, 0.4, '255,154,60', 6);
+      fx.shake = Math.max(fx.shake, 6);
+    } else if (ev.type === 'freeze') {
+      burst(ev.x, ev.y, 22, '#bfefff', 220);
+      ring(ev.x, ev.y, 30, 2.5, 0.5, '191,239,255', 5);
     } else if (ev.type === 'dash') {
       ring(ev.x, ev.y, 8, 4, 0.35, SIDE_RGB[ev.side], 3);
     } else if (ev.type === 'super') {
@@ -141,6 +150,49 @@ function train(ctx, z, t) {
   ctx.restore();
 }
 
+function bombZone(ctx, z, t, now) {
+  if (z.done) return; // the blast itself is drawn from the 'boom' event
+  const left = Math.max(0, z.go - t), k = 1 - Math.min(1, left / 1.2);
+  ctx.save();
+  ctx.setLineDash([6, 6]);
+  ctx.strokeStyle = `rgba(255,120,60,${0.25 + 0.5 * k})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = '#1b1b24';
+  ctx.beginPath(); ctx.arc(z.x, z.y, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = Math.sin(now * (10 + 30 * k)) > 0 ? '#ff4d4d' : '#5a1a1a';
+  ctx.beginPath(); ctx.arc(z.x + 3, z.y - 3, 3.2, 0, Math.PI * 2); ctx.fill();
+}
+
+function zapZone(ctx, z, t) {
+  const k = 1 - (t - z.born) / (z.until - z.born);
+  const dx = z.x2 - z.x, dy = z.y2 - z.y, n = 7;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, k);
+  ctx.strokeStyle = '#fff6b0';
+  ctx.shadowColor = '#ffd23f';
+  ctx.shadowBlur = 14;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(z.x, z.y);
+  for (let i = 1; i < n; i++) {
+    const j = (Math.random() - 0.5) * 22; // flicker
+    ctx.lineTo(z.x + (dx * i) / n - (dy / Math.hypot(dx, dy)) * j, z.y + (dy * i) / n + (dx / Math.hypot(dx, dy)) * j);
+  }
+  ctx.lineTo(z.x2, z.y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function needle(ctx, s) {
+  const m = Math.hypot(s.vx, s.vy) || 1, ux = s.vx / m, uy = s.vy / m;
+  ctx.strokeStyle = '#d9b48a';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(s.x - ux * 9, s.y - uy * 9); ctx.lineTo(s.x + ux * 5, s.y + uy * 5); ctx.stroke();
+}
+
 function shuriken(ctx, s, t) {
   ctx.save();
   ctx.translate(s.x, s.y);
@@ -189,6 +241,63 @@ function deco(ctx, e, t) {
     ctx.moveTo(x + r * 0.85, y - r * 0.5);
     ctx.quadraticCurveTo(x + r * 1.2, y - r * 0.55 + wave, x + r * 1.45, y - r * 0.3 + wave);
     ctx.stroke();
+  } else if (e.kind === 'magnet') { // red/blue poles like a real magnet
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    const g = ctx.createLinearGradient(x, y, x, y + r);
+    g.addColorStop(0, '#5b86ff');
+    g.addColorStop(1, '#2443b8');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y, r * 2, r);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(x - r, y - r * 0.05, r * 2, r * 0.1);
+    ctx.restore();
+  } else if (e.kind === 'bomb') { // fuse + spark
+    ctx.strokeStyle = '#c9a36b';
+    ctx.lineWidth = r * 0.1;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x + r * 0.5, y - r * 0.75); ctx.quadraticCurveTo(x + r * 0.9, y - r * 1.2, x + r * 1.15, y - r * 1.05); ctx.stroke();
+    ctx.fillStyle = Math.sin(t * 30) > 0 ? '#ffd23f' : '#ff7a2f';
+    ctx.beginPath(); ctx.arc(x + r * 1.15, y - r * 1.05, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.22, 0, Math.PI * 2); ctx.fill();
+  } else if (e.kind === 'turtle') { // shell plates
+    ctx.strokeStyle = 'rgba(40,70,20,0.55)';
+    ctx.lineWidth = Math.max(1.5, r * 0.07);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+      i ? ctx.lineTo(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45) : ctx.moveTo(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45);
+    }
+    ctx.closePath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+      ctx.moveTo(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45);
+      ctx.lineTo(x + Math.cos(a) * r * 0.95, y + Math.sin(a) * r * 0.95);
+    }
+    ctx.stroke();
+  } else if (e.kind === 'lightning') { // a little bolt on the forehead
+    const s = r * 0.42, bx = x, by = y - r * 0.58;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(bx + s * 0.2, by - s * 0.6);
+    ctx.lineTo(bx - s * 0.45, by + s * 0.1);
+    ctx.lineTo(bx - s * 0.02, by + s * 0.1);
+    ctx.lineTo(bx - s * 0.2, by + s * 0.6);
+    ctx.lineTo(bx + s * 0.45, by - s * 0.12);
+    ctx.lineTo(bx + s * 0.04, by - s * 0.12);
+    ctx.closePath();
+    ctx.fill();
+  } else if (e.kind === 'ice') { // frosty snowflake
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = Math.max(1.2, r * 0.06);
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI;
+      ctx.moveTo(x + Math.cos(a) * r * 0.75, y + Math.sin(a) * r * 0.75);
+      ctx.lineTo(x - Math.cos(a) * r * 0.75, y - Math.sin(a) * r * 0.75);
+    }
+    ctx.stroke();
   } else if (e.kind === 'train') {
     ctx.fillStyle = '#4a3418';
     ctx.fillRect(x - r * 0.17, y - r * 1.28, r * 0.34, r * 0.45);
@@ -197,6 +306,67 @@ function deco(ctx, e, t) {
     ctx.fillStyle = 'rgba(80,50,20,0.45)';
     ctx.fillRect(x - r, y + r * 0.42, r * 2, r * 0.14);
     ctx.fillRect(x - r, y + r * 0.66, r * 2, r * 0.14);
+    ctx.restore();
+  }
+}
+
+function spikes(ctx, e) {
+  const { x, y, r } = e;
+  ctx.fillStyle = '#5a3a24';
+  const n = 14;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2, b = a + Math.PI / n;
+    ctx.moveTo(x + Math.cos(a - 0.18) * r * 0.9, y + Math.sin(a - 0.18) * r * 0.9);
+    ctx.lineTo(x + Math.cos(b) * r * 1.32, y + Math.sin(b) * r * 1.32);
+    ctx.lineTo(x + Math.cos(a + 0.38) * r * 0.9, y + Math.sin(a + 0.38) * r * 0.9);
+  }
+  ctx.fill();
+}
+
+// Skin patterns, clipped to the ball.
+function pattern(ctx, e, sk, t) {
+  const { x, y, r } = e;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+  if (sk.pattern === 'shine') {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(x - r, y - r * 0.2); ctx.lineTo(x - r * 0.2, y - r); ctx.lineTo(x + r * 0.1, y - r); ctx.lineTo(x - r, y + r * 0.1);
+    ctx.fill();
+  } else if (sk.pattern === 'stripes') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = r * 0.22;
+    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x - r + k * r * 0.6, y + r); ctx.lineTo(x + r + k * r * 0.6, y - r); ctx.stroke(); }
+  } else if (sk.pattern === 'stars') {
+    ctx.fillStyle = '#ffffff';
+    for (let k = 0; k < 9; k++) {
+      const a = k * 2.399, d = r * 0.85 * Math.sqrt((k + 0.5) / 9);
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 3 + k);
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.05, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (sk.pattern === 'cracks') {
+    ctx.strokeStyle = 'rgba(60,10,0,0.55)';
+    ctx.lineWidth = r * 0.07;
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.7, y - r * 0.2); ctx.lineTo(x - r * 0.2, y); ctx.lineTo(x, y - r * 0.5);
+    ctx.moveTo(x - r * 0.2, y); ctx.lineTo(x + r * 0.3, y + r * 0.4); ctx.lineTo(x + r * 0.7, y + r * 0.2);
+    ctx.stroke();
+  } else if (sk.pattern === 'dots') {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    for (let k = 0; k < 7; k++) {
+      const a = k * 2.399, d = r * 0.7 * Math.sqrt((k + 0.5) / 7);
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.12, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.restore();
+  if (sk.pattern === 'neon') { // glowing outline in the ball's own colour
+    ctx.save();
+    ctx.strokeStyle = BALLS[e.kind].color;
+    ctx.shadowColor = BALLS[e.kind].color;
+    ctx.shadowBlur = r * 0.6;
+    ctx.lineWidth = r * 0.12;
+    ctx.beginPath(); ctx.arc(x, y, r * 0.86, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
 }
@@ -221,7 +391,7 @@ function legs(ctx, e, t) {
 function trail(ctx, e, t) {
   if (!e.boost || e.boost.until <= t) return;
   const m = Math.hypot(e.vx, e.vy) || 1, ux = e.vx / m, uy = e.vy / m;
-  ctx.fillStyle = BALLS[e.kind].color;
+  ctx.fillStyle = e.skin && SKINS[e.skin] ? SKINS[e.skin].color : BALLS[e.kind].color;
   for (let i = 4; i >= 1; i--) {
     ctx.globalAlpha = 0.08 * (5 - i);
     ctx.beginPath();
@@ -232,17 +402,30 @@ function trail(ctx, e, t) {
 }
 
 export function drawBall(ctx, e, now, t, { hp = true, rim = true } = {}) {
-  const { x, y, r } = e, color = BALLS[e.kind].color;
+  const sk = e.skin && SKINS[e.skin], { x, y, r } = e, color = sk ? sk.color : BALLS[e.kind].color;
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
   ctx.beginPath(); ctx.arc(x + r * 0.12, y + r * 0.2, r, 0, Math.PI * 2); ctx.fill();
   if (e.kind === 'spider') legs(ctx, e, t);
+  if (e.kind === 'hedgehog') spikes(ctx, e);
   const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
   g.addColorStop(0, shade(color, 0.45));
   g.addColorStop(0.6, color);
   g.addColorStop(1, shade(color, -0.35));
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  if (sk) pattern(ctx, e, sk, t);
   deco(ctx, e, t);
+  if (e.chillUntil > t) { // frost: light chill, or solid ice when frozen
+    ctx.fillStyle = e.chillSlow < 0.2 ? 'rgba(200,240,255,0.6)' : 'rgba(150,220,255,0.3)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  if (e.shieldUntil > t) { // shell bubble
+    ctx.strokeStyle = `rgba(190,255,170,${0.55 + 0.25 * Math.sin(now * 12)})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, r * 1.22, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(190,255,170,0.12)';
+    ctx.fill();
+  }
   if (rim) {
     ctx.strokeStyle = SIDE[e.side];
     ctx.lineWidth = Math.max(2, r * 0.1);
@@ -292,7 +475,12 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
   if (fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
   fx.shake = Math.max(0, fx.shake - dt * 40);
   arena(ctx, w, now);
-  for (const z of w.zones) z.kind === 'web' ? web(ctx, z, w.t) : train(ctx, z, w.t);
+  for (const z of w.zones) {
+    if (z.kind === 'web') web(ctx, z, w.t);
+    else if (z.kind === 'train') train(ctx, z, w.t);
+    else if (z.kind === 'bomb') bombZone(ctx, z, w.t, now);
+    else if (z.kind === 'zap') zapZone(ctx, z, w.t);
+  }
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
   for (const s of [0, 1]) { // golden halo: this side's super is ready
@@ -302,7 +490,7 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(lead.x, lead.y, lead.r + 6 + 2 * Math.sin(now * 10), 0, Math.PI * 2); ctx.stroke();
   }
-  for (const sh of w.shots) shuriken(ctx, sh, w.t);
+  for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : shuriken(ctx, sh, w.t);
   if (aim != null) aimArrow(ctx, w.ents[0], aim, now);
 
   for (const r of fx.rings) {
@@ -344,12 +532,13 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
 }
 
 // Static card icon: the same ball art without HP or team rim.
-export function drawIcon(canvas, kind, css = 56) {
+export function drawIcon(canvas, kind, css = 56, skin = null) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = canvas.height = Math.round(css * dpr);
   canvas.style.width = canvas.style.height = css + 'px';
   const c = canvas.getContext('2d');
   const k = canvas.width / 64;
   c.setTransform(k, 0, 0, k, 0, 0);
-  drawBall(c, { id: -1, side: 0, kind, x: 32, y: 34, r: 21, vx: 1, vy: -1, hp: 0 }, 0, 0, { hp: false, rim: false });
+  const r = kind === 'hedgehog' ? 18 : 21; // leave room for spikes
+  drawBall(c, { id: -1, side: 0, kind, skin, x: 32, y: 34, r, vx: 1, vy: -1, hp: 0, chillUntil: 0, shieldUntil: 0 }, 0, 0, { hp: false, rim: false });
 }

@@ -73,7 +73,7 @@ export function hurt(w, e, amount, quiet = false, meter = true) {
   e.hp = 0;
   e.dead = true;
   e.latch = null;
-  w.events.push({ type: 'death', x: e.x, y: e.y, r: e.r, side: e.side, kind: e.kind });
+  w.events.push({ type: 'death', x: e.x, y: e.y, r: e.r, side: e.side, kind: e.kind, mini: e.mini });
   BALLS[e.kind].onDeath?.(w, e);
 }
 
