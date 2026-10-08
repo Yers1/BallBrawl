@@ -1,3 +1,18 @@
+// Confetti burst for big moments (DOM pieces, removed after the animation).
+export function confetti(n = 36) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const colors = ['#ffcc33', '#4cc9f0', '#ff4d6d', '#6ff0b4', '#b892ff', '#ff9a3c'];
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i');
+    p.className = 'confetti';
+    p.style.cssText = `left:${50 + (Math.random() - 0.5) * 30}%;background:${colors[i % colors.length]};` +
+      `--dx:${(Math.random() - 0.5) * 520}px;--dy:${-220 - Math.random() * 260}px;--r:${Math.random() * 720 - 360}deg;` +
+      `animation-delay:${Math.random() * 0.12}s;width:${6 + Math.random() * 6}px;height:${8 + Math.random() * 8}px`;
+    document.body.append(p);
+    setTimeout(() => p.remove(), 1700);
+  }
+}
+
 // Tiny WebAudio synth — no audio files. The context starts on the first user gesture (browser rule).
 let ac = null, master = null, muted = false;
 

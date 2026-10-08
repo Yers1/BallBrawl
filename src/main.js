@@ -8,7 +8,7 @@ import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
 import { randomNick, nickText } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
-import { initAudio, setMuted, sfx } from './sfx.js';
+import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss,
   claimable, pathNodes, track, dayKey, refreshQuests,
@@ -447,6 +447,7 @@ function finishMatch(r) {
   coinsUI();
   S.mode = 'result';
   won ? sfx.win() : sfx.lose();
+  if (won) confetti(48);
   showResult();
 }
 
@@ -460,12 +461,24 @@ function trophyLine() {
   }
   const d = S.delta, shown = save.pendingFinish ? save.trophies + d : save.trophies;
   $('#r-trophies').hidden = false;
-  $('#r-trophies').innerHTML = `<i class="trophy" style="width:26px;height:26px"></i>${shown} <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}</span>`;
+  $('#r-trophies').innerHTML = `<i class="trophy" style="width:26px;height:26px"></i><span class="cnt">${shown - d}</span> <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}</span>`;
+  countUp($('#r-trophies .cnt'), shown - d, shown);
   const next = pathNodes(save.maxTrophies).find(n => n.at > shown);
   $('#r-sub').textContent = next ? t('toNext', { n: next.at - shown }) : '';
   const ready = claimable(save).length > 0;
   $('#r-reward').hidden = !ready;
   if (ready) $('#r-reward').textContent = t('rewardWaiting');
+}
+
+// Numbers roll from old to new value, so the trophy change is felt, not just read.
+function countUp(node, from, to, ms = 700) {
+  const t0 = performance.now();
+  const tick = () => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    node.textContent = Math.round(from + (to - from) * (1 - (1 - k) ** 3));
+    if (k < 1) setTimeout(tick, 16); // setTimeout, not rAF: keeps counting in background tabs too
+  };
+  tick();
 }
 
 // Report a ranked result. The server refuses anything under 15 s, so short matches wait a moment;
@@ -680,7 +693,8 @@ requestAnimationFrame(frame);
 // Go online in the background; the game is already playable offline.
 setTimeout(async () => {
   const { save: merged, moved } = await online.connect(save);
-  for (const k of Object.keys(save)) delete save[k];
+  if (merged === save) return; // offline: connect hands back our own save untouched — nothing to swap in
+  for (const k of Object.keys(save)) delete save[k]; // swap contents in place: home & the match hold this object
   Object.assign(save, merged);
   persist();
   coinsUI();

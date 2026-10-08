@@ -18,6 +18,7 @@ async function rpc(name, args = {}) {
 // Sign in (anonymously), make sure we have a profile, merge the cloud save into ours.
 // Returns { save, moved } — moved = this device's profile was taken to another phone with its code.
 export async function connect(save) {
+  if (new URLSearchParams(location.search).has('offline')) return { save, moved: false }; // dev: test without touching the real backend
   try {
     const { createClient } = await timeout(import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'), 10000);
     sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'ballbrawl.auth' } });

@@ -8,7 +8,7 @@ import {
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
   ACHIEVEMENTS, achievementValue, claimAchievement,
 } from './progress.js';
-import { sfx } from './sfx.js';
+import { sfx, confetti } from './sfx.js';
 
 const $ = s => document.querySelector(s);
 const ROW = 92; // px per road node (matches .node-row height)
@@ -42,6 +42,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#rw-sub').textContent = sub;
     $('#scr-reward').hidden = false;
     sfx.coin();
+    if (res.ball || res.skin) confetti();
     persist();
     coinsUI();
     render();
