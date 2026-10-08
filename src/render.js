@@ -4,10 +4,10 @@ import { W, H, SUDDEN, METER } from './sim.js';
 import { BALLS, TRAIN } from './balls.js';
 import { SKINS } from './progress.js';
 
-export const SIDE = ['#4cc9f0', '#ff4d6d']; // you · opponent
-const SIDE_RGB = ['76,201,240', '255,77,109'];
-const FONT = 'Rubik, system-ui, sans-serif';
-const INK = '#060b1d'; // the cartoon outline colour, same as --ink in style.css
+export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
+const SIDE_RGB = ['76,201,240', '255,77,94'];
+const FONT = 'Nunito, system-ui, sans-serif';
+const INK = '#0A0F1C'; // outline for numbers and small shapes
 export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
 const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0 };
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -34,7 +34,7 @@ export function fitCanvas(canvas, cssSize) {
 function burst(x, y, n, color, speed) {
   for (let i = 0; i < n; i++) {
     const a = rnd(0, Math.PI * 2), v = rnd(0.3, 1) * speed;
-    fx.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(0.25, 0.55), age: 0, color, size: rnd(1.5, 3.5) });
+    fx.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(0.3, 0.65), age: 0, color, size: rnd(2.5, 7) });
   }
 }
 
@@ -44,8 +44,8 @@ function absorb(w, now) {
   for (const ev of w.events) {
     if (ev.type === 'hit') {
       fx.flash[ev.id] = now + 0.12;
-      if (ev.amount >= 1) fx.floats.push({ x: ev.x + rnd(-10, 10), y: ev.y - 24, text: '-' + Math.round(ev.amount), side: ev.side, age: 0 });
-      burst(ev.x, ev.y, 5, '#ffffff', 110);
+      if (ev.amount >= 1) fx.floats.push({ x: ev.x + rnd(-10, 10), y: ev.y - 24, text: '-' + Math.round(ev.amount), age: 0 });
+      burst(ev.x, ev.y, 6, '#E6EDF7', 120);
     } else if (ev.type === 'clash') {
       burst(ev.x, ev.y, 12, '#ff9f1c', 220);
       fx.shake = Math.max(fx.shake, 3);
@@ -80,38 +80,36 @@ function absorb(w, now) {
 
 // ---------- pieces ----------
 
-// Brawl-Stars-like toy arena: chunky wall frame, sandy checker floor, centre circle.
+// The arena is a sunken box seen from above, like the original: navy floor, four bevelled walls lit from the top.
+const FACES = [ // colour, then the corners of each wall face
+  ['#2E4C77', [-M, -M], [W + M, -M], [W, 0], [0, 0]],
+  ['#1B3254', [-M, -M], [0, 0], [0, H], [-M, H + M]],
+  ['#14284A', [W + M, -M], [W + M, H + M], [W, H], [W, 0]],
+  ['#10213D', [-M, H + M], [0, H], [W, H], [W + M, H + M]],
+];
 function arena(ctx, w, now) {
-  const sudden = w.launched && w.t > SUDDEN, k = sudden ? 0.5 + 0.5 * Math.sin(now * 9) : 0;
-  ctx.fillStyle = sudden ? `rgb(${210 + 40 * k},${60 + 30 * k},${90 + 20 * k})` : '#4c5fd6';
+  const sudden = w.launched && w.t > SUDDEN;
+  ctx.fillStyle = '#0F1F38';
   ctx.fillRect(-M - 20, -M - 20, W + 2 * M + 40, H + 2 * M + 40); // oversized: camera shake never shows an edge
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.fillRect(-M - 20, -M - 20, W + 2 * M + 40, 24);
-  ctx.strokeStyle = 'rgba(6,11,29,0.35)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 50; i < W; i += 50) { // stone blocks
-    ctx.moveTo(i, -M); ctx.lineTo(i, 0); ctx.moveTo(i, H); ctx.lineTo(i, H + M);
-    ctx.moveTo(-M, i); ctx.lineTo(0, i); ctx.moveTo(W, i); ctx.lineTo(W + M, i);
+  for (const [color, ...pts] of FACES) {
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (sudden) { // walls glow red in sudden death
+      ctx.fillStyle = `rgba(255,60,80,${0.3 + 0.3 * Math.sin(now * 9)})`;
+      ctx.fill();
+    }
   }
-  ctx.stroke();
-  ctx.fillStyle = '#f0d197';
+  ctx.fillStyle = '#203A5E';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#e7c486';
-  for (let y = 0; y < H; y += 50) for (let x = (y / 50) % 2 ? 0 : 50; x < W; x += 100) ctx.fillRect(x, y, 50, 50);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.arc(W / 2, H / 2, 62, 0, Math.PI * 2); ctx.stroke();
-  for (const [x, y, gx, gy] of [[0, 0, 0, 1], [0, 0, 1, 0]]) { // the walls cast a soft shadow onto the floor
-    const g = ctx.createLinearGradient(x, y, gx * 16, gy * 16);
-    g.addColorStop(0, 'rgba(90,50,10,0.3)');
-    g.addColorStop(1, 'rgba(90,50,10,0)');
+  for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
+    const g = ctx.createLinearGradient(0, 0, gx * 18, gy * 18);
+    g.addColorStop(0, 'rgba(8,16,32,0.4)');
+    g.addColorStop(1, 'rgba(8,16,32,0)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, gx ? 16 : W, gy ? 16 : H);
+    ctx.fillRect(0, 0, gx ? 18 : W, gy ? 18 : H);
   }
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(-1.5, -1.5, W + 3, H + 3);
 }
 
 function web(ctx, z, t) {
@@ -182,7 +180,9 @@ function bombZone(ctx, z, t, now) {
   ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
   ctx.fillStyle = '#1b1b24';
-  ctx.beginPath(); ctx.arc(z.x, z.y, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(z.x, z.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = Math.sin(now * (10 + 30 * k)) > 0 ? '#ff4d4d' : '#5a1a1a';
   ctx.beginPath(); ctx.arc(z.x + 3, z.y - 3, 3.2, 0, Math.PI * 2); ctx.fill();
 }
@@ -212,7 +212,7 @@ function zapZone(ctx, z, t) {
 
 function needle(ctx, s) {
   const m = Math.hypot(s.vx, s.vy) || 1, ux = s.vx / m, uy = s.vy / m;
-  ctx.strokeStyle = '#5a3a24';
+  ctx.strokeStyle = '#E6D2B5';
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(s.x - ux * 9, s.y - uy * 9); ctx.lineTo(s.x + ux * 5, s.y + uy * 5); ctx.stroke();
@@ -430,93 +430,63 @@ function trail(ctx, e, t) {
   ctx.globalAlpha = 1;
 }
 
-// Cartoon face: eyes look where the ball is rolling, squeeze shut on a hit, blink now and then.
-function face(ctx, e, now) {
-  const { x, y, r } = e, m = Math.hypot(e.vx, e.vy) || 1, lx = e.vx / m, ly = e.vy / m;
-  const cx = x + lx * r * 0.2, cy = y - r * 0.06 + ly * r * 0.16;
-  const ouch = (fx.flash[e.id] ?? 0) > now, blink = !ouch && (((now * 0.31 + e.id * 0.37) % 1) + 1) % 1 < 0.035;
-  ctx.strokeStyle = INK;
-  ctx.lineCap = ctx.lineJoin = 'round';
-  for (const s of [-1, 1]) {
-    const ex = cx + s * r * 0.3, ey = cy;
-    ctx.lineWidth = r * 0.09;
-    ctx.beginPath();
-    if (ouch) { ctx.moveTo(ex + s * r * 0.12, ey - r * 0.12); ctx.lineTo(ex - s * r * 0.06, ey); ctx.lineTo(ex + s * r * 0.12, ey + r * 0.12); }
-    else if (blink) { ctx.moveTo(ex - r * 0.15, ey); ctx.lineTo(ex + r * 0.15, ey); }
-    else {
-      ctx.fillStyle = '#ffffff';
-      ctx.lineWidth = r * 0.06;
-      ctx.ellipse(ex, ey, r * 0.17, r * 0.22, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = INK;
-      ctx.beginPath(); ctx.arc(ex + lx * r * 0.06, ey + ly * r * 0.08, r * 0.095, 0, Math.PI * 2); ctx.fill();
-      ctx.lineWidth = r * 0.09;
-      ctx.beginPath();
-    }
-    ctx.moveTo(ex + s * r * 0.19, ey - r * 0.34); // determined brow
-    ctx.lineTo(ex - s * r * 0.12, ey - r * 0.25);
-    ctx.stroke();
-  }
-}
-
-// HP bar over the ball in the team colour, number on it; flips below when the ball hugs the top wall.
-function hpBar(ctx, e) {
-  const { x, y, r } = e, bw = Math.max(40, r * 1.9), bh = 14, bx = x - bw / 2;
-  const by = y - r - 20 < -M + 2 ? y + r + 6 : y - r - 20;
-  ctx.fillStyle = INK;
-  ctx.beginPath(); ctx.roundRect(bx - 2.5, by - 2.5, bw + 5, bh + 5, 7); ctx.fill();
-  ctx.fillStyle = SIDE[e.side];
-  ctx.beginPath(); ctx.roundRect(bx, by, Math.max(0, bw * Math.min(1, e.hp / e.maxHp)), bh, 5); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.fillRect(bx + 3, by + 2, Math.max(0, bw * Math.min(1, e.hp / e.maxHp) - 6), 3);
-  ctx.font = `900 13px ${FONT}`;
+// HP sits in the middle of the ball, white with a dark outline, like the original.
+function hpText(ctx, e) {
+  const { x, y, r } = e, n = Math.ceil(e.hp);
+  ctx.font = `900 ${Math.round(r * 0.78)}px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.lineWidth = 3.5;
   ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(3, r * 0.17);
   ctx.strokeStyle = INK;
-  ctx.strokeText(Math.ceil(e.hp), x, by + bh / 2 + 1);
+  ctx.strokeText(n, x, y + r * 0.05);
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(Math.ceil(e.hp), x, by + bh / 2 + 1);
+  ctx.fillText(n, x, y + r * 0.05);
 }
 
+// A glossy ball: soft floor shadow, shaded body, specular highlight, a thin glowing rim in the team colour.
 export function drawBall(ctx, e, now, t, { rim = true } = {}) {
   const sk = e.skin && SKINS[e.skin], { x, y, r } = e, color = sk ? sk.color : BALLS[e.kind].color;
-  ctx.fillStyle = 'rgba(70,35,0,0.25)'; // shadow on the floor
-  ctx.beginPath(); ctx.ellipse(x, y + r * 0.8, r * 0.95, r * 0.36, 0, 0, Math.PI * 2); ctx.fill();
-  if (rim) { // team ring on the floor, like Brawl Stars
-    ctx.strokeStyle = SIDE[e.side];
-    ctx.lineWidth = Math.max(3, r * 0.14);
-    ctx.beginPath(); ctx.ellipse(x, y + r * 0.6, r * 1.1, r * 0.55, 0, 0, Math.PI * 2); ctx.stroke();
-  }
+  ctx.fillStyle = 'rgba(8,16,32,0.42)';
+  ctx.beginPath(); ctx.ellipse(x + r * 0.16, y + r * 0.3, r * 0.98, r * 0.86, 0, 0, Math.PI * 2); ctx.fill();
   if (e.kind === 'spider') legs(ctx, e, t);
   if (e.kind === 'hedgehog') spikes(ctx, e);
-  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
-  g.addColorStop(0, shade(color, 0.45));
-  g.addColorStop(0.6, color);
-  g.addColorStop(1, shade(color, -0.35));
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
+  g.addColorStop(0, shade(color, 0.5));
+  g.addColorStop(0.55, color);
+  g.addColorStop(1, shade(color, -0.5));
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   if (sk) pattern(ctx, e, sk, t);
   deco(ctx, e, t);
-  face(ctx, e, now);
+  ctx.fillStyle = 'rgba(255,255,255,0.42)';
+  ctx.beginPath(); ctx.ellipse(x - r * 0.33, y - r * 0.42, r * 0.34, r * 0.19, -0.55, 0, Math.PI * 2); ctx.fill();
   if (e.chillUntil > t) { // frost: light chill, or solid ice when frozen
     ctx.fillStyle = e.chillSlow < 0.2 ? 'rgba(200,240,255,0.6)' : 'rgba(150,220,255,0.3)';
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = Math.max(2, r * 0.09);
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+  if (rim) {
+    ctx.save();
+    ctx.strokeStyle = SIDE[e.side];
+    ctx.shadowColor = SIDE[e.side];
+    ctx.shadowBlur = r * 0.4;
+    ctx.lineWidth = Math.max(2, r * 0.085);
+    ctx.beginPath(); ctx.arc(x, y, r - ctx.lineWidth / 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   if (e.shieldUntil > t) { // shell bubble
-    ctx.strokeStyle = `rgba(120,230,100,${0.65 + 0.25 * Math.sin(now * 12)})`;
+    ctx.save();
+    ctx.strokeStyle = `rgba(140,255,150,${0.7 + 0.25 * Math.sin(now * 12)})`;
+    ctx.shadowColor = '#7CFF8A';
+    ctx.shadowBlur = 10;
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(x, y, r * 1.22, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = 'rgba(190,255,170,0.18)';
+    ctx.restore();
+    ctx.fillStyle = 'rgba(140,255,150,0.12)';
     ctx.fill();
   }
   if ((fx.flash[e.id] ?? 0) > now) {
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   }
 }
@@ -560,24 +530,32 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
   }
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
-  for (const e of w.ents) if (!e.dead) hpBar(ctx, e); // bars last, so a ball never covers another's bar
+  for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const s of [0, 1]) { // golden halo: this side's super is ready
     const lead = w.sides[s].meter >= METER.full && w.ents.find(e => e.side === s && !e.dead);
     if (!lead) continue;
-    ctx.strokeStyle = `rgba(255,170,0,${0.65 + 0.35 * Math.sin(now * 10)})`;
-    ctx.lineWidth = 4;
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,204,51,${0.7 + 0.3 * Math.sin(now * 10)})`;
+    ctx.shadowColor = '#FFCC33';
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.arc(lead.x, lead.y, lead.r + 6 + 2 * Math.sin(now * 10), 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
   for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : shuriken(ctx, sh, w.t);
   if (aim != null) aimArrow(ctx, w.ents[0], aim, now);
 
+  ctx.save();
+  ctx.shadowBlur = 14;
   for (const r of fx.rings) {
     r.age += dt;
+    ctx.shadowColor = `rgb(${r.rgb})`;
     const k = Math.min(1, r.age / r.life);
     ctx.strokeStyle = `rgba(${r.rgb},${1 - k})`;
     ctx.lineWidth = r.width * (1 - k) + 1;
     ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (1 + k * (r.grow - 1)), 0, Math.PI * 2); ctx.stroke();
   }
+  ctx.restore();
   fx.rings = fx.rings.filter(r => r.age < r.life);
 
   for (const p of fx.parts) {
@@ -588,12 +566,12 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
     p.vy *= 1 - 3 * dt;
     ctx.globalAlpha = Math.max(0, 1 - p.age / p.life);
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
   }
   ctx.globalAlpha = 1;
   fx.parts = fx.parts.filter(p => p.age < p.life);
 
-  ctx.font = `900 19px ${FONT}`;
+  ctx.font = `italic 900 22px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 5;
@@ -604,7 +582,7 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
     ctx.globalAlpha = Math.max(0, 1 - k * k);
     ctx.strokeStyle = INK;
     ctx.strokeText(f.text, f.x, f.y - k * 30);
-    ctx.fillStyle = f.side === 0 ? '#ff6b81' : '#ffd23f';
+    ctx.fillStyle = '#FF3B3B';
     ctx.fillText(f.text, f.x, f.y - k * 30);
   }
   ctx.globalAlpha = 1;

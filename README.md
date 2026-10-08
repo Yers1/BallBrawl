@@ -46,7 +46,7 @@ Rule: keep every ball's average win rate roughly within **35–65%**. Right now 
 | `src/progress.js` | Trophies, road, skins, quests, daily reward, achievements, old-save migration. Pure functions, covered by tests. |
 | `src/meta.js` | Main menu (lobby: squad, section buttons, road bar, Play) and the pages it opens with a back button: Road, Balls (skins), Quests, Leaders, Profile. |
 | `src/ai.js` | The computer opponent: leading dashes, dodging the train, supers. Gets stronger with level. |
-| `src/render.js` | Drawing: walled arena, balls with faces and HP bars, webs, train, shurikens, sparks, damage numbers, screen shake. |
+| `src/render.js` | Drawing: the bevelled navy arena box, glossy balls with HP in the centre and a glowing team rim, webs, train, shurikens, pixel debris, damage numbers, screen shake. |
 | `src/main.js` | Screens, aiming, game loop, saving, ads. |
 | `src/net.js`, `src/config.js` | Online: Supabase client (anonymous profile, cloud save, ranked matches, leaderboards). |
 | `src/ads.js` | Wrapper around the AdSense Ad Placement API. |
