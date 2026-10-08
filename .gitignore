@@ -1,3 +1,4 @@
 .env.local
 supabase/.temp/
 supabase/.branches/
+dist/

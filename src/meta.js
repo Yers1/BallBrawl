@@ -11,7 +11,7 @@ import {
 import { sfx, confetti } from './sfx.js';
 
 const $ = s => document.querySelector(s);
-const ROW = 92; // px per road node (matches .node-row height)
+const STEP = 128, PAD = 64; // trophy road: px between reward cards, and where 0 trophies sits
 
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
   const { net, leaderboard, redeemCode, deleteProfile } = online;
@@ -56,39 +56,113 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#h-trophies').textContent = save.trophies;
   }
 
-  // ---------- trophy road ----------
+  // ---------- trophy road (horizontal, left → right, like Brawl Stars) ----------
+  const rewardName = n => (n.ball ? ballName(n.ball) : n.skin ? skinName(n.skin[1]) : `+${n.coins}`);
+  const rewardIcon = (n, size) => {
+    if (n.ball) return icon(n.ball, size);
+    if (n.skin) return icon(n.skin[0], size, n.skin[1]);
+    return el('i', 'coin big-coin');
+  };
+
   function road() {
-    const box = $('#road'), until = Math.max(save.maxTrophies + 300, 300);
-    const nodes = pathNodes(until).filter(n => n.at <= until).reverse(); // top = farthest
+    const box = $('#road'), until = Math.max(save.maxTrophies + 400, 400);
+    const nodes = pathNodes(until).filter(n => n.at <= until);
     const ready = new Set(claimable(save).map(n => n.at));
-    const rows = nodes.map((n, i) => {
+    const x = i => PAD + (i + 1) * STEP;
+    const inner = el('div', 'hroad-in');
+    inner.style.width = `${x(nodes.length - 1) + PAD + 30}px`;
+
+    // gold fill up to your trophies, interpolated between the cards around them
+    const xs = [PAD, ...nodes.map((_, i) => x(i))], ats = [0, ...nodes.map(n => n.at)];
+    let k = 0;
+    while (k < ats.length - 1 && ats[k + 1] <= save.trophies) k++;
+    const frac = k < ats.length - 1 ? (save.trophies - ats[k]) / (ats[k + 1] - ats[k]) : 0;
+    const fill = xs[k] + frac * ((xs[k + 1] ?? xs[k]) - xs[k]);
+    const track = el('div', 'track');
+    const bar = el('div', 'track-fill');
+    bar.style.width = `${Math.max(0, fill - 14)}px`;
+    track.append(bar);
+    inner.append(track);
+
+    const tick = (left, at, state) => {
+      const d = el('div', `tick ${state}`, `<i class="trophy"></i>${at}`);
+      d.style.left = `${left}px`;
+      const notch = el('div', `notch ${state}`);
+      notch.style.left = `${left}px`;
+      return [notch, d];
+    };
+    inner.append(...tick(PAD, 0, 'done'));
+    nodes.forEach((n, i) => {
       const state = save.claimed.includes(n.at) ? 'done' : ready.has(n.at) ? 'ready' : 'locked';
-      const row = el('div', `node-row ${i % 2 ? 'alt' : ''}`);
-      const b = el('button', `node ${state}`);
-      if (n.ball) b.append(icon(n.ball, 46));
-      else if (n.skin) b.append(icon(n.skin[0], 46, n.skin[1]));
-      else b.innerHTML = coin(n.coins);
-      if (state === 'ready') b.onclick = () => reward(claim(save, n));
-      const what = n.ball ? ballName(n.ball) : n.skin ? `${skinName(n.skin[1])} · ${ballName(n.skin[0])}` : '';
-      row.append(b, el('div', 'lbl', `<i class="trophy"></i>${n.at}`), el('div', 'what', what));
-      return row;
+      const card = el('button', `rcard ${state} ${n.ball ? 'is-ball' : n.skin ? 'is-skin' : 'is-coins'}`);
+      card.style.left = `${x(i)}px`;
+      card.append(rewardIcon(n, 54), el('span', 'rlabel'));
+      card.lastChild.textContent = rewardName(n);
+      if (state === 'ready') {
+        card.append(el('span', 'rclaim', t('claim')));
+        card.onclick = () => reward(claim(save, n));
+      }
+      if (state === 'done') card.append(el('span', 'rbadge ok', '\u2713'));
+      if (state === 'locked') card.append(el('span', 'rbadge lock', '<svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1v11H6V10zm2 0h6V7a3 3 0 0 0-6 0z"/></svg>'));
+      const stem = el('div', `stem ${state}`);
+      stem.style.left = `${x(i)}px`;
+      inner.append(stem, card, ...tick(x(i), n.at, state));
     });
-    const start = el('div', 'node-row start');
-    start.append(el('div', 'node done', ''), el('div', 'lbl', `<i class="trophy"></i>0`));
-    // the gold fill climbs to your current trophies, interpolated between nodes
-    const asc = [0, ...nodes.map(n => n.at).reverse()];
-    let i = 0;
-    while (i < asc.length - 1 && asc[i + 1] <= save.trophies) i++;
-    const frac = i < asc.length - 1 ? (save.trophies - asc[i]) / (asc[i + 1] - asc[i]) : 0;
-    const fill = (i + frac) * ROW + ROW / 2 - 16;
-    const marker = el('div', 'marker');
-    marker.append(icon(save.avatar, 38, save.skinOf[save.avatar]));
-    box.style.setProperty('--fill', `${Math.max(0, fill)}px`);
-    box.replaceChildren(el('div', 'fill'), ...rows, start, marker);
-    if (tab === 'path') requestAnimationFrame(() => {
-      const body = $('#tab-body');
-      body.scrollTop = box.offsetHeight - fill - body.clientHeight * 0.55;
-    });
+
+    const me = el('div', 'hmarker');
+    me.style.left = `${fill}px`;
+    me.append(icon(save.avatar, 38, save.skinOf[save.avatar]));
+    inner.append(me);
+    box.replaceChildren(inner);
+    if (tab === 'path') requestAnimationFrame(() => { box.scrollLeft = fill - box.clientWidth * 0.4; });
+  }
+
+  // drag the road with the mouse; turn the mouse wheel into sideways scrolling (touch scrolls natively)
+  const roadBox = $('#road');
+  roadBox.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    roadBox.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+  let drag = null;
+  roadBox.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') drag = { x: e.clientX, left: roadBox.scrollLeft, moved: false }; });
+  addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 5) drag.moved = true;
+    roadBox.scrollLeft = drag.left - dx;
+  });
+  addEventListener('pointerup', () => { setTimeout(() => { drag = null; }); });
+  roadBox.addEventListener('click', e => { if (drag?.moved) { e.stopPropagation(); e.preventDefault(); } }, true);
+
+  // the card above the road: your trophies, the next reward and how far it is
+  function pathHero() {
+    const all = pathNodes(save.maxTrophies + 400);
+    const next = all.find(n => n.at > save.trophies);
+    const prev = [...all].reverse().find(n => n.at <= save.trophies)?.at ?? 0;
+    const ready = claimable(save);
+    const hero = $('#path-hero');
+    const p = next ? Math.round(((save.trophies - prev) / (next.at - prev)) * 100) : 100;
+    const nextBox = el('div', 'ph-next');
+    if (next) {
+      nextBox.append(rewardIcon(next, 46));
+      const txt = el('div', 'ph-next-txt');
+      txt.append(el('small', '', t('nextReward')), el('b', ''), el('div', 'ph-bar', `<i style="--p:${p}%"></i>`), el('small', '', t('toNext', { n: next.at - save.trophies })));
+      txt.children[1].textContent = rewardName(next);
+      nextBox.append(txt);
+    }
+    hero.replaceChildren(el('div', 'ph-trophies', `<i class="trophy"></i><b>${save.trophies}</b>`), nextBox);
+    if (ready.length > 1) {
+      const all2 = el('button', 'btn primary sm claim-all', `${t('claimAll')} (${ready.length})`);
+      all2.onclick = () => {
+        const got = ready.map(n => claim(save, n));
+        const coins = got.reduce((s, r) => s + (r?.coins || 0), 0);
+        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || { coins });
+        if (got.length > 1) $('#rw-sub').textContent = t('andMore', { n: got.length - 1 });
+      };
+      hero.append(all2);
+    }
+    $('#path-tips').innerHTML = `<span><i class="trophy"></i>+8 ${t('tipWin')}</span><span><i class="trophy"></i>+9 ${t('tipFlawless')}</span><span>${t('tipKeep')}</span>`;
   }
 
   // ---------- balls & skins ----------
@@ -280,7 +354,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   function render() {
     top();
-    if (tab === 'path') road();
+    if (tab === 'path') { pathHero(); road(); }
     if (tab === 'balls') balls();
     if (tab === 'quests') quests();
     if (tab === 'profile') profile();
