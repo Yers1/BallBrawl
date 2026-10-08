@@ -4,3 +4,4 @@ supabase/.branches/
 dist/
 node_modules/
 .wrangler/
+.vercel/
