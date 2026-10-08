@@ -4,7 +4,7 @@ import { BALLS } from './balls.js';
 export const W = 400, H = 400, R = 30, SPEED = 300, DMG = 10, HIT_CD = 0.3, SUDDEN = 30;
 export const SPAWN = [[90, 310], [310, 90]];
 const JITTER = 0.3; // rad of random spin on each wall bounce
-const TURN = 0.55; // rad/s a ball curves toward its nearest enemy (gentle — strong homing glues balls together)
+const TURN = 0.275; // rad/s a ball curves toward its nearest enemy (halved again: players felt balls glued together)
 export const DASH = { charges: 2, regen: 2.5, time: 0.35, mul: 2.2, dmg: 1.3 };
 export const METER = { full: 100, dealt: 0.9, taken: 0.6 };
 

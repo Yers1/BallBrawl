@@ -2,7 +2,7 @@
 import { createWorld, launch, step, act, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
-import { draw, drawIcon, fitCanvas, resetFx } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout } from './i18n.js';
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
@@ -45,7 +45,7 @@ const S = {
   mode: 'home', // home | squad | aim | fight | ending | result | watch-pick | watch | challenge
   world: null, match: null, demo: false, demoEnd: 0,
   aim: 0, aiming: false, slot: 0,
-  trial: null, pendingTrial: null, tryPlay: null,
+  trial: null, pendingTrial: null, tryPlay: null, info: null, // info = the ball whose description the squad screen shows
   watch: ['leech', 'train'], launchAt: 0, watchDone: false,
   endAt: 0, outcome: null, earned: 0, delta: 0, adAfter: 0,
   ai: null, ais: [], dashed: false, // ai = opponent in a match; ais = both sides in demo / watch
@@ -178,6 +178,7 @@ function goSquad() {
   S.mode = 'squad';
   if (!S.demo) demo();
   S.slot = 0;
+  S.info = null;
   S.tryPlay = null;
   S.nextSeed = newSeed();
   S.opponent = null;
@@ -197,6 +198,7 @@ function goSquad() {
 }
 
 function place(id) {
+  S.info = id;
   save.squad[S.slot] = id;
   S.slot = (S.slot + 1) % 3;
   persist();
@@ -220,31 +222,36 @@ function renderSquad() {
   note.textContent = !net.online ? t('training') : o ? t('vsPlayer', { nick: nickText(o.nick, lang), n: o.trophies }) : t('vsBots');
   note.className = 'squad-note' + (net.online ? ' live' : '');
 
+  const info = S.info ?? save.squad[0]; // what the last tapped ball does
+  $('#s-info').innerHTML = `<b></b> · ${BALLS[info].hp} ${t('hp')}<br><span></span><br><em></em>`;
+  $('#s-info b').textContent = ballName(info);
+  $('#s-info span').textContent = ballAbout(info);
+  $('#s-info em').textContent = `${t('super')} · ${superName(info)}: ${superAbout(info)}`;
+
   $('#s-cards').replaceChildren(...ORDER.map(id => {
-    const d = BALLS[id], ok = has(id);
-    const card = el('div', 'ball-card' + (ok ? '' : ' locked'));
-    const top = el('div', 'top');
-    const head = el('div');
-    head.append(el('div', 'name', ballName(id)), el('div', 'hp', `${d.hp} ${t('hp')}`));
-    top.append(icon(id, 42, save.skinOf[id]), head);
-    const foot = el('div', 'foot-row');
-    if (ok) foot.append(el('span', 'tag', save.owned.includes(id) ? '✓ ' + t('owned') : '★ ' + t('trial')));
+    const d = BALLS[id], ok = has(id), slots = save.squad.map((s, i) => (s === id ? i + 1 : 0)).filter(Boolean);
+    const tile = el('div', 'tile' + (ok ? '' : ' locked') + (id === info ? ' info' : ''));
+    tile.style.setProperty('--c', d.color);
+    if (ok && slots.length) tile.append(el('i', 'pos', slots.join('·')));
+    tile.append(icon(id, 60, save.skinOf[id]), el('b', ''), el('small', ''));
+    tile.children[slots.length && ok ? 2 : 1].textContent = ballName(id);
+    const small = tile.lastChild;
+    if (ok) small.textContent = save.owned.includes(id) ? superName(id) : '★ ' + t('trial');
     else {
-      foot.append(el('span', 'lock', `<i class="trophy"></i>${UNLOCK[id]}`));
+      small.innerHTML = `<i class="trophy"></i>${UNLOCK[id]}`;
       const buy = el('button', 'btn sm primary', `<span class="price"><i class="coin"></i>${d.price}</span>`);
       buy.disabled = save.coins < d.price;
       buy.title = buy.disabled ? t('notEnough') : t('buy');
       buy.onclick = e => { e.stopPropagation(); if (buyBall(save, id)) { sfx.coin(); coinsUI(); place(id); } };
-      foot.append(buy);
+      tile.append(buy);
       if (S.tryPlay && !S.trial) {
-        const tr = el('button', 'btn sm ad', t('try'));
+        const tr = el('button', 'btn sm ad', t('trial'));
         tr.onclick = e => { e.stopPropagation(); S.pendingTrial = id; S.tryPlay(); };
-        foot.append(tr);
+        tile.append(tr);
       }
     }
-    card.append(top, el('p', '', ballAbout(id)), el('p', 'sup', `<b>${t('super')} · ${superName(id)}:</b> ${superAbout(id)}`), foot);
-    if (ok) card.onclick = () => { sfx.click(); place(id); };
-    return card;
+    tile.onclick = () => { sfx.click(); if (ok) place(id); else { S.info = id; renderSquad(); } };
+    return tile;
   }));
 }
 
@@ -304,7 +311,7 @@ function fire() {
 
 const toArena = e => {
   const r = canvas.getBoundingClientRect();
-  return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H];
+  return [((e.clientX - r.left) / r.width) * (W + 2 * M) - M, ((e.clientY - r.top) / r.height) * (H + 2 * M) - M];
 };
 function aimAt(e) {
   const [x, y] = toArena(e), me = S.world.ents[0];
@@ -341,9 +348,9 @@ addEventListener('keydown', e => {
 });
 
 function hud() {
-  const dot = (id, cls = '') => {
-    const d = el('span', 'dot ' + cls);
-    if (id) d.style.background = BALLS[id].color;
+  const dot = (id, cls = '', skin = null) => { // portrait of a squad ball; an empty one marks a lost ball
+    const d = el('span', 'por ' + cls);
+    if (id) d.append(icon(id, cls === 'cur' ? 46 : 34, skin));
     return d;
   };
   const you = $('#hud-you'), foe = $('#hud-foe');
@@ -353,8 +360,8 @@ function hud() {
     return;
   }
   const { a, b } = S.match, dead = n => Array.from({ length: Math.max(0, 3 - n) }, () => dot(null, 'dead'));
-  you.replaceChildren(...dead(a.length), ...a.slice(1).reverse().map(x => dot(x.id)), dot(a[0].id, 'cur'));
-  foe.replaceChildren(dot(b[0].id, 'cur'), ...b.slice(1).map(x => dot(x.id)), ...dead(b.length));
+  you.replaceChildren(...dead(a.length), ...a.slice(1).reverse().map(x => dot(x.id, '', x.skin)), dot(a[0].id, 'cur', a[0].skin));
+  foe.replaceChildren(dot(b[0].id, 'cur', b[0].skin), ...b.slice(1).map(x => dot(x.id, '', x.skin)), ...dead(b.length));
 }
 
 const BOLT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z"/></svg>';
@@ -506,6 +513,9 @@ function showResult() {
   const r = S.outcome, won = r === 0, title = $('#r-title');
   title.textContent = won ? t('win') : r === 'draw' ? t('draw') : t('lose');
   title.className = won ? 'win' : 'lose';
+  const squad = S.challenge ? S.challenge.squad : save.squad;
+  $('#r-squad').replaceChildren(...squad.map((id, i) => icon(id, i ? 60 : 84, save.skinOf[id])));
+  $('#r-squad').classList.toggle('sad', !won);
   const c = S.challenge, box = $('#r-ads');
   box.replaceChildren();
   $('#r-coins').textContent = '+' + S.earned;
@@ -668,12 +678,12 @@ if (lang === 'en') document.title = 'BallBrawl — ball battle';
 for (const n of document.querySelectorAll('[data-t]')) n.textContent = t(n.dataset.t);
 $('#s-back').onclick = () => goHome();
 $('#s-fight').onclick = startMatch;
-$('#r-menu').onclick = () => leaveResult(() => goHome('path'));
+$('#r-menu').onclick = () => leaveResult(() => goHome('lobby'));
 $('#r-share').onclick = () => shareChallenge();
 $('#w-start').onclick = startWatch;
 $('#w-again').onclick = startWatch;
 $('#w-back').onclick = goWatch;
-$('#w-cancel').onclick = () => goHome('balls');
+$('#w-cancel').onclick = () => goHome('lobby');
 $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
@@ -688,7 +698,7 @@ layout();
 coinsUI();
 S.challenge = decodeChallenge(location.hash.slice(1));
 if (location.hash) history.replaceState(null, '', location.pathname + location.search); // tidy URL; a reload won't replay it
-S.challenge ? goChallenge() : goHome('path');
+S.challenge ? goChallenge() : goHome('lobby');
 requestAnimationFrame(frame);
 // Go online in the background; the game is already playable offline.
 setTimeout(async () => {

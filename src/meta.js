@@ -1,4 +1,4 @@
-// Home screen: the trophy road (main tab), the ball collection with skins, quests, and the profile.
+// Home: the lobby (main menu) and the pages it opens — trophy road, balls with skins, quests, leaders, profile.
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
 import { t, lang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
@@ -15,7 +15,7 @@ const STEP = 128, PAD = 64; // trophy road: px between reward cards, and where 0
 
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
   const { net, leaderboard, redeemCode, deleteProfile } = online;
-  let tab = 'path';
+  let tab = 'lobby';
   const coin = n => `<span class="amt"><i class="coin"></i>${n}</span>`;
 
   // ---------- reward popup ----------
@@ -135,14 +135,18 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   addEventListener('pointerup', () => { setTimeout(() => { drag = null; }); });
   roadBox.addEventListener('click', e => { if (drag?.moved) { e.stopPropagation(); e.preventDefault(); } }, true);
 
-  // the card above the road: your trophies, the next reward and how far it is
-  function pathHero() {
+  // the next road reward and how far along the way to it you are (0–100)
+  function nextReward() {
     const all = pathNodes(save.maxTrophies + 400);
     const next = all.find(n => n.at > save.trophies);
     const prev = [...all].reverse().find(n => n.at <= save.trophies)?.at ?? 0;
-    const ready = claimable(save);
+    return { next, p: next ? Math.round(((save.trophies - prev) / (next.at - prev)) * 100) : 100 };
+  }
+
+  // the card above the road: your trophies, the next reward and how far it is
+  function pathHero() {
+    const { next, p } = nextReward(), ready = claimable(save);
     const hero = $('#path-hero');
-    const p = next ? Math.round(((save.trophies - prev) / (next.at - prev)) * 100) : 100;
     const nextBox = el('div', 'ph-next');
     if (next) {
       nextBox.append(rewardIcon(next, 46));
@@ -166,18 +170,15 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   }
 
   // ---------- balls & skins ----------
-  function balls() {
+  function balls() { // character tiles; details and skins open on tap
     $('#b-grid').replaceChildren(...ORDER.map(id => {
-      const own = save.owned.includes(id), d = BALLS[id];
-      const card = el('div', 'ball-card' + (own ? '' : ' locked'));
-      const head = el('div');
-      head.append(el('div', 'name', ballName(id)), el('div', 'hp', `${d.hp} ${t('hp')}`));
-      const topRow = el('div', 'top');
-      topRow.append(icon(id, 42, save.skinOf[id]), head);
-      card.append(topRow, el('p', '', ballAbout(id)));
-      if (!own) card.append(el('div', 'lock', `<i class="trophy"></i>${UNLOCK[id]} · <i class="coin"></i>${d.price}`));
-      card.onclick = () => openBall(id);
-      return card;
+      const own = save.owned.includes(id);
+      const tile = el('button', 'tile' + (own ? '' : ' locked'));
+      tile.style.setProperty('--c', BALLS[id].color);
+      tile.append(icon(id, 72, save.skinOf[id]), el('b', ''), el('small', '', own ? `${BALLS[id].hp} ${t('hp')}` : `<i class="trophy"></i>${UNLOCK[id]}`));
+      tile.children[1].textContent = ballName(id);
+      tile.onclick = () => { sfx.click(); openBall(id); };
+      return tile;
     }));
   }
 
@@ -334,26 +335,38 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       location.reload();
     } catch { toast(t('needNet')); }
   };
-  $('#p-challenge').onclick = onChallenge;
-  $('#b-watch').onclick = onWatch;
+  // ---------- lobby ----------
+  function lobby() {
+    const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
+    $('#l-trio').replaceChildren(icon(l, 72, sk(l)), icon(lead, 128, sk(lead)), icon(r, 72, sk(r)));
+    $('#l-lead').textContent = ballName(lead);
+    const { next, p } = nextReward();
+    $('#l-tr').textContent = save.trophies;
+    $('#l-bar').style.width = p + '%';
+    $('#l-next').replaceChildren(...(next ? [rewardIcon(next, 40)] : []));
+    $('#l-mode').textContent = net.online ? t('modeRanked') : t('modeTraining');
+    $('#l-mode').classList.toggle('live', net.online);
+  }
+  $('#l-squad').onclick = onPlay;
+  $('#l-challenge').onclick = onChallenge;
+  $('#l-watch').onclick = onWatch;
   $('#h-play').onclick = onPlay;
+  $('#sub-back').onclick = () => { sfx.click(); open('lobby'); };
 
-  // ---------- tabs + red dots ----------
+  // ---------- pages + red dots ----------
   function badges() {
     refreshQuests(save, dayKey());
     const questReady = dailyState(save, dayKey()).canClaim
       || save.quests.list.some(q => !q.claimed && q.progress >= questDef(q.id).goal)
       || ACHIEVEMENTS.some(a => !save.achieved.includes(a.id) && achievementValue(save, a) >= a.goal);
     const dots = { path: claimable(save).length > 0, quests: questReady };
-    for (const b of document.querySelectorAll('.tabs button')) {
-      b.classList.toggle('on', b.dataset.tab === tab);
-      b.querySelector('.badge').hidden = !dots[b.dataset.tab];
-    }
+    for (const b of document.querySelectorAll('[data-tab]')) b.querySelector('.badge').hidden = !dots[b.dataset.tab];
   }
-  for (const b of document.querySelectorAll('.tabs button')) b.onclick = () => { sfx.click(); open(b.dataset.tab); };
+  for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sfx.click(); open(b.dataset.tab); };
 
   function render() {
     top();
+    if (tab === 'lobby') lobby();
     if (tab === 'path') { pathHero(); road(); }
     if (tab === 'balls') balls();
     if (tab === 'quests') quests();
@@ -365,6 +378,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   function open(next = tab) {
     tab = next;
     for (const name of ['path', 'balls', 'quests', 'leaders', 'profile']) $('#tab-' + name).hidden = name !== tab;
+    $('#lobby').hidden = tab !== 'lobby';
+    $('#sub').hidden = tab === 'lobby';
+    if (tab !== 'lobby') $('#sub-title').textContent = t('tab' + tab[0].toUpperCase() + tab.slice(1));
     $('#scr-home').hidden = false;
     $('#tab-body').scrollTop = 0;
     render();

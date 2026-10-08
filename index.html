@@ -12,7 +12,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.webmanifest">
   <!-- AdSense H5 Games Ads. Replace the id (also in ads.txt); remove data-adbreak-test once approved.
@@ -54,77 +54,101 @@
 
   <footer class="foot"><a href="privacy.html" data-t="privacy"></a></footer>
 
-  <!-- Home: a page with four tabs. The Road is the main screen. -->
+  <!-- Home: the lobby (main menu) and the pages it opens, each with a back button. -->
   <section id="scr-home" class="page" hidden>
     <div class="page-in">
-      <div class="me">
-        <span id="h-avatar" class="avatar"></span>
-        <div class="me-txt">
-          <b id="h-nick"></b>
-          <span class="trophies"><i class="trophy"></i><span id="h-trophies">0</span></span>
+      <div id="lobby" class="lobby">
+        <div class="me">
+          <span id="h-avatar" class="avatar"></span>
+          <div class="me-txt">
+            <b id="h-nick"></b>
+            <span class="trophies"><i class="trophy"></i><span id="h-trophies">0</span></span>
+          </div>
+        </div>
+        <div class="lobby-mid">
+          <div class="side">
+            <button class="sbtn c-balls" data-tab="balls"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="5"/><circle cx="16.5" cy="8.5" r="4"/></svg></span><span data-t="tabBalls"></span><i class="badge" hidden></i></button>
+            <button class="sbtn c-quests" data-tab="quests"><span class="ic"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3h14v18H5zM8 7h8v2H8zm0 4h8v2H8zm0 4h5v2H8z"/></svg></span><span data-t="tabQuests"></span><i class="badge" hidden></i></button>
+            <button class="sbtn c-leaders" data-tab="leaders"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 21V11h5v10zm6.5 0V4h5v17zM16 21v-7h5v7z"/></svg></span><span data-t="tabLeaders"></span><i class="badge" hidden></i></button>
+          </div>
+          <button id="l-squad" class="showcase" aria-label="squad">
+            <span class="rays"></span>
+            <span id="l-trio" class="trio"></span>
+            <span class="podium"></span>
+            <b id="l-lead" class="sc-name"></b>
+            <small class="sc-sub" data-t="yourSquad"></small>
+          </button>
+          <div class="side">
+            <button class="sbtn c-profile" data-tab="profile"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21a8.5 7 0 0 1 17 0z"/></svg></span><span data-t="tabProfile"></span><i class="badge" hidden></i></button>
+            <button class="sbtn c-friend" id="l-challenge"><span class="ic"><svg viewBox="0 0 24 24"><path d="M22 2 2 9.5l7.5 3L18 6l-6.5 8.5V21l3.5-4.2 4.5 3.2z"/></svg></span><span data-t="duel"></span></button>
+            <button class="sbtn c-watch" id="l-watch"><span class="ic"><svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 5C6.5 5 2.7 9 1.5 12c1.2 3 5 7 10.5 7s9.3-4 10.5-7C21.3 9 17.5 5 12 5zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg></span><span data-t="watchShort"></span></button>
+          </div>
+        </div>
+        <button id="l-road" class="road-bar" data-tab="path">
+          <span class="rb-tr"><i class="trophy"></i><b id="l-tr">0</b></span>
+          <span class="rb-mid"><small data-t="tabPath"></small><span class="rb-bar"><i id="l-bar"></i></span></span>
+          <span id="l-next" class="rb-next"></span>
+          <i class="badge" hidden></i>
+        </button>
+        <div class="play-row">
+          <span id="l-mode" class="mode-chip"></span>
+          <button id="h-play" class="btn primary big play" data-t="play"></button>
         </div>
       </div>
-      <div id="tab-body" class="tab-body">
-        <div id="tab-path" class="tab">
-          <div id="path-hero" class="path-hero"></div>
-          <div id="road" class="hroad" aria-label="trophy road"></div>
-          <div id="path-tips" class="path-tips"></div>
+      <div id="sub" class="sub" hidden>
+        <div class="sub-head">
+          <button id="sub-back" class="back-btn" aria-label="back"><svg viewBox="0 0 24 24"><path d="M10 4 2 12l8 8v-5h12V9H10z"/></svg></button>
+          <h2 id="sub-title"></h2>
         </div>
-        <div id="tab-balls" class="tab" hidden>
-          <button class="btn wide-btn" id="b-watch" data-t="watch"></button>
-          <h3 data-t="collection"></h3>
-          <div id="b-grid" class="cards"></div>
-        </div>
-        <div id="tab-quests" class="tab" hidden>
-          <h3 data-t="dailyTitle"></h3>
-          <div id="q-daily" class="daily"></div>
-          <p id="q-daily-note" class="muted center"></p>
-          <h3 data-t="questsTitle"></h3>
-          <div id="q-list" class="qlist"></div>
-          <h3 data-t="achievementsTitle"></h3>
-          <div id="q-ach" class="qlist"></div>
-        </div>
-        <div id="tab-leaders" class="tab" hidden>
-          <div class="seg">
-            <button id="l-all" class="on" data-t="allTime"></button>
-            <button id="l-week" data-t="thisWeek"></button>
+        <div id="tab-body" class="tab-body">
+          <div id="tab-path" class="tab">
+            <div id="path-hero" class="path-hero"></div>
+            <div id="road" class="hroad" aria-label="trophy road"></div>
+            <div id="path-tips" class="path-tips"></div>
           </div>
-          <p id="l-note" class="muted center"></p>
-          <div id="l-list" class="llist"></div>
-        </div>
-        <div id="tab-profile" class="tab" hidden>
-          <div class="nick-row big-nick">
-            <span id="p-nick" class="nick"></span>
-            <button id="p-renick" class="icon-btn sm" aria-label="new nickname">&#x1F3B2;</button>
+          <div id="tab-balls" class="tab" hidden>
+            <div id="b-grid" class="tiles"></div>
           </div>
-          <h3 data-t="avatarTitle"></h3>
-          <div id="p-avatars" class="pick-row"></div>
-          <h3 data-t="statsTitle"></h3>
-          <div id="p-stats" class="stats"></div>
-          <button class="btn wide-btn" id="p-challenge" data-t="challengeFriend"></button>
-          <div id="p-online">
-            <h3 data-t="codeTitle"></h3>
-            <div class="code-box"><b id="p-code"></b><button id="p-copy" class="btn sm" data-t="copy"></button></div>
-            <p class="muted" data-t="codeHint"></p>
-            <div class="row">
-              <input id="p-code-in" class="code-in" maxlength="8" placeholder="XXXXXXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="code">
-              <button id="p-redeem" class="btn sm primary" data-t="redeem"></button>
+          <div id="tab-quests" class="tab" hidden>
+            <h3 data-t="dailyTitle"></h3>
+            <div id="q-daily" class="daily"></div>
+            <p id="q-daily-note" class="muted center"></p>
+            <h3 data-t="questsTitle"></h3>
+            <div id="q-list" class="qlist"></div>
+            <h3 data-t="achievementsTitle"></h3>
+            <div id="q-ach" class="qlist"></div>
+          </div>
+          <div id="tab-leaders" class="tab" hidden>
+            <div class="seg">
+              <button id="l-all" class="on" data-t="allTime"></button>
+              <button id="l-week" data-t="thisWeek"></button>
             </div>
-            <button class="btn ghost danger wide-btn" id="p-delete" data-t="deleteProfile"></button>
+            <p id="l-note" class="muted center"></p>
+            <div id="l-list" class="llist"></div>
           </div>
-          <p id="p-offline" class="muted center" data-t="needNet" hidden></p>
-          <p class="center"><a href="privacy.html" data-t="privacy"></a></p>
+          <div id="tab-profile" class="tab" hidden>
+            <div class="nick-row big-nick">
+              <span id="p-nick" class="nick"></span>
+              <button id="p-renick" class="icon-btn sm" aria-label="new nickname">&#x1F3B2;</button>
+            </div>
+            <h3 data-t="avatarTitle"></h3>
+            <div id="p-avatars" class="pick-row"></div>
+            <h3 data-t="statsTitle"></h3>
+            <div id="p-stats" class="stats"></div>
+            <div id="p-online">
+              <h3 data-t="codeTitle"></h3>
+              <div class="code-box"><b id="p-code"></b><button id="p-copy" class="btn sm" data-t="copy"></button></div>
+              <p class="muted" data-t="codeHint"></p>
+              <div class="row">
+                <input id="p-code-in" class="code-in" maxlength="8" placeholder="XXXXXXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="code">
+                <button id="p-redeem" class="btn sm primary" data-t="redeem"></button>
+              </div>
+              <button class="btn ghost danger wide-btn" id="p-delete" data-t="deleteProfile"></button>
+            </div>
+            <p id="p-offline" class="muted center" data-t="needNet" hidden></p>
+            <p class="center"><a href="privacy.html" data-t="privacy"></a></p>
+          </div>
         </div>
-      </div>
-      <div class="home-bottom">
-        <button id="h-play" class="btn primary big play" data-t="fightNow"></button>
-        <nav class="tabs">
-          <button data-tab="path"><svg viewBox="0 0 24 24"><path d="M12 2c-3 3-5 6-5 9a5 5 0 0 0 10 0c0-3-2-6-5-9Zm-1 18h2v2h-2zM7 18h10v1H7z"/></svg><span data-t="tabPath"></span><i class="badge" hidden></i></button>
-          <button data-tab="balls"><svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="5"/><circle cx="16.5" cy="8.5" r="4"/></svg><span data-t="tabBalls"></span><i class="badge" hidden></i></button>
-          <button data-tab="quests"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zM8 7h8v2H8zm0 4h8v2H8zm0 4h5v2H8z"/></svg><span data-t="tabQuests"></span><i class="badge" hidden></i></button>
-          <button data-tab="leaders"><svg viewBox="0 0 24 24"><path d="M3 21V11h5v10zm6.5 0V4h5v17zM16 21v-7h5v7z"/></svg><span data-t="tabLeaders"></span><i class="badge" hidden></i></button>
-          <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21a8.5 7 0 0 1 17 0z"/></svg><span data-t="tabProfile"></span><i class="badge" hidden></i></button>
-        </nav>
       </div>
     </div>
   </section>
@@ -168,7 +192,8 @@
       </div>
       <p id="s-note" class="squad-note"></p>
       <p class="muted" data-t="squadHint"></p>
-      <div id="s-cards" class="cards"></div>
+      <p id="s-info" class="s-info"></p>
+      <div id="s-cards" class="tiles"></div>
       <div class="row sticky">
         <button class="btn ghost" id="s-back" data-t="back"></button>
         <button class="btn primary grow" id="s-fight" data-t="fight"></button>
@@ -178,6 +203,7 @@
 
   <section id="scr-result" class="overlay" hidden>
     <div class="card result">
+      <div id="r-squad" class="trio"></div>
       <h2 id="r-title"></h2>
       <p id="r-sub" class="muted"></p>
       <div id="r-trophies" class="trophy-line" hidden></div>
@@ -186,7 +212,7 @@
       <div id="r-ads" class="col"></div>
       <button class="btn share" id="r-share" data-t="challengeFriend" hidden></button>
       <div class="row">
-        <button class="btn ghost" id="r-menu" data-t="tabPath"></button>
+        <button class="btn ghost" id="r-menu" data-t="menu"></button>
         <button class="btn primary grow" id="r-next"></button>
       </div>
     </div>
