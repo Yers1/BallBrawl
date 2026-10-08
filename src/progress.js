@@ -37,6 +37,9 @@ export function freshSave() {
     claimed: [], skins: [], skinOf: {},
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
+    // cloud bookkeeping
+    profileId: null, savedAt: 0, codeShown: false,
+    pendingFinish: null, // a ranked result the server hasn't confirmed yet: { match, result, flawless }
   };
 }
 
@@ -65,6 +68,12 @@ export function migrate(raw) {
   if (r.daily && (r.daily.last === null || typeof r.daily.last === 'string')) s.daily = { last: r.daily.last, streak: int(r.daily.streak) ?? 0 };
   s.achieved = list(r.achieved, id => ACHIEVEMENTS.some(a => a.id === id));
   for (const k of Object.keys(s.stats)) s.stats[k] = int(r.stats?.[k]) ?? 0;
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  if (uuid.test(r.profileId)) s.profileId = r.profileId;
+  s.savedAt = int(r.savedAt, 0, 1e13) ?? 0;
+  s.codeShown = r.codeShown === true;
+  const pf = r.pendingFinish;
+  if (pf && uuid.test(pf.match) && ['won', 'lost', 'draw'].includes(pf.result)) s.pendingFinish = { match: pf.match, result: pf.result, flawless: pf.flawless === true };
   return s;
 }
 
@@ -223,4 +232,34 @@ export function buyBall(s, id) {
   s.coins -= BALLS[id].price;
   s.owned.push(id);
   return true;
+}
+
+// ---------- cloud merge ----------
+// Combine this device's save with the cloud copy without losing anything: collections are unioned,
+// counters take the larger value, today's quests keep the best progress. Trophies always come from the server.
+const dayNum = key => (key ? new Date(...key.split('-').map((v, i) => (i === 1 ? v - 1 : +v))).getTime() : 0);
+export function mergeSave(local, cloudRaw, server) {
+  const cloud = migrate(cloudRaw), s = migrate(local);
+  const union = (a, b) => [...new Set([...a, ...b])];
+  s.coins = Math.max(s.coins, cloud.coins);
+  s.owned = union(s.owned, cloud.owned);
+  s.skins = union(s.skins, cloud.skins);
+  s.claimed = union(s.claimed, cloud.claimed);
+  s.achieved = union(s.achieved, cloud.achieved);
+  s.created = union(s.created, cloud.created).slice(-100);
+  s.answered = union(s.answered, cloud.answered).slice(-100);
+  s.matches = Math.max(s.matches, cloud.matches);
+  for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);
+  for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;
+  if (dayNum(cloud.quests.day) > dayNum(s.quests.day)) s.quests = cloud.quests;
+  else if (cloud.quests.day === s.quests.day) {
+    for (const q of s.quests.list) {
+      const c = cloud.quests.list.find(x => x.id === q.id);
+      if (c) { q.progress = Math.max(q.progress, c.progress); q.claimed ||= c.claimed; }
+    }
+  }
+  if (dayNum(cloud.daily.last) > dayNum(s.daily.last)) s.daily = cloud.daily;
+  s.trophies = server.trophies;
+  s.maxTrophies = Math.max(server.max_trophies, server.trophies);
+  return s;
 }

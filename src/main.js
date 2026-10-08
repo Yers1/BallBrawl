@@ -10,10 +10,12 @@ import { randomNick, nickText } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx } from './sfx.js';
 import {
-  migrate, applyResult, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall,
+  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss,
   claimable, pathNodes, track, dayKey, refreshQuests,
 } from './progress.js';
 import { createHome } from './meta.js';
+import * as online from './net.js';
+const { net } = online;
 
 const $ = s => document.querySelector(s);
 const el = (tag, cls = '', html) => {
@@ -32,7 +34,11 @@ try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* corrupt 
 const save = migrate(raw);
 save.nick ??= randomNick();
 refreshQuests(save, dayKey());
-const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* private mode */ } };
+const persist = () => {
+  save.savedAt = Date.now();
+  try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* private mode */ }
+  online.queueSync(save);
+};
 
 // ---------- state ----------
 const S = {
@@ -47,6 +53,9 @@ const S = {
   challenge: null, // decoded friend challenge while playing one
   nextSeed: 1, // the next match's seed, fixed when you open the squad screen so its preview is the real fight
   ms: { dashes: 0, supers: 0, kills: 0 }, // this match's stats, for quests
+  opponent: null, // a real player's squad from the server (null = computer squad)
+  ranked: false, matchId: null, matchStart: 0, // ranked = online match whose trophies the server decides
+  settleLater: false, // a loss waits for the revive offer before it's reported
 };
 
 const canvas = $('#arena'), ctx = canvas.getContext('2d');
@@ -105,6 +114,7 @@ async function shareChallenge(reply = null) {
   save.created = [...save.created, seed].slice(-100);
   track(save, { challenges: 1 });
   persist();
+  online.logEvent('challenge_created');
   const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}c/#${encodeChallenge({ squad: save.squad, seed, nick: save.nick, level: aiLevel(save.trophies), reply })}`;
   const text = t('shareText', { nick: myNick() });
   try {
@@ -142,7 +152,7 @@ function startChallenge() {
 
 // ---------- home ----------
 const home = createHome({
-  save, persist, el, icon, coinsUI,
+  save, persist, el, icon, coinsUI, toast, online,
   onPlay: () => goSquad(),
   onWatch: () => goWatch(),
   onChallenge: () => shareChallenge(),
@@ -154,6 +164,11 @@ function goHome(tab) {
   if (!S.demo) demo();
   show(null);
   home.open(tab);
+  if (net.online && net.code && !save.codeShown && save.stats.wins > 0) { // once: keep your transfer code
+    save.codeShown = true;
+    persist();
+    home.showCode();
+  }
 }
 
 // ---------- squad & shop ----------
@@ -165,8 +180,15 @@ function goSquad() {
   S.slot = 0;
   S.tryPlay = null;
   S.nextSeed = newSeed();
+  S.opponent = null;
   show('squad');
   renderSquad();
+  const seed = S.nextSeed;
+  if (net.online) online.findOpponent().then(o => {
+    if (S.mode !== 'squad' || seed !== S.nextSeed || !o || !Array.isArray(o.squad) || o.squad.length !== 3 || !o.squad.every(id => BALLS[id])) return;
+    S.opponent = o;
+    renderSquad();
+  }).catch(() => {});
   if (!S.trial) offerReward('try-ball', {
     onAvailable: play => { S.tryPlay = play; renderSquad(); },
     onReward: () => { S.trial = S.pendingTrial; place(S.trial); },
@@ -191,9 +213,12 @@ function renderSquad() {
     return b;
   }));
 
-  const mul = enemyHpMulFor(save.trophies);
-  $('#s-enemy').replaceChildren(...enemySquadFor(save.trophies, rng(S.nextSeed)).map(id => icon(id, 34)));
+  const mul = enemyHpMulFor(save.trophies), o = S.opponent;
+  $('#s-enemy').replaceChildren(...enemySquad().map(id => icon(id, 34, o?.skins?.[id] ?? null)));
   $('#scr-squad .enemy small').textContent = t('enemy') + (mul > 1 ? ` · HP ×${mul.toFixed(2).replace(/0$/, '')}` : '');
+  const note = $('#s-note');
+  note.textContent = !net.online ? t('training') : o ? t('vsPlayer', { nick: nickText(o.nick, lang), n: o.trophies }) : t('vsBots');
+  note.className = 'squad-note' + (net.online ? ' live' : '');
 
   $('#s-cards').replaceChildren(...ORDER.map(id => {
     const d = BALLS[id], ok = has(id);
@@ -224,14 +249,27 @@ function renderSquad() {
 }
 
 // ---------- battle ----------
-function startMatch() {
+const enemySquad = () => (S.opponent ? S.opponent.squad : enemySquadFor(save.trophies, rng(S.nextSeed)));
+
+async function startMatch() {
+  if (S.mode !== 'squad') return;
   cancelReward();
+  S.mode = 'starting';
+  $('#s-fight').disabled = $('#s-back').disabled = true; // leaving now would orphan a server match (= a loss)
+  S.matchId = null;
+  if (net.online) {
+    try { S.matchId = await online.startMatch(S.opponent?.id); } catch { /* server unreachable: this one is training */ }
+  }
+  $('#s-fight').disabled = $('#s-back').disabled = false;
+  S.ranked = !!S.matchId;
+  S.matchStart = Date.now();
   S.match = createMatch({
     squadA: [...save.squad],
-    squadB: enemySquadFor(save.trophies, rng(S.nextSeed)),
+    squadB: enemySquad(), // a real player's squad is still piloted by the AI, at your trophies' difficulty
     hpMulB: enemyHpMulFor(save.trophies),
     seed: S.nextSeed,
     skinsA: save.skinOf,
+    skinsB: S.opponent?.skins ?? {},
   });
   S.aiLevel = aiLevel(save.trophies);
   beginMatch();
@@ -387,13 +425,19 @@ function finishMatch(r) {
   const flawless = won && S.match.a.length === 3 && !S.match.revived; // not a single ball lost
   S.outcome = r;
   S.delta = 0;
+  S.settleLater = false;
   if (c) { // challenges: no trophies; a one-time bonus, never for your own links
     const fresh = !save.created.includes(c.seed) && !save.answered.includes(c.seed);
     S.earned = fresh ? CHALLENGE_BONUS : 0;
     if (fresh) save.answered = [...save.answered, c.seed].slice(-100);
   } else {
-    S.delta = applyResult(save, r, flawless);
     S.earned = won ? winCoinsFor(before) : LOSE_COINS;
+    if (S.ranked) { // the server decides; show the expected change until it answers
+      S.delta = won ? 8 + (flawless ? 1 : 0) : r === 1 ? -Math.min(save.trophies, trophyLoss(save.trophies)) : 0;
+      save.pendingFinish = { match: S.matchId, result: won ? 'won' : r === 1 ? 'lost' : 'draw', flawless };
+      S.settleLater = r === 1 && !S.match.revived; // a revive may still turn this loss around
+      if (!S.settleLater) settle();
+    }
   }
   save.coins += S.earned;
   save.matches++;
@@ -404,6 +448,45 @@ function finishMatch(r) {
   S.mode = 'result';
   won ? sfx.win() : sfx.lose();
   showResult();
+}
+
+// Trophies on the result screen: the server's number once it answers, the expected one before that.
+function trophyLine() {
+  if (S.mode !== 'result' || S.challenge) return;
+  if (!S.ranked) {
+    $('#r-trophies').hidden = true;
+    $('#r-sub').textContent = t('training');
+    return;
+  }
+  const d = S.delta, shown = save.pendingFinish ? save.trophies + d : save.trophies;
+  $('#r-trophies').hidden = false;
+  $('#r-trophies').innerHTML = `<i class="trophy" style="width:26px;height:26px"></i>${shown} <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}</span>`;
+  const next = pathNodes(save.maxTrophies).find(n => n.at > shown);
+  $('#r-sub').textContent = next ? t('toNext', { n: next.at - shown }) : '';
+  const ready = claimable(save).length > 0;
+  $('#r-reward').hidden = !ready;
+  if (ready) $('#r-reward').textContent = t('rewardWaiting');
+}
+
+// Report a ranked result. The server refuses anything under 15 s, so short matches wait a moment;
+// if the network fails, pendingFinish stays in the save and is retried on the next connect.
+async function settle() {
+  const pending = save.pendingFinish;
+  if (!pending) return;
+  persist();
+  const wait = 16000 - (Date.now() - S.matchStart);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  try {
+    const r = await online.finishMatch(pending);
+    if (save.pendingFinish !== pending) return;
+    save.pendingFinish = null;
+    save.trophies = r.trophies;
+    save.maxTrophies = Math.max(save.maxTrophies, r.max_trophies);
+    S.delta = r.delta;
+    persist();
+    trophyLine();
+    if (S.mode === 'home') home.render();
+  } catch { /* stays pending */ }
 }
 
 function showResult() {
@@ -424,11 +507,7 @@ function showResult() {
     show('result');
     return;
   }
-  const d = S.delta;
-  $('#r-trophies').innerHTML = `<i class="trophy" style="width:26px;height:26px"></i>${save.trophies} <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}</span>`;
-  const next = pathNodes(save.maxTrophies).find(n => n.at > save.trophies);
-  $('#r-sub').textContent = next ? t('toNext', { n: next.at - save.trophies }) : '';
-  if (claimable(save).length) { $('#r-reward').textContent = t('rewardWaiting'); $('#r-reward').hidden = false; }
+  trophyLine();
   $('#r-next').textContent = won ? t('next') : t('retry');
   $('#r-next').onclick = () => leaveResult(goSquad);
   $('#r-share').hidden = !won;
@@ -451,8 +530,9 @@ function showResult() {
     $('#r-coins').textContent = '+' + S.earned;
   });
   else if (r === 1 && !S.match.revived) offer('revive', t('revive'), () => {
-    // the match isn't over after all: take back what the loss changed
-    save.trophies -= S.delta;
+    // the match isn't over after all: take back what the loss changed (trophies weren't reported yet)
+    save.pendingFinish = null;
+    S.settleLater = false;
     save.coins -= LOSE_COINS;
     save.matches--;
     save.stats.matches--;
@@ -465,6 +545,7 @@ function showResult() {
 
 async function leaveResult(next) {
   cancelReward();
+  if (S.settleLater) { S.settleLater = false; settle(); } // the revive wasn't taken: report the loss
   if (S.trial) { // trial balls go back after one match
     S.trial = null;
     save.squad = save.squad.map(id => (save.owned.includes(id) ? id : 'basic'));
@@ -596,4 +677,15 @@ S.challenge = decodeChallenge(location.hash.slice(1));
 if (location.hash) history.replaceState(null, '', location.pathname + location.search); // tidy URL; a reload won't replay it
 S.challenge ? goChallenge() : goHome('path');
 requestAnimationFrame(frame);
+// Go online in the background; the game is already playable offline.
+setTimeout(async () => {
+  const { save: merged, moved } = await online.connect(save);
+  for (const k of Object.keys(save)) delete save[k];
+  Object.assign(save, merged);
+  persist();
+  coinsUI();
+  if (moved) toast(t('moved'));
+  if (S.mode === 'home') home.render();
+  if (S.mode === 'squad') renderSquad();
+}, 300);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is a bonus */ });

@@ -2,7 +2,7 @@
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
 import { t, lang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
-import { nickText, randomNick } from './nick.js';
+import { nickText, randomNick, validNick } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, SKIN_PRICE, hasSkin, buySkin, equipSkin, buyBall,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
@@ -13,7 +13,8 @@ import { sfx } from './sfx.js';
 const $ = s => document.querySelector(s);
 const ROW = 92; // px per road node (matches .node-row height)
 
-export function createHome({ save, persist, el, icon, coinsUI, onPlay, onWatch, onChallenge }) {
+export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
+  const { net, leaderboard, redeemCode, deleteProfile } = online;
   let tab = 'path';
   const coin = n => `<span class="amt"><i class="coin"></i>${n}</span>`;
 
@@ -186,6 +187,36 @@ export function createHome({ save, persist, el, icon, coinsUI, onPlay, onWatch, 
       row(achievementName(a.id), achievementValue(save, a), a.goal, a.coins, save.achieved.includes(a.id), () => reward({ coins: claimAchievement(save, a.id) }))));
   }
 
+  // ---------- leaderboards ----------
+  let week = false, lbReq = 0;
+  async function leaders() {
+    $('#l-all').classList.toggle('on', !week);
+    $('#l-week').classList.toggle('on', week);
+    const list = $('#l-list'), note = $('#l-note');
+    if (!net.online) { list.replaceChildren(); note.textContent = t('needNet'); return; }
+    note.textContent = t('loading');
+    const my = ++lbReq;
+    try {
+      const data = await leaderboard(week);
+      if (my !== lbReq) return; // a newer request (tab switch) won
+      const rows = Array.isArray(data?.top) ? data.top : [];
+      note.textContent = rows.length ? (data.me ? t('yourRank', { n: data.me.rank }) : '') : t('emptyBoard');
+      list.replaceChildren(...rows.map(r => {
+        const row = el('div', `lrow ${r.me ? 'me' : ''} ${r.rank <= 3 ? 'top' + r.rank : ''}`);
+        const name = el('div', 'nm');
+        name.textContent = validNick(r.nick) ? nickText(r.nick, lang) : '???'; // never trust text from the network
+        const ball = BALLS[r.avatar] ? r.avatar : 'basic', skin = SKINS[r.skin] ? r.skin : null;
+        row.append(el('div', 'rk', String(Number(r.rank) || '')), icon(ball, 32, skin), name,
+          el('div', 'sc', `<i class="trophy"></i>${Number(r.score) || 0}`));
+        return row;
+      }));
+    } catch {
+      if (my === lbReq) note.textContent = t('needNet');
+    }
+  }
+  $('#l-all').onclick = () => { week = false; leaders(); };
+  $('#l-week').onclick = () => { week = true; leaders(); };
+
   // ---------- profile ----------
   function profile() {
     $('#p-nick').textContent = nickText(save.nick, lang);
@@ -195,6 +226,9 @@ export function createHome({ save, persist, el, icon, coinsUI, onPlay, onWatch, 
       b.onclick = () => { save.avatar = id; persist(); render(); };
       return b;
     }));
+    $('#p-online').hidden = !net.online;
+    $('#p-offline').hidden = net.online;
+    $('#p-code').textContent = net.code || '\u2014';
     const s = save.stats, rate = s.matches ? Math.round((s.wins / s.matches) * 100) : 0;
     $('#p-stats').replaceChildren(...[
       [s.matches, 'statMatches'], [s.wins, 'statWins'], [rate, 'statWinrate'],
@@ -202,6 +236,29 @@ export function createHome({ save, persist, el, icon, coinsUI, onPlay, onWatch, 
     ].map(([v, k]) => el('div', 'stat', `<b>${v}</b><small>${t(k)}</small>`)));
   }
   $('#p-renick').onclick = () => { save.nick = randomNick(); persist(); sfx.click(); render(); };
+  $('#p-copy').onclick = () => navigator.clipboard?.writeText(net.code || '').then(() => toast(t('copied')), () => {});
+  $('#p-redeem').onclick = async () => {
+    const code = $('#p-code-in').value.trim().toUpperCase();
+    if (!/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(code)) return toast(t('codeWrong'));
+    try {
+      const r = await redeemCode(code);
+      if (!r?.id) return toast(t('codeWrong'));
+      save.profileId = r.id; // pulls that profile's cloud save on the reload
+      persist();
+      toast(t('codeDone'));
+      setTimeout(() => location.reload(), 900);
+    } catch (e) {
+      toast(/too many/.test(e?.message) ? t('codeTooMany') : t('needNet'));
+    }
+  };
+  $('#p-delete').onclick = async () => {
+    if (!confirm(t('deleteConfirm'))) return;
+    try {
+      await deleteProfile();
+      try { localStorage.removeItem('ballbrawl.v1'); } catch { /* blocked storage */ }
+      location.reload();
+    } catch { toast(t('needNet')); }
+  };
   $('#p-challenge').onclick = onChallenge;
   $('#b-watch').onclick = onWatch;
   $('#h-play').onclick = onPlay;
@@ -226,16 +283,28 @@ export function createHome({ save, persist, el, icon, coinsUI, onPlay, onWatch, 
     if (tab === 'balls') balls();
     if (tab === 'quests') quests();
     if (tab === 'profile') profile();
+    if (tab === 'leaders') leaders();
     badges();
   }
 
   function open(next = tab) {
     tab = next;
-    for (const name of ['path', 'balls', 'quests', 'profile']) $('#tab-' + name).hidden = name !== tab;
+    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile']) $('#tab-' + name).hidden = name !== tab;
     $('#scr-home').hidden = false;
     $('#tab-body').scrollTop = 0;
     render();
   }
 
-  return { open, render, hide: () => { $('#scr-home').hidden = true; }, hasReward: () => claimable(save).length > 0 };
+  // Once, after the first online win: make sure the player keeps their transfer code.
+  function showCode() {
+    const hero = $('#rw-icon');
+    hero.className = 'ball-hero pop';
+    hero.replaceChildren(el('div', 'code-hero'));
+    hero.firstChild.textContent = net.code;
+    $('#rw-text').textContent = t('saveCodeTitle');
+    $('#rw-sub').textContent = t('saveCodeSub');
+    $('#scr-reward').hidden = false;
+  }
+
+  return { open, render, showCode, hide: () => { $('#scr-home').hidden = true; } };
 }

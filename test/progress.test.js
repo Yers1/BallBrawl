@@ -132,3 +132,22 @@ test('balls can also be bought early, at a fixed price', async () => {
   assert.equal(buyBall(s, 'train'), false, 'once');
   assert.equal(buyBall(s, 'ice'), false, 'not without coins');
 });
+
+test('cloud merge keeps everything from both sides, trophies from the server', async () => {
+  const { mergeSave } = await import('../src/progress.js');
+  const local = { ...freshSave(), coins: 50, owned: ['basic', 'train'], claimed: [10], trophies: 999, stats: { ...freshSave().stats, wins: 3 },
+    quests: { day: '2026-10-8', list: [{ id: 'win3', progress: 1, claimed: false }] } };
+  const cloud = { ...freshSave(), coins: 80, owned: ['basic', 'ice'], claimed: [20], skins: ['ice:gold'], stats: { ...freshSave().stats, wins: 5 },
+    quests: { day: '2026-10-8', list: [{ id: 'win3', progress: 3, claimed: true }] } };
+  const m = mergeSave(local, cloud, { trophies: 120, max_trophies: 150 });
+  assert.equal(m.coins, 80);
+  assert.deepEqual(m.owned.sort(), ['basic', 'ice', 'train']);
+  assert.deepEqual(m.claimed.sort(), [10, 20]);
+  assert.deepEqual(m.skins, ['ice:gold']);
+  assert.equal(m.stats.wins, 5);
+  assert.deepEqual(m.quests.list[0], { id: 'win3', progress: 3, claimed: true });
+  assert.equal(m.trophies, 120, 'the server owns trophies');
+  assert.equal(m.maxTrophies, 150);
+  const newer = mergeSave(local, { ...cloud, quests: { day: '2026-10-10', list: [] } }, { trophies: 0, max_trophies: 0 });
+  assert.equal(newer.quests.day, '2026-10-10', '10 > 8 even though "10" < "8" as text');
+});

@@ -16,9 +16,10 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.webmanifest">
   <!-- AdSense H5 Games Ads. Replace the id (also in ads.txt); remove data-adbreak-test once approved.
-       Kids' game: child-directed + under-age-of-consent tags keep every ad non-personalized. -->
+       Kids' game: the age-treatment tag keeps every ad non-personalized (it replaces the deprecated
+       child-directed / under-age-of-consent tags — adsbygoogle.js itself says so in the console). -->
   <script async data-ad-client="ca-pub-0000000000000000" data-adbreak-test="on"
-    data-tag-for-child-directed-treatment="1" data-tag-for-under-age-of-consent="1" data-ad-frequency-hint="90s"
+    data-tag-for-age-treatment="1" data-ad-frequency-hint="90s"
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -79,6 +80,14 @@
           <h3 data-t="achievementsTitle"></h3>
           <div id="q-ach" class="qlist"></div>
         </div>
+        <div id="tab-leaders" class="tab" hidden>
+          <div class="seg">
+            <button id="l-all" class="on" data-t="allTime"></button>
+            <button id="l-week" data-t="thisWeek"></button>
+          </div>
+          <p id="l-note" class="muted center"></p>
+          <div id="l-list" class="llist"></div>
+        </div>
         <div id="tab-profile" class="tab" hidden>
           <div class="nick-row big-nick">
             <span id="p-nick" class="nick"></span>
@@ -89,6 +98,17 @@
           <h3 data-t="statsTitle"></h3>
           <div id="p-stats" class="stats"></div>
           <button class="btn wide-btn" id="p-challenge" data-t="challengeFriend"></button>
+          <div id="p-online">
+            <h3 data-t="codeTitle"></h3>
+            <div class="code-box"><b id="p-code"></b><button id="p-copy" class="btn sm" data-t="copy"></button></div>
+            <p class="muted" data-t="codeHint"></p>
+            <div class="row">
+              <input id="p-code-in" class="code-in" maxlength="8" placeholder="XXXXXXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="code">
+              <button id="p-redeem" class="btn sm primary" data-t="redeem"></button>
+            </div>
+            <button class="btn ghost danger wide-btn" id="p-delete" data-t="deleteProfile"></button>
+          </div>
+          <p id="p-offline" class="muted center" data-t="needNet" hidden></p>
           <p class="center"><a href="privacy.html" data-t="privacy"></a></p>
         </div>
       </div>
@@ -98,6 +118,7 @@
           <button data-tab="path"><svg viewBox="0 0 24 24"><path d="M12 2c-3 3-5 6-5 9a5 5 0 0 0 10 0c0-3-2-6-5-9Zm-1 18h2v2h-2zM7 18h10v1H7z"/></svg><span data-t="tabPath"></span><i class="badge" hidden></i></button>
           <button data-tab="balls"><svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="5"/><circle cx="16.5" cy="8.5" r="4"/></svg><span data-t="tabBalls"></span><i class="badge" hidden></i></button>
           <button data-tab="quests"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zM8 7h8v2H8zm0 4h8v2H8zm0 4h5v2H8z"/></svg><span data-t="tabQuests"></span><i class="badge" hidden></i></button>
+          <button data-tab="leaders"><svg viewBox="0 0 24 24"><path d="M3 21V11h5v10zm6.5 0V4h5v17zM16 21v-7h5v7z"/></svg><span data-t="tabLeaders"></span><i class="badge" hidden></i></button>
           <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21a8.5 7 0 0 1 17 0z"/></svg><span data-t="tabProfile"></span><i class="badge" hidden></i></button>
         </nav>
       </div>
@@ -141,6 +162,7 @@
           <div id="s-enemy" class="mini-row"></div>
         </div>
       </div>
+      <p id="s-note" class="squad-note"></p>
       <p class="muted" data-t="squadHint"></p>
       <div id="s-cards" class="cards"></div>
       <div class="row sticky">
