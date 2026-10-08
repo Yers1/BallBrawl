@@ -1,0 +1,11 @@
+{
+  "name": "BallBrawl",
+  "short_name": "BallBrawl",
+  "description": "Balls with superpowers fight in an arena.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1222",
+  "theme_color": "#0b1222",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

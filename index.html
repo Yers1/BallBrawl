@@ -14,14 +14,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <!-- AdSense H5 Games Ads. Replace the id (also in ads.txt); remove data-adbreak-test once approved. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <!-- AdSense H5 Games Ads. Replace the id (also in ads.txt); remove data-adbreak-test once approved.
+       Kids' game: child-directed + under-age-of-consent tags keep every ad non-personalized. -->
   <script async data-ad-client="ca-pub-0000000000000000" data-adbreak-test="on"
+    data-tag-for-child-directed-treatment="1" data-tag-for-under-age-of-consent="1" data-ad-frequency-hint="90s"
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <header class="bar">
     <div class="brand">Ball<b>Brawl</b></div>
-    <div class="pill" title="coins"><i class="coin"></i><span id="coins">0</span></div>
+    <div class="row">
+      <button id="mute" class="icon-btn" aria-label="sound"></button>
+      <div class="pill" title="coins"><i class="coin"></i><span id="coins">0</span></div>
+    </div>
   </header>
 
   <main class="stage">
@@ -51,8 +57,13 @@
     <div class="card menu">
       <h1 class="logo">Ball<span>Brawl</span></h1>
       <p class="tagline" data-t="tagline"></p>
+      <div class="nick-row">
+        <span id="m-nick" class="nick"></span>
+        <button id="m-renick" class="icon-btn sm" aria-label="new nickname">&#x1F3B2;</button>
+      </div>
       <div id="m-level" class="chip"></div>
       <button class="btn primary big" id="m-play" data-t="play"></button>
+      <button class="btn" id="m-challenge" data-t="challengeFriend"></button>
       <button class="btn" id="m-watch" data-t="watch"></button>
     </div>
   </section>
@@ -86,6 +97,7 @@
       <p id="r-sub" class="muted"></p>
       <div class="coins-big"><i class="coin"></i><span id="r-coins"></span></div>
       <div id="r-ads" class="col"></div>
+      <button class="btn share" id="r-share" data-t="challengeFriend" hidden></button>
       <div class="row">
         <button class="btn ghost" id="r-menu" data-t="menu"></button>
         <button class="btn primary grow" id="r-next"></button>
@@ -107,6 +119,21 @@
       </div>
     </div>
   </section>
+
+  <section id="scr-challenge" class="overlay" hidden>
+    <div class="card result">
+      <p id="c-reply" class="reply-note" hidden></p>
+      <h2 id="c-title"></h2>
+      <div id="c-squad" class="mini-row big"></div>
+      <p class="muted" data-t="mirrorNote"></p>
+      <div class="row">
+        <button class="btn ghost" id="c-skip" data-t="skip"></button>
+        <button class="btn primary grow big" id="c-accept" data-t="accept"></button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
 
   <script type="module" src="src/main.js"></script>
 </body>

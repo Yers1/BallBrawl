@@ -6,6 +6,9 @@ import { draw, drawIcon, fitCanvas, resetFx } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout } from './i18n.js';
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
+import { randomNick, validNick, nickText } from './nick.js';
+import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
+import { initAudio, setMuted, sfx } from './sfx.js';
 
 const $ = s => document.querySelector(s);
 const el = (tag, cls = '', html) => {
@@ -19,7 +22,11 @@ const STEP = 1 / 60;
 
 // ---------- save (localStorage is user-editable: validate everything) ----------
 const KEY = 'ballbrawl.v1';
-const save = { coins: 0, owned: ['basic'], squad: ['basic', 'basic', 'basic'], level: 1, matches: 0 };
+const save = {
+  coins: 0, owned: ['basic'], squad: ['basic', 'basic', 'basic'], level: 1, matches: 0,
+  nick: randomNick(), muted: false,
+  created: [], answered: [], // seeds of challenge links I made / already got the bonus for
+};
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || '{}');
   if (Number.isFinite(s.coins)) save.coins = Math.max(0, Math.floor(s.coins));
@@ -27,6 +34,11 @@ try {
   if (Array.isArray(s.squad) && s.squad.length === 3) save.squad = s.squad.map(id => (save.owned.includes(id) ? id : 'basic'));
   if (Number.isInteger(s.level)) save.level = Math.min(LEVELS, Math.max(1, s.level));
   if (Number.isInteger(s.matches)) save.matches = Math.max(0, s.matches);
+  if (validNick(s.nick)) save.nick = s.nick;
+  save.muted = s.muted === true;
+  const seeds = a => (Array.isArray(a) ? a.filter(Number.isInteger).slice(-100) : []);
+  save.created = seeds(s.created);
+  save.answered = seeds(s.answered);
 } catch { /* corrupt or blocked storage: start fresh */ }
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* private mode */ } };
 
@@ -39,6 +51,8 @@ const S = {
   watch: ['leech', 'train'], launchAt: 0, watchDone: false,
   endAt: 0, outcome: null, earned: 0, wonLevel: 1, adAfter: 0,
   ai: null, ais: [], dashed: false, // ai = opponent in a match; ais = both sides in demo / watch
+  aiLevel: 1, freezeUntil: 0, // freeze = hit-stop: pauses stepping only, the sim itself is untouched
+  challenge: null, // decoded friend challenge while playing one
 };
 
 const canvas = $('#arena'), ctx = canvas.getContext('2d');
@@ -50,7 +64,7 @@ function layout() {
   scale = fitCanvas(canvas, size);
 }
 
-const SCREENS = ['menu', 'squad', 'result', 'watch'];
+const SCREENS = ['menu', 'squad', 'result', 'watch', 'challenge'];
 function show(screen) {
   for (const s of SCREENS) $('#scr-' + s).hidden = s !== screen;
   $('#hud').hidden = !['aim', 'fight', 'ending', 'watch'].includes(S.mode);
@@ -68,6 +82,58 @@ function banner(text, stay = false, tone = '') {
 }
 
 const coinsUI = () => { $('#coins').textContent = save.coins; };
+const myNick = () => nickText(save.nick, lang);
+
+let toastTimer = 0;
+function toast(text) {
+  const n = $('#toast');
+  n.textContent = text;
+  n.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { n.hidden = true; }, 2600);
+}
+
+// ---------- friend challenges (all data lives in the link) ----------
+async function shareChallenge(reply = null) {
+  const seed = newSeed();
+  save.created = [...save.created, seed].slice(-100);
+  persist();
+  const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}c/#${encodeChallenge({ squad: save.squad, seed, nick: save.nick, level: save.level, reply })}`;
+  const text = t('shareText', { nick: myNick() });
+  try {
+    if (navigator.share) return await navigator.share({ title: 'BallBrawl', text, url });
+  } catch (e) {
+    if (e?.name === 'AbortError') return; // user closed the share sheet
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast(t('copied'));
+  } catch {
+    prompt(t('copyManual'), url); // ponytail: last-resort copy when the clipboard is blocked
+  }
+}
+
+function goChallenge() {
+  const c = S.challenge;
+  S.mode = 'challenge';
+  if (!S.demo) demo();
+  const name = nickText(c.nick, lang);
+  const mine = c.reply && save.created.includes(c.reply.seed);
+  $('#c-reply').hidden = !mine;
+  if (mine) $('#c-reply').textContent = t({ w: 'replyWon', l: 'replyLost', d: 'replyDraw' }[c.reply.result], { nick: name });
+  $('#c-title').textContent = t('challengeTitle', { nick: name });
+  $('#c-squad').replaceChildren(...c.squad.map(id => icon(id, 44)));
+  show('challenge');
+}
+
+function startChallenge() {
+  const c = S.challenge;
+  S.match = createMatch({ squadA: [...c.squad], squadB: [...c.squad], hpMulB: 1, seed: c.seed }); // mirror squads: only skill decides
+  S.aiLevel = c.level;
+  S.demo = false;
+  S.dashed = false;
+  nextRound();
+}
 
 // A random AI-vs-AI fight that plays behind the menus.
 function demo() {
@@ -85,7 +151,9 @@ function goMenu() {
   cancelReward();
   S.mode = 'menu';
   if (!S.demo) demo();
+  S.challenge = null;
   $('#m-level').textContent = t('level', { n: save.level, max: LEVELS });
+  $('#m-nick').textContent = myNick();
   show('menu');
 }
 
@@ -174,6 +242,7 @@ function startMatch() {
     hpMulB: enemyHpMul(save.level),
     seed: Math.floor(Math.random() * 1e9),
   });
+  S.aiLevel = save.level;
   S.demo = false;
   S.dashed = false;
   nextRound();
@@ -181,7 +250,7 @@ function startMatch() {
 
 function nextRound() {
   S.world = roundWorld(S.match);
-  S.ai = createAI(1, save.level, S.match.seed + S.match.round);
+  S.ai = createAI(1, S.aiLevel, S.match.seed + S.match.round);
   resetFx();
   const [me, foe] = S.world.ents;
   S.aim = Math.atan2(foe.y - me.y, foe.x - me.x);
@@ -194,7 +263,7 @@ function nextRound() {
 function fire() {
   if (S.mode !== 'aim') return;
   const w = S.world, [me, foe] = w.ents;
-  launch(w, S.aim, aiAngle(foe.x, foe.y, me.x, me.y, save.level, w.rand));
+  launch(w, S.aim, aiAngle(foe.x, foe.y, me.x, me.y, S.aiLevel, w.rand));
   S.mode = 'fight';
   show(null);
 }
@@ -316,17 +385,25 @@ function onRoundOver(now) {
 }
 
 // ---------- results ----------
+const CHALLENGE_BONUS = 10;
 function finishMatch(r) {
-  const won = r === 0;
+  const won = r === 0, c = S.challenge;
   S.wonLevel = save.level;
   S.outcome = r;
-  S.earned = won ? winCoins(save.level) : LOSE_COINS;
+  if (c) { // challenges: no level change; a one-time bonus, never for your own links
+    const fresh = !save.created.includes(c.seed) && !save.answered.includes(c.seed);
+    S.earned = fresh ? CHALLENGE_BONUS : 0;
+    if (fresh) save.answered = [...save.answered, c.seed].slice(-100);
+  } else {
+    S.earned = won ? winCoins(save.level) : LOSE_COINS;
+    if (won && save.level < LEVELS) save.level++;
+  }
   save.coins += S.earned;
   save.matches++;
-  if (won && save.level < LEVELS) save.level++;
   persist();
   coinsUI();
   S.mode = 'result';
+  won ? sfx.win() : sfx.lose();
   showResult();
 }
 
@@ -334,11 +411,22 @@ function showResult() {
   const r = S.outcome, won = r === 0, title = $('#r-title');
   title.textContent = won ? t('win') : r === 'draw' ? t('draw') : t('lose');
   title.className = won ? 'win' : 'lose';
-  $('#r-sub').textContent = won && S.wonLevel === LEVELS ? t('allDone') : t('level', { n: S.wonLevel, max: LEVELS });
-  $('#r-coins').textContent = '+' + S.earned;
-  $('#r-next').textContent = won ? t('next') : t('retry');
-  const box = $('#r-ads');
+  const c = S.challenge, box = $('#r-ads');
   box.replaceChildren();
+  $('#r-coins').textContent = '+' + S.earned;
+  if (c) { // challenge result: no ads, the main action is "challenge them back"
+    const name = nickText(c.nick, lang);
+    $('#r-sub').textContent = won ? t('challengeWin', { nick: name }) : r === 'draw' ? t('draw') : t('challengeLose', { nick: name });
+    $('#r-next').textContent = t('replyChallenge');
+    $('#r-next').onclick = () => shareChallenge({ seed: c.seed, result: won ? 'w' : r === 'draw' ? 'd' : 'l' });
+    $('#r-share').hidden = true;
+    show('result');
+    return;
+  }
+  $('#r-sub').textContent = won && S.wonLevel === LEVELS ? t('allDone') : t('level', { n: S.wonLevel, max: LEVELS });
+  $('#r-next').textContent = won ? t('next') : t('retry');
+  $('#r-next').onclick = () => leaveResult(goSquad);
+  $('#r-share').hidden = !won;
   show('result');
 
   const offer = (name, label, onReward) => offerReward(name, {
@@ -419,6 +507,24 @@ function watchLaunch() {
   launch(w, aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand));
 }
 
+// Sound, hit-stop and super banners from this frame's sim events (draw() consumes them right after).
+let lastWallSfx = 0;
+function feel(w, now) {
+  let hits = 0;
+  for (const ev of w.events) {
+    if (ev.type === 'hit' && hits++ < 2) sfx.hit(ev.amount);
+    if (ev.type === 'hit' && ev.amount >= 18) S.freezeUntil = Math.max(S.freezeUntil, now + 0.05);
+    if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(); }
+    if (ev.type === 'dash') sfx.dash();
+    if (ev.type === 'death') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.12); }
+    if (ev.type === 'super') {
+      sfx.super();
+      S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
+      banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
+    }
+  }
+}
+
 // ---------- loop ----------
 let last = performance.now() / 1000, acc = 0;
 function frame(ms) {
@@ -427,7 +533,8 @@ function frame(ms) {
   const w = S.world;
   if (w) {
     if (S.mode === 'watch' && !w.launched && now >= S.launchAt) watchLaunch();
-    if (S.demo || S.mode === 'fight' || S.mode === 'watch') {
+    if (now < S.freezeUntil) acc = 0; // hit-stop: hold the frame, the sim just waits
+    else if (S.demo || S.mode === 'fight' || S.mode === 'watch') {
       acc += dt;
       while (acc >= STEP) {
         if (S.mode === 'fight') S.ai.think(w);
@@ -436,9 +543,7 @@ function frame(ms) {
         acc -= STEP;
       }
     } else acc = 0;
-    if (!S.demo) for (const ev of w.events) {
-      if (ev.type === 'super') banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
-    }
+    if (!S.demo) feel(w, now);
     if (w.result != null) onRoundOver(now);
     draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : null, now, dt });
     mid();
@@ -456,8 +561,14 @@ $('#m-play').onclick = goSquad;
 $('#m-watch').onclick = goWatch;
 $('#s-back').onclick = goMenu;
 $('#s-fight').onclick = startMatch;
-$('#r-next').onclick = () => leaveResult(goSquad);
 $('#r-menu').onclick = () => leaveResult(goMenu);
+$('#r-share').onclick = () => shareChallenge();
+$('#m-challenge').onclick = () => shareChallenge();
+$('#m-renick').onclick = () => { save.nick = randomNick(); persist(); $('#m-nick').textContent = myNick(); sfx.click(); };
+$('#c-accept').onclick = startChallenge;
+$('#c-skip').onclick = goMenu;
+const muteUI = () => { $('#mute').textContent = save.muted ? '\u{1F507}' : '\u{1F50A}'; };
+$('#mute').onclick = () => { save.muted = !save.muted; setMuted(save.muted); persist(); muteUI(); };
 $('#w-start').onclick = startWatch;
 $('#w-again').onclick = startWatch;
 $('#w-back').onclick = goWatch;
@@ -465,7 +576,13 @@ $('#w-cancel').onclick = goMenu;
 $('#super-btn').onclick = useSuper;
 addEventListener('resize', layout);
 initAds();
+initAudio(save.muted);
+muteUI();
+persist(); // keeps the generated nickname stable from the first visit
 layout();
 coinsUI();
-goMenu();
+S.challenge = decodeChallenge(location.hash.slice(1));
+if (location.hash) history.replaceState(null, '', location.pathname + location.search); // tidy URL; a reload won't replay it
+S.challenge ? goChallenge() : goMenu();
 requestAnimationFrame(frame);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is a bonus */ });
