@@ -2,3 +2,5 @@
 supabase/.temp/
 supabase/.branches/
 dist/
+node_modules/
+.wrangler/

@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test",
     "balance": "node tools/balance.mjs",
-    "dev": "python tools/dev.py"
+    "dev": "python tools/dev.py",
+    "deploy": "node tools/dist.mjs && npx wrangler pages deploy dist --project-name ballbrawl --branch main --commit-dirty=true"
   }
 }
