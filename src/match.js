@@ -1,24 +1,18 @@
-// Squad / round / ladder rules on top of the one-round simulation.
+// Squad / round rules on top of the one-round simulation.
 import { createWorld } from './sim.js';
-import { BALLS, ORDER } from './balls.js';
+import { BALLS } from './balls.js';
 
-export const LEVELS = 30, LOSE_COINS = 5;
-export const enemyHpMul = level => 1 + 0.05 * (level - 1);
-export const winCoins = level => 20 + 2 * level;
-export const poolSize = level => Math.min(ORDER.length, 1 + Math.floor((level + 1) / 3));
-
-export function enemySquad(level, rand) {
-  const pool = ORDER.slice(0, poolSize(level));
-  return [0, 1, 2].map(() => pool[Math.floor(rand() * pool.length)]);
-}
+export const LEVELS = 30; // AI skill scale (1 = sloppy, 30 = sharp)
 
 export function aiAngle(fx, fy, tx, ty, level, rand) {
   const err = 0.1 + 0.8 * (1 - (level - 1) / (LEVELS - 1));
   return Math.atan2(ty - fy, tx - fx) + (rand() * 2 - 1) * err;
 }
 
-export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1 }) {
-  return { a: squadA.map(id => ({ id })), b: squadB.map(id => ({ id })), hpMulB, seed, round: 0, result: null, revived: false, lost: null };
+// skinsA / skinsB: { ballId: skinStyle } — cosmetic, carried along so the renderer can draw them
+export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {} }) {
+  const spec = skins => id => (skins[id] ? { id, skin: skins[id] } : { id });
+  return { a: squadA.map(spec(skinsA)), b: squadB.map(spec(skinsB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null };
 }
 
 export function roundWorld(m) {
@@ -43,7 +37,7 @@ export function endRound(m, w) {
 }
 
 export function revive(m) {
-  m.a.unshift({ id: m.lost.id, hp: BALLS[m.lost.id].hp * 0.5 });
+  m.a.unshift({ id: m.lost.id, hp: BALLS[m.lost.id].hp * 0.5, ...(m.lost.skin && { skin: m.lost.skin }) });
   m.revived = true;
   m.result = null;
 }

@@ -1,11 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { step, launch, hurt, SPAWN } from '../src/sim.js';
-import { ORDER } from '../src/balls.js';
-import {
-  LEVELS, LOSE_COINS, createMatch, roundWorld, endRound, revive,
-  enemySquad, enemyHpMul, winCoins, poolSize, aiAngle,
-} from '../src/match.js';
+import { LEVELS, createMatch, roundWorld, endRound, revive, aiAngle } from '../src/match.js';
 
 const finish = (w, winner, hp) => {
   const [a, b] = w.ents;
@@ -64,28 +60,6 @@ test('revive brings the last lost ball back at 50% HP, once', () => {
   assert.equal(m.result, null);
   assert.deepEqual(m.a, [{ id: 'leech', hp: 45 }]);
   assert.equal(m.revived, true);
-});
-
-test('ladder formulas', () => {
-  assert.equal(LEVELS, 30);
-  assert.equal(LOSE_COINS, 5);
-  assert.equal(enemyHpMul(1), 1);
-  assert.ok(Math.abs(enemyHpMul(30) - 2.45) < 1e-9);
-  assert.equal(winCoins(7), 34);
-  assert.equal(poolSize(1), 1);
-  assert.equal(poolSize(LEVELS), ORDER.length);
-  for (let l = 2; l <= LEVELS; l++) assert.ok(poolSize(l) >= poolSize(l - 1));
-});
-
-test('enemy squads are 3 balls from the level pool', () => {
-  let s = 0;
-  const rand = () => (s = (s + 0.37) % 1);
-  assert.deepEqual(enemySquad(1, rand), ['basic', 'basic', 'basic']);
-  for (let l = 1; l <= LEVELS; l++) {
-    const sq = enemySquad(l, rand);
-    assert.equal(sq.length, 3);
-    assert.ok(sq.every(id => ORDER.indexOf(id) < poolSize(l)));
-  }
 });
 
 test('AI aim gets sharper with level', () => {

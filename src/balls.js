@@ -3,11 +3,17 @@
 // Tune with `npm run balance` — keep every ball's average win rate inside ~35–65%.
 import { hurt, spawnBall, foes, W } from './sim.js';
 
-export const LEECH = { stick: 2, cooldown: 4, drain: 5 };
+export const LEECH = { stick: 2, cooldown: 4, drain: 4 };
 export const CELL = { r: 20, hp: 24, dmg: 6, speed: 320 };
 export const WEB = { r: 70, life: 5, max: 3, slow: 0.4, dps: 8 };
 export const NINJA = { first: 0.8, base: 0.4, scale: 1.2, speed: 500, dmg: 6 };
 export const TRAIN = { first: 2, every: 4, warn: 1, sweep: 0.6, dmg: 26, halfWidth: 22 };
+export const MAGNET = { range: 230, pull: 1.0, superPull: 5, superTime: 2 };
+export const BOMB = { cooldown: 2.2, blastR: 75, blast: 7, r: 70, dmg: 18, superCount: 4, superStep: 0.2 };
+export const TURTLE = { first: 1.5, every: 6, shield: 1.5, mul: 0.7, reflect: 0.3, superShield: 2, superHeal: 10 };
+export const BOLT = { first: 1, every: 2.8, dmg: 8, storm: 5, stormGap: 0.3 };
+export const SPIKES = { thorns: 3, needles: 12, needleDmg: 5 };
+export const ICE = { chill: 2, slow: 0.5, freeze: 2.5, freezeSlow: 0.05 };
 export const SUPER = {
   ramTime: 0.6, ramMul: 3, ramDmg: 2,
   leechStick: 3, leechMul: 2,
@@ -37,11 +43,31 @@ function rails(w, me, f, warn, dmg) {
   w.zones.push({ kind: 'train', owner: me, side: me.side, axis, pos, dir, dmg, born: w.t, go: w.t + warn, until: w.t + warn + TRAIN.sweep, hit: [] });
 }
 
-function throwStar(w, me, a) {
+function throwStar(w, me, a, kind = 'star', dmg = NINJA.dmg) {
   w.shots.push({
-    side: me.side, x: me.x + Math.cos(a) * me.r, y: me.y + Math.sin(a) * me.r,
-    vx: Math.cos(a) * NINJA.speed, vy: Math.sin(a) * NINJA.speed, r: 6, dmg: NINJA.dmg, born: w.t,
+    side: me.side, kind, x: me.x + Math.cos(a) * me.r, y: me.y + Math.sin(a) * me.r,
+    vx: Math.cos(a) * NINJA.speed, vy: Math.sin(a) * NINJA.speed, r: 6, dmg, born: w.t,
   });
+}
+
+// Turn a ball's heading toward (x, y) by at most `max` radians, keeping its speed.
+function steer(e, x, y, max) {
+  if (!e.vx && !e.vy) return;
+  const cur = Math.atan2(e.vy, e.vx);
+  let d = Math.atan2(y - e.y, x - e.x) - cur;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  const a = cur + Math.max(-max, Math.min(max, d)), m = Math.hypot(e.vx, e.vy);
+  e.vx = Math.cos(a) * m;
+  e.vy = Math.sin(a) * m;
+}
+
+function plant(w, me, x, y, fuse) {
+  w.zones.push({ kind: 'bomb', owner: me, side: me.side, x, y, r: BOMB.r, born: w.t, go: w.t + fuse, until: w.t + fuse + 0.3, done: false });
+}
+
+function zap(w, me, f) {
+  hurt(w, f, BOLT.dmg);
+  w.zones.push({ kind: 'zap', owner: me, side: me.side, x: me.x, y: me.y, x2: f.x, y2: f.y, born: w.t, until: w.t + 0.18 });
 }
 
 function splitOff(w, me, hp = CELL.hp) { // two mini cells fly out sideways
@@ -183,6 +209,94 @@ export const BALLS = {
     onSuper(w, me) { // an express with almost no warning
       const f = nearest(foes(w, me), me);
       if (f) rails(w, me, f, SUPER.trainWarn, SUPER.trainDmg);
+    },
+  },
+
+  magnet: {
+    hp: 110, dmg: 14, color: '#ff5a36', price: 300, // hits hard on contact; the pull makes sure it connects
+    onTick(w, me, dt) { // drags nearby foes' paths toward itself; the super makes it irresistible
+      const strong = (me.cd.pullUntil ?? 0) > w.t, pull = (strong ? MAGNET.superPull : MAGNET.pull) * dt;
+      for (const f of foes(w, me)) if (strong || Math.hypot(f.x - me.x, f.y - me.y) < MAGNET.range) steer(f, me.x, me.y, pull);
+    },
+    onSuper(w, me) { me.cd.pullUntil = w.t + MAGNET.superTime; },
+  },
+
+  bomb: {
+    hp: 95, color: '#2a2a38', price: 350,
+    onEnemyHit(w, me, foe) { // blows up on impact (with a short fuse to recharge), hurting every foe nearby
+      if ((me.cd.blast ?? 0) > w.t) return;
+      me.cd.blast = w.t + BOMB.cooldown;
+      const x = (me.x + foe.x) / 2, y = (me.y + foe.y) / 2;
+      w.events.push({ type: 'boom', x, y, r: BOMB.blastR });
+      for (const f of foes(w, me)) if (Math.hypot(f.x - x, f.y - y) < BOMB.blastR + f.r * 0.5) hurt(w, f, BOMB.blast);
+    },
+    onTick(w, me) {
+      for (const z of w.zones) {
+        if (z.kind !== 'bomb' || z.owner !== me || z.done || w.t < z.go) continue;
+        z.done = true;
+        w.events.push({ type: 'boom', x: z.x, y: z.y, r: z.r });
+        for (const f of foes(w, me)) if (Math.hypot(f.x - z.x, f.y - z.y) < z.r + f.r * 0.5) hurt(w, f, BOMB.dmg);
+      }
+    },
+    onSuper(w, me) { // carpet: bombs along the foe's path, each timed to go off as it arrives
+      const f = nearest(foes(w, me), me);
+      if (!f) return;
+      for (let i = 1; i <= BOMB.superCount; i++) {
+        const t = i * BOMB.superStep;
+        plant(w, me, bounceFold(f.x + f.vx * t, f.r), bounceFold(f.y + f.vy * t, f.r), t);
+      }
+    },
+  },
+
+  turtle: {
+    hp: 115, speed: 240, color: '#8bbf3f', price: 400,
+    onTick(w, me) {
+      me.cd.shell ??= TURTLE.first;
+      if (w.t < me.cd.shell) return;
+      me.cd.shell = w.t + TURTLE.every;
+      me.shieldUntil = Math.max(me.shieldUntil, w.t + TURTLE.shield);
+      me.shieldMul = TURTLE.mul;
+    },
+    onEnemyHit(w, me, foe) { if (me.shieldUntil > w.t) hurt(w, foe, foe.dmg * TURTLE.reflect); },
+    onSuper(w, me) {
+      me.shieldUntil = w.t + TURTLE.superShield;
+      me.shieldMul = TURTLE.mul;
+      me.hp = Math.min(me.maxHp, me.hp + TURTLE.superHeal);
+    },
+  },
+
+  lightning: {
+    hp: 90, color: '#ffd23f', price: 450,
+    onTick(w, me) {
+      const f = nearest(foes(w, me), me);
+      if (!f) return;
+      me.cd.zap ??= BOLT.first;
+      if (w.t >= me.cd.zap) { me.cd.zap = w.t + BOLT.every; zap(w, me, f); }
+      if (me.cd.storm > 0 && w.t >= me.cd.stormNext) { me.cd.storm--; me.cd.stormNext = w.t + BOLT.stormGap; zap(w, me, f); }
+    },
+    onSuper(w, me) { me.cd.storm = BOLT.storm; me.cd.stormNext = w.t; },
+  },
+
+  hedgehog: {
+    hp: 100, color: '#9c6b4a', price: 500,
+    onEnemyHit(w, me, foe) { hurt(w, foe, SPIKES.thorns); },
+    onSuper(w, me) {
+      for (let i = 0; i < SPIKES.needles; i++) throwStar(w, me, (i / SPIKES.needles) * Math.PI * 2, 'needle', SPIKES.needleDmg);
+    },
+  },
+
+  ice: {
+    hp: 120, color: '#8fe3ff', price: 550,
+    onEnemyHit(w, me, foe) {
+      foe.chillUntil = w.t + ICE.chill;
+      foe.chillSlow = Math.min(ICE.slow, foe.chillUntil > w.t && foe.chillSlow < 1 ? foe.chillSlow : 1);
+    },
+    onSuper(w, me) {
+      const f = nearest(foes(w, me), me);
+      if (!f) return;
+      f.chillUntil = w.t + ICE.freeze;
+      f.chillSlow = ICE.freezeSlow;
+      w.events.push({ type: 'freeze', x: f.x, y: f.y });
     },
   },
 };

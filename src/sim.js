@@ -29,13 +29,20 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1 }) {
     const e = spawnBall(w, side, spec.id, { x, y, hpMul: side ? hpMulB : 1 });
     if (spec.hp != null) e.hp = Math.min(spec.hp, e.maxHp);
     e.split = !!spec.split;
+    e.skin = spec.skin || null; // cosmetic only — the sim never reads it
   });
   return w;
 }
 
-export function spawnBall(w, side, kind, { x, y, vx = 0, vy = 0, r = R, hp, hpMul = 1, dmg = DMG, speed = SPEED, mini = false }) {
+export function spawnBall(w, side, kind, { x, y, vx = 0, vy = 0, r = R, hp, hpMul = 1, dmg, speed, mini = false }) {
   const maxHp = hp ?? Math.round(BALLS[kind].hp * hpMul);
-  const e = { id: w.nextId++, side, kind, x, y, vx, vy, r, hp: maxHp, maxHp, speed, dmg, dead: false, mini, split: false, slow: 1, cd: {}, latch: null, boost: null };
+  speed ??= BALLS[kind].speed ?? SPEED;
+  dmg ??= BALLS[kind].dmg ?? DMG;
+  const e = {
+    id: w.nextId++, side, kind, x, y, vx, vy, r, hp: maxHp, maxHp, speed, dmg, dead: false, mini, split: false,
+    slow: 1, cd: {}, latch: null, boost: null,
+    shieldUntil: 0, shieldMul: 1, chillUntil: 0, chillSlow: 1, // status effects any ball can apply
+  };
   w.ents.push(e);
   return e;
 }
@@ -54,6 +61,7 @@ export const foes = (w, e) => w.ents.filter(f => !f.dead && f.side !== e.side);
 // meter=false for damage nobody dealt (sudden death)
 export function hurt(w, e, amount, quiet = false, meter = true) {
   if (e.dead || amount <= 0) return;
+  if (e.shieldUntil > w.t) amount *= e.shieldMul;
   e.hp -= amount;
   if (meter) {
     const me = w.sides[e.side], them = w.sides[1 - e.side];
@@ -104,7 +112,7 @@ export function step(w, dt) {
     if (s.regen >= DASH.regen) { s.dashes++; s.regen -= DASH.regen; }
   }
   w.zones = w.zones.filter(z => !z.owner.dead && z.until > w.t);
-  for (const e of w.ents) e.slow = 1;
+  for (const e of w.ents) e.slow = e.chillUntil > w.t ? e.chillSlow : 1;
   for (const e of w.ents) if (!e.dead) BALLS[e.kind].onTick?.(w, e, dt);
   for (const e of w.ents) if (!e.dead && !e.latch) move(w, e, dt);
   for (const e of w.ents) if (e.latch) {

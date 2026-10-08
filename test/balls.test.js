@@ -13,8 +13,8 @@ const duel = (a, b) => {
   return [w, ...w.ents];
 };
 
-test('roster has 6 balls with known prices', () => {
-  assert.deepEqual(ORDER, ['basic', 'leech', 'cell', 'spider', 'ninja', 'train']);
+test('roster has 12 balls with known prices', () => {
+  assert.deepEqual(ORDER, ['basic', 'leech', 'cell', 'spider', 'ninja', 'train', 'magnet', 'bomb', 'turtle', 'lightning', 'hedgehog', 'ice']);
   for (const id of ORDER) assert.ok(BALLS[id].hp > 0 && BALLS[id].price >= 0 && BALLS[id].color);
 });
 
