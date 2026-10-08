@@ -71,15 +71,8 @@ h2 { margin: 0; font-size: 24px; font-weight: 900; }
 .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .icon-btn.sm { width: 36px; height: 36px; border-radius: 11px; }
 .icon-btn.sm svg { width: 18px; height: 18px; }
-.coin {
-  display: inline-block; flex: none; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--gold); box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 0 5px #C78C00;
-}
-.trophy {
-  display: inline-block; width: 18px; height: 18px; flex: none; background: var(--gold);
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6 3h12v3h3v3a5 5 0 0 1-5 5h-.3A5 5 0 0 1 13 16.9V19h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 14H8a5 5 0 0 1-5-5V6h3zm-1 5v1a3 3 0 0 0 2 2.8V8zm14 0h-2v3.8A3 3 0 0 0 19 9z'/></svg>") center / contain no-repeat;
-  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6 3h12v3h3v3a5 5 0 0 1-5 5h-.3A5 5 0 0 1 13 16.9V19h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 14H8a5 5 0 0 1-5-5V6h3zm-1 5v1a3 3 0 0 0 2 2.8V8zm14 0h-2v3.8A3 3 0 0 0 19 9z'/></svg>") center / contain no-repeat;
-}
+.coin { display: inline-block; flex: none; width: 22px; height: 22px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16.5' r='14.5' fill='%23D98E00' stroke='%230F1F38' stroke-width='2'/><circle cx='16' cy='15' r='12' fill='%23FFCC33'/><circle cx='16' cy='15' r='8.8' fill='none' stroke='%23E59F00' stroke-width='1.6'/><path d='M16 9.2l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z' fill='%23FFF1B0' stroke='%23C98200' stroke-width='1.1' stroke-linejoin='round'/><path d='M8 11.5a8.8 8.8 0 0 1 5-5' fill='none' stroke='%23FFFFFF' stroke-width='1.8' stroke-linecap='round' opacity='.85'/></svg>") center / contain no-repeat; }
+.trophy { display: inline-block; width: 18px; height: 18px; flex: none; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M9.5 8H5v2.6a5 5 0 0 0 5.4 4.8M22.5 8H27v2.6a5 5 0 0 1-5.4 4.8' fill='none' stroke='%230F1F38' stroke-width='4.4' stroke-linecap='round'/><path d='M9.5 8H5v2.6a5 5 0 0 0 5.4 4.8M22.5 8H27v2.6a5 5 0 0 1-5.4 4.8' fill='none' stroke='%23FFCC33' stroke-width='2' stroke-linecap='round'/><path d='M9 4.5h14v8a7 7 0 0 1-14 0z' fill='%23FFCC33' stroke='%230F1F38' stroke-width='2' stroke-linejoin='round'/><path d='M13.8 19h4.4v4.2h-4.4z' fill='%23E09A00' stroke='%230F1F38' stroke-width='2' stroke-linejoin='round'/><rect x='9' y='23' width='14' height='5.5' rx='1.6' fill='%23C98A4B' stroke='%230F1F38' stroke-width='2'/><path d='M12.6 7.5v4' stroke='%23FFF1B0' stroke-width='2' stroke-linecap='round'/></svg>") center / contain no-repeat; }
 .trophies { display: inline-flex; align-items: center; gap: 5px; font-weight: 900; color: var(--gold); }
 
 /* ---------- battle ---------- */
@@ -175,7 +168,7 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
 .btn.danger { color: #FF8F9B; border-color: rgba(255, 77, 94, 0.5); margin-top: 18px; }
 .btn.share { width: 100%; margin-bottom: 12px; }
 .price { display: inline-flex; align-items: center; gap: 4px; }
-.price .coin { width: 14px; height: 14px; box-shadow: inset 0 0 0 2px var(--gold), inset 0 0 0 3.5px #C78C00; }
+.price .coin { width: 15px; height: 15px; }
 
 /* ---------- overlays ---------- */
 .overlay {
@@ -200,7 +193,7 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
 #r-title.win { color: var(--gold); }
 #r-title.lose { color: #FF8F9B; }
 .coins-big { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 8px 0; font-size: 30px; font-weight: 900; }
-.coins-big .coin { width: 30px; height: 30px; box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 7px #C78C00; }
+.coins-big .coin { width: 34px; height: 34px; }
 .trophy-line { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 4px 0; font-size: 24px; font-weight: 900; }
 .trophy-line .up { color: var(--go); }
 .trophy-line .down { color: #FF8F9B; }
@@ -298,12 +291,7 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
   background: var(--panel); border: 3px solid var(--stroke); box-shadow: var(--lift); transition: transform 0.06s;
 }
 .sbtn:active .ic { transform: translateY(3px); box-shadow: 0 1px 0 var(--stroke); }
-.sbtn svg { width: 28px; height: 28px; fill: none; stroke: #FFFFFF; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.sbtn .fill-you { fill: var(--you); stroke: none; }
-.sbtn .fill-foe { fill: var(--foe); stroke: none; }
-.sbtn .fill-gold { fill: var(--gold); stroke: var(--gold); }
-.sbtn .st-go { stroke: var(--go); }
-.sbtn .st-foe { stroke: var(--foe); }
+.sbtn svg { width: 36px; height: 36px; overflow: visible; }
 
 .showcase {
   position: relative; min-width: 0; padding: 0; border: 0; background: none; cursor: pointer; color: var(--text);
@@ -311,14 +299,14 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
 }
 .trio { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: center; }
 .trio canvas { animation: float 2.6s ease-in-out infinite; }
-.lobby .trio canvas:nth-child(1) { margin-right: -30px; margin-bottom: 24px; animation-delay: -0.9s; }
+.lobby .trio canvas:nth-child(1) { margin-right: -28px; margin-bottom: 18px; animation-delay: -0.9s; }
 .lobby .trio canvas:nth-child(2) { position: relative; z-index: 1; }
-.lobby .trio canvas:nth-child(3) { margin-left: -30px; margin-bottom: 24px; animation-delay: -1.7s; }
+.lobby .trio canvas:nth-child(3) { margin-left: -28px; margin-bottom: 18px; animation-delay: -1.7s; }
 @keyframes float { 50% { transform: translateY(-7px); } }
-.podium { /* a little arena box for the squad to stand in: the borders mitre into bevelled walls */
-  width: min(100%, 220px); height: 54px; margin-top: -36px; border-radius: 4px;
+.stage-box { /* a little arena for the squad: the borders mitre into bevelled walls, like the battle arena */
+  width: min(100%, 232px); display: flex; justify-content: center; padding: 18px 0 10px; border-radius: 4px;
   background: var(--floor); border: 12px solid; border-color: #2E4C77 #14284A #10213D #1B3254;
-  box-shadow: 0 0 0 3px var(--stroke), 0 10px 18px rgba(15, 31, 56, 0.35);
+  box-shadow: 0 0 0 3px var(--stroke), 0 12px 22px rgba(15, 31, 56, 0.35);
 }
 .showcase:active .trio { transform: scale(0.97); }
 .sc-name { margin-top: 4px; font-size: 28px; font-weight: 900; line-height: 1; text-shadow: var(--stroke-text); }
@@ -382,7 +370,7 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
 .ph-bar { height: 12px; border-radius: 7px; background: var(--stroke); overflow: hidden; }
 .ph-bar i { display: block; height: 100%; width: var(--p); border-radius: 7px; background: var(--gold); }
 .claim-all { grid-column: 1 / -1; width: 100%; }
-.big-coin { width: 52px !important; height: 52px !important; box-shadow: inset 0 0 0 7px var(--gold), inset 0 0 0 11px #C78C00 !important; }
+.big-coin { width: 54px !important; height: 54px !important; }
 
 .hroad {
   overflow-x: auto; overflow-y: hidden; margin: 4px -16px 0; cursor: grab;

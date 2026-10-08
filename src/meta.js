@@ -35,7 +35,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       text = t('newSkin', { skin: skinName(res.skin[1]), name: ballName(res.skin[0]) });
       if (res.coins) sub = t('gotCoins', { n: res.coins });
     } else {
-      hero.innerHTML = '<i class="coin" style="width:72px;height:72px"></i>';
+      hero.innerHTML = '<i class="coin" style="width:96px;height:96px"></i>';
       text = t('gotCoins', { n: res.coins });
     }
     $('#rw-text').textContent = text;
@@ -338,7 +338,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- lobby ----------
   function lobby() {
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
-    $('#l-trio').replaceChildren(icon(l, 72, sk(l)), icon(lead, 128, sk(lead)), icon(r, 72, sk(r)));
+    $('#l-trio').replaceChildren(icon(l, 64, sk(l)), icon(lead, 112, sk(lead)), icon(r, 64, sk(r)));
     $('#l-lead').textContent = ballName(lead);
     const { next, p } = nextReward();
     $('#l-tr').textContent = save.trophies;
