@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, step, act, hurt, launch, DASH, METER, DMG } from '../src/sim.js';
-import { BALLS, SUPER, CELL } from '../src/balls.js';
+import { BALLS, SUPER, CELL, TRAIN } from '../src/balls.js';
 import { createAI } from '../src/ai.js';
 
 const DT = 1 / 60;
@@ -125,19 +125,27 @@ test('ninja super: a fan of shurikens', () => {
   assert.equal(w.shots.length, SUPER.fan);
 });
 
-test('train super: an express through the foe, quick warning, big hit', () => {
-  const [w, , foe] = superDuel('train');
-  const z = w.zones.find(z => z.kind === 'train');
-  assert.equal(z.go, w.t + SUPER.trainWarn);
-  run(w, SUPER.trainWarn + 0.65);
-  assert.equal(foe.hp, foe.maxHp - SUPER.trainDmg);
+test('train super: an express runs the rails and on through the foe ahead', () => {
+  const [w, me, foe] = duel({ id: 'train' }, { id: 'basic' });
+  place(me, 60, 200, 300, 0);
+  place(foe, 350, 350);
+  run(w, 0.5); // lays some rails
+  const m = Math.hypot(me.vx, me.vy);
+  place(foe, me.x + (me.vx / m) * 150, me.y + (me.vy / m) * 150); // straight ahead on its heading
+  w.sides[0].meter = METER.full;
+  act(w, 0, { type: 'super' });
+  const z = w.zones.find(z => z.kind === 'track');
+  assert.ok(z.express, 'express launched');
+  run(w, 0.5);
+  assert.ok(foe.hp <= foe.maxHp - TRAIN.superDmg, `hp ${foe.hp}`);
+  assert.equal(z.express, null, 'the express has passed');
 });
 
 // ---------- replay + AI ----------
 
 test('same seed + same command log replays the exact same fight', () => {
   const play = log => {
-    const w = createWorld({ seed: 99, a: { id: 'leech' }, b: { id: 'train' } });
+    const w = createWorld({ seed: 99, a: { id: 'turtle' }, b: { id: 'train' } });
     launch(w, 0.5, 2.5);
     const ai = log ? null : createAI(1, 25, 5);
     const cmds = log ? [...log] : [];

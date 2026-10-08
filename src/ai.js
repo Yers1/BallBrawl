@@ -1,7 +1,7 @@
-// Computer opponent: dashes at you, dodges trains, fires its super. Gets sharper with level.
+// Computer opponent: dashes at you, jumps off enemy rails, fires its super. Gets sharper with level.
 // Uses its own RNG — never world.rand — so a fight replays from seed + command log alone.
 import { act, rng, METER } from './sim.js';
-import { TRAIN } from './balls.js';
+import { onTrack } from './balls.js';
 import { LEVELS } from './match.js';
 
 export function createAI(side, level, seed = 1) {
@@ -16,20 +16,11 @@ export function createAI(side, level, seed = 1) {
       if (!me || !foe) return;
       const s = w.sides[side];
 
-      // dodge enemy rails during their warning
-      if (skill > 0.3 && s.dashes >= 1) {
-        for (const z of w.zones) {
-          if (z.kind !== 'train' || z.side === side || w.t >= z.go) continue;
-          const across = z.axis === 'h' ? me.y : me.x;
-          if (Math.abs(across - z.pos) > TRAIN.halfWidth + me.r + 10 || rand() > 0.03 * skill) continue;
-          const away = across < z.pos ? -140 : 140;
-          act(w, side, z.axis === 'h' ? { type: 'dash', x: me.x, y: me.y + away } : { type: 'dash', x: me.x + away, y: me.y });
-          return;
-        }
-      }
+      // standing on enemy rails hurts: a sharp AI dashes off them at the foe right away
+      const onRails = skill > 0.3 && w.zones.some(z => z.kind === 'track' && z.side !== side && onTrack(z, me, 0, w.t)) && rand() < 0.08 * skill;
 
       // ram: dash where the foe is about to be
-      if (w.t >= nextDash) {
+      if (w.t >= nextDash || onRails) {
         nextDash = w.t + (3 - 2.1 * skill) * (0.6 + rand() * 0.8);
         if (s.dashes >= 1 && !me.latch) { // a latched leech stays latched
           const err = (1 - skill) * 60, lead = 0.2;

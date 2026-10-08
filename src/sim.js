@@ -1,5 +1,5 @@
 // Deterministic battle simulation for one round. No DOM — runs under node --test.
-import { BALLS } from './balls.js';
+import { BALLS, ICE } from './balls.js';
 
 export const W = 400, H = 400, R = 30, SPEED = 300, DMG = 10, HIT_CD = 0.3, SUDDEN = 30;
 export const SPAWN = [[90, 310], [310, 90]];
@@ -40,7 +40,7 @@ export function spawnBall(w, side, kind, { x, y, vx = 0, vy = 0, r = R, hp, hpMu
   dmg ??= BALLS[kind].dmg ?? DMG;
   const e = {
     id: w.nextId++, side, kind, x, y, vx, vy, r, hp: maxHp, maxHp, speed, dmg, dead: false, mini, split: false,
-    slow: 1, cd: {}, latch: null, boost: null,
+    slow: 1, cd: {}, latch: null, boost: null, yank: null,
     shieldUntil: 0, shieldMul: 1, chillUntil: 0, chillSlow: 1, // status effects any ball can apply
   };
   w.ents.push(e);
@@ -62,6 +62,7 @@ export const foes = (w, e) => w.ents.filter(f => !f.dead && f.side !== e.side);
 export function hurt(w, e, amount, quiet = false, meter = true) {
   if (e.dead || amount <= 0) return;
   if (e.shieldUntil > w.t) amount *= e.shieldMul;
+  if (e.chillUntil > w.t && e.chillSlow <= ICE.freezeSlow) amount *= ICE.brittle; // frozen solid = brittle
   e.hp -= amount;
   if (meter) {
     const me = w.sides[e.side], them = w.sides[1 - e.side];
@@ -205,7 +206,7 @@ function moveShots(w, dt) {
     s.y += s.vy * dt;
     if (s.x < -10 || s.x > W + 10 || s.y < -10 || s.y > H + 10) return false;
     const hit = w.ents.find(e => !e.dead && e.side !== s.side && Math.hypot(e.x - s.x, e.y - s.y) < e.r + s.r);
-    if (hit) hurt(w, hit, s.dmg);
+    if (hit) { hurt(w, hit, s.dmg); s.onHit?.(w, hit); }
     return !hit;
   });
 }

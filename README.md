@@ -34,7 +34,7 @@ npm run balance
 ```
 
 `balance` runs thousands of computer-vs-computer fights, with dashes and supers, and prints a win table: row vs column, in percent.
-Rule: keep every ball's average win rate roughly within **35–65%**. Right now all balls are within 37–59%, and there are counter-picks (e.g. Leech beats Basic, Ninja beats Leech).
+Rule: keep every ball's average win rate roughly within **35–65%**. Right now all balls are within 44–56%, and there are counter-picks (e.g. Leech beats Basic, Ninja beats Leech).
 
 ## Code map
 

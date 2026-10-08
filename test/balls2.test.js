@@ -23,23 +23,28 @@ const superOf = (id, setup) => {
 };
 const heading = e => Math.atan2(e.vy, e.vx);
 
-test('magnet bends a fleeing foe back toward itself', () => {
-  const turn = id => {
-    const [w, me, foe] = duel(id);
-    place(me, 100, 200);
-    place(foe, 250, 200, 300, 0); // flying straight away
-    run(w, 0.3);
-    return Math.abs(heading(foe));
-  };
-  assert.ok(turn('magnet') > turn('basic') + 0.2, 'pulled harder than plain homing');
+const closestOver = (w, a, b, steps) => {
+  let d = Infinity;
+  for (let i = 0; i < steps; i++) { step(w, DT); d = Math.min(d, Math.hypot(a.x - b.x, a.y - b.y)); }
+  return d;
+};
+
+test('magnet hooks the nearest foe, reels it in and slams it', () => {
+  const [w, me, foe] = duel('magnet');
+  place(me, 100, 200);
+  place(foe, 300, 200);
+  run(w, MAGNET.first + 0.05);
+  assert.ok(w.shots.some(s => s.kind === 'hook'), 'hook fired');
+  assert.ok(closestOver(w, me, foe, 40) < me.r + foe.r + 8, 'reeled in'); // +8: it bounces off in the slam tick
+  assert.ok(foe.hp <= foe.maxHp - MAGNET.dmg - MAGNET.slam, `hp ${foe.hp}`);
+  assert.equal(foe.yank, null, 'let go after the slam');
 });
 
-test('magnet super yanks the foe straight at it', () => {
-  const [w, me, foe] = superOf('magnet', (w, me, foe) => { foe.vx = 300; });
-  run(w, 0.6);
-  const toMe = Math.atan2(me.y - foe.y, me.x - foe.x);
-  assert.ok(Math.abs(Math.atan2(Math.sin(heading(foe) - toMe), Math.cos(heading(foe) - toMe))) < 0.35);
-  assert.ok(me.cd.pullUntil > w.t);
+test('magnet super reels in every foe at once', () => {
+  const [w, me, foe] = superOf('magnet');
+  assert.equal(foe.yank?.by, me);
+  assert.ok(closestOver(w, me, foe, 40) < me.r + foe.r + 8, 'reeled in'); // +8: it bounces off in the slam tick
+  assert.ok(foe.hp <= foe.maxHp - MAGNET.superSlam, `hp ${foe.hp}`);
 });
 
 test('bomb blows up on impact, then needs to recharge', () => {

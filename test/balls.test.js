@@ -88,14 +88,20 @@ test('ninja throws faster when hurt', () => {
   assert.ok(foe.hp <= foe.maxHp - 3 * NINJA.dmg, `hp ${foe.hp}`);
 });
 
-test('train telegraphs, then hits a foe in its lane — never its owner', () => {
+test('train lays rails behind it; a foe on the rails is hit, its owner never is', () => {
   const [w, train, foe] = duel({ id: 'train' }, { id: 'basic' });
-  place(train, 60, 340);
-  place(foe, 200, 200);
-  run(w, TRAIN.first + 0.05);
-  assert.ok(w.zones.find(z => z.kind === 'train'), 'rails appear');
-  assert.equal(foe.hp, foe.maxHp, 'no damage during the warning');
-  run(w, TRAIN.warn + TRAIN.sweep);
+  place(train, 60, 200, 300, 0); // drives right along y = 200
+  place(foe, 350, 350);
+  run(w, 0.6);
+  const z = w.zones.find(z => z.kind === 'track');
+  assert.ok(z && z.pts.length > 5, 'rails laid');
+  assert.equal(foe.hp, foe.maxHp, 'nothing happens off the rails');
+  place(foe, 100, 200); // steps onto the rails behind the train
+  step(w, DT);
   assert.equal(foe.hp, foe.maxHp - TRAIN.dmg);
+  run(w, TRAIN.every);
+  assert.equal(foe.hp, foe.maxHp - 2 * TRAIN.dmg, 'hit again after the cooldown');
   assert.equal(train.hp, train.maxHp);
+  run(w, 1);
+  assert.ok(z.pts[0].t >= w.t - TRAIN.life - DT, 'old rails fade');
 });
