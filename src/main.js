@@ -1,9 +1,10 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
-import { createWorld, launch, step, rng, W, H, SUDDEN } from './sim.js';
+import { createWorld, launch, step, act, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { LEVELS, LOSE_COINS, createMatch, roundWorld, endRound, revive, enemySquad, enemyHpMul, winCoins, aiAngle } from './match.js';
 import { draw, drawIcon, fitCanvas, resetFx } from './render.js';
-import { lang, t, ballName, ballAbout } from './i18n.js';
+import { lang, t, ballName, ballAbout, superName, superAbout } from './i18n.js';
+import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
 
 const $ = s => document.querySelector(s);
@@ -37,6 +38,7 @@ const S = {
   trial: null, pendingTrial: null, tryPlay: null,
   watch: ['leech', 'train'], launchAt: 0, watchDone: false,
   endAt: 0, outcome: null, earned: 0, wonLevel: 1, adAfter: 0,
+  ai: null, ais: [], dashed: false, // ai = opponent in a match; ais = both sides in demo / watch
 };
 
 const canvas = $('#arena'), ctx = canvas.getContext('2d');
@@ -52,17 +54,17 @@ const SCREENS = ['menu', 'squad', 'result', 'watch'];
 function show(screen) {
   for (const s of SCREENS) $('#scr-' + s).hidden = s !== screen;
   $('#hud').hidden = !['aim', 'fight', 'ending', 'watch'].includes(S.mode);
-  $('#hint').hidden = S.mode !== 'aim';
+  $('#controls').hidden = !['aim', 'fight', 'ending'].includes(S.mode);
   $('#watch-bar').hidden = S.mode !== 'watch';
   if (screen) $('#banner').className = 'banner';
 }
 
-function banner(text, stay = false) {
+function banner(text, stay = false, tone = '') {
   const b = $('#banner');
   b.textContent = text;
   b.className = 'banner';
   void b.offsetWidth; // restart the CSS animation
-  b.className = 'banner ' + (stay ? 'stay' : 'show');
+  b.className = `banner ${stay ? 'stay' : 'show'} ${tone}`;
 }
 
 const coinsUI = () => { $('#coins').textContent = save.coins; };
@@ -72,6 +74,7 @@ function demo() {
   const r = Math.random, pick = () => ORDER[Math.floor(r() * ORDER.length)];
   S.world = createWorld({ seed: Math.floor(r() * 1e9), a: { id: pick() }, b: { id: pick() } });
   launch(S.world, r() * Math.PI * 2, r() * Math.PI * 2);
+  S.ais = [createAI(0, 12, Math.floor(r() * 1e9)), createAI(1, 12, Math.floor(r() * 1e9))];
   S.demo = true;
   S.demoEnd = 0;
   resetFx();
@@ -156,7 +159,7 @@ function renderSquad() {
         foot.append(tr);
       }
     }
-    card.append(top, el('p', '', ballAbout(id)), foot);
+    card.append(top, el('p', '', ballAbout(id)), el('p', 'sup', `<b>${t('super')} · ${superName(id)}:</b> ${superAbout(id)}`), foot);
     if (ok) card.onclick = () => place(id);
     return card;
   }));
@@ -172,11 +175,13 @@ function startMatch() {
     seed: Math.floor(Math.random() * 1e9),
   });
   S.demo = false;
+  S.dashed = false;
   nextRound();
 }
 
 function nextRound() {
   S.world = roundWorld(S.match);
+  S.ai = createAI(1, save.level, S.match.seed + S.match.round);
   resetFx();
   const [me, foe] = S.world.ents;
   S.aim = Math.atan2(foe.y - me.y, foe.x - me.x);
@@ -194,12 +199,21 @@ function fire() {
   show(null);
 }
 
+const toArena = e => {
+  const r = canvas.getBoundingClientRect();
+  return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H];
+};
 function aimAt(e) {
-  const r = canvas.getBoundingClientRect(), me = S.world.ents[0];
-  const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
+  const [x, y] = toArena(e), me = S.world.ents[0];
   if (Math.hypot(x - me.x, y - me.y) > 6) S.aim = Math.atan2(y - me.y, x - me.x);
 }
+const useSuper = () => { if (S.mode === 'fight') act(S.world, 0, { type: 'super' }); };
 canvas.addEventListener('pointerdown', e => {
+  if (S.mode === 'fight') { // tap = dash there
+    const [x, y] = toArena(e);
+    if (act(S.world, 0, { type: 'dash', x, y })) S.dashed = true;
+    return;
+  }
   if (S.mode !== 'aim') return;
   S.aiming = true;
   canvas.setPointerCapture(e.pointerId);
@@ -214,6 +228,7 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointercancel', () => { S.aiming = false; });
 addEventListener('keydown', e => {
+  if (S.mode === 'fight' && e.key === ' ') { useSuper(); e.preventDefault(); return; }
   if (S.mode !== 'aim') return;
   if (e.key === 'ArrowLeft') S.aim -= 0.08;
   else if (e.key === 'ArrowRight') S.aim += 0.08;
@@ -237,6 +252,34 @@ function hud() {
   const { a, b } = S.match, dead = n => Array.from({ length: Math.max(0, 3 - n) }, () => dot(null, 'dead'));
   you.replaceChildren(...dead(a.length), ...a.slice(1).reverse().map(x => dot(x.id)), dot(a[0].id, 'cur'));
   foe.replaceChildren(dot(b[0].id, 'cur'), ...b.slice(1).map(x => dot(x.id)), ...dead(b.length));
+}
+
+const BOLT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z"/></svg>';
+const pips = Array.from({ length: DASH.charges }, () => el('span', 'pip', BOLT));
+$('#dash-pips').append(...pips);
+function controls() {
+  if ($('#controls').hidden) return;
+  const s = S.world.sides[0], k = s.meter / METER.full, btn = $('#super-btn');
+  pips.forEach((p, i) => {
+    p.classList.toggle('on', i < s.dashes);
+    p.style.setProperty('--p', i === s.dashes ? s.regen / DASH.regen : 0);
+  });
+  btn.style.setProperty('--p', k);
+  btn.disabled = S.mode !== 'fight' || k < 1;
+  btn.classList.toggle('ready', k >= 1);
+}
+
+let hintText = null;
+function hints() {
+  const tutorial = save.matches < 2;
+  let txt = '';
+  if (S.mode === 'aim') txt = t('aimHint');
+  else if (S.mode === 'fight' && tutorial) txt = S.world.sides[0].meter >= METER.full ? t('superHint') : S.dashed ? '' : t('dashHint');
+  if (txt === hintText) return;
+  hintText = txt;
+  const h = $('#hint');
+  h.textContent = txt;
+  h.hidden = !txt;
 }
 
 let midText = null;
@@ -360,6 +403,7 @@ function renderWatch() {
 
 function startWatch() {
   S.world = createWorld({ seed: Math.floor(Math.random() * 1e9), a: { id: S.watch[0] }, b: { id: S.watch[1] } });
+  S.ais = [createAI(0, 20, Math.floor(Math.random() * 1e9)), createAI(1, 20, Math.floor(Math.random() * 1e9))];
   resetFx();
   S.demo = false;
   S.watchDone = false;
@@ -385,11 +429,21 @@ function frame(ms) {
     if (S.mode === 'watch' && !w.launched && now >= S.launchAt) watchLaunch();
     if (S.demo || S.mode === 'fight' || S.mode === 'watch') {
       acc += dt;
-      while (acc >= STEP) { step(w, STEP); acc -= STEP; }
+      while (acc >= STEP) {
+        if (S.mode === 'fight') S.ai.think(w);
+        else if (w.launched) for (const ai of S.ais) ai.think(w);
+        step(w, STEP);
+        acc -= STEP;
+      }
     } else acc = 0;
+    if (!S.demo) for (const ev of w.events) {
+      if (ev.type === 'super') banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
+    }
     if (w.result != null) onRoundOver(now);
     draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : null, now, dt });
     mid();
+    controls();
+    hints();
   }
   requestAnimationFrame(frame);
 }
@@ -408,6 +462,7 @@ $('#w-start').onclick = startWatch;
 $('#w-again').onclick = startWatch;
 $('#w-back').onclick = goWatch;
 $('#w-cancel').onclick = goMenu;
+$('#super-btn').onclick = useSuper;
 addEventListener('resize', layout);
 initAds();
 layout();

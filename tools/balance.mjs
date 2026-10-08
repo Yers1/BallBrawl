@@ -1,12 +1,14 @@
-// Headless 1v1 win-rate matrix: node tools/balance.mjs [rounds per pair]
+// Headless 1v1 win-rate matrix, both sides played by the AI: node tools/balance.mjs [rounds per pair] [AI level]
 import { createWorld, launch, step } from '../src/sim.js';
 import { ORDER } from '../src/balls.js';
+import { createAI } from '../src/ai.js';
 
-const N = +process.argv[2] || 300;
+const N = +process.argv[2] || 300, LEVEL = +process.argv[3] || 20;
 const duel = (a, b, seed) => {
   const w = createWorld({ seed, a: { id: a }, b: { id: b } });
+  const ais = [createAI(0, LEVEL, seed + 1), createAI(1, LEVEL, seed + 2)];
   launch(w, w.rand() * Math.PI * 2, w.rand() * Math.PI * 2);
-  while (w.result == null && w.t < 90) step(w, 1 / 60);
+  while (w.result == null && w.t < 90) { ais[0].think(w); ais[1].think(w); step(w, 1 / 60); }
   return [w.result, w.t];
 };
 

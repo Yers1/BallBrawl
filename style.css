@@ -118,6 +118,38 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
 @keyframes bob { 50% { transform: translate(-50%, -4px); } }
 
 .watch-bar { display: flex; gap: 10px; }
+
+.controls { width: var(--size); display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.pips { display: flex; gap: 8px; }
+.pip {
+  --p: 0;
+  width: 34px; height: 40px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: linear-gradient(to top, rgba(255, 204, 51, 0.28) calc(var(--p) * 100%), rgba(255, 255, 255, 0.05) 0);
+  border: 1px solid var(--line);
+}
+.pip svg { width: 20px; height: 20px; fill: #3a4568; transition: fill 0.15s, transform 0.15s; }
+.pip.on { background: rgba(255, 204, 51, 0.16); border-color: rgba(255, 204, 51, 0.5); }
+.pip.on svg { fill: var(--gold); transform: scale(1.1); }
+.super-btn {
+  --p: 0;
+  width: 64px; height: 64px; border-radius: 50%; border: 0; padding: 4px;
+  background: conic-gradient(var(--gold) calc(var(--p) * 1turn), rgba(255, 255, 255, 0.08) 0);
+  cursor: pointer;
+}
+.super-btn span {
+  display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%;
+  background: var(--panel); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+}
+.super-btn:disabled { cursor: default; }
+.super-btn.ready { animation: glow 0.9s ease-in-out infinite; }
+.super-btn.ready span { background: linear-gradient(180deg, #ffdd57, #f5b301); color: #2a1a00; }
+.super-btn:active span { transform: scale(0.94); }
+@keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(255, 204, 51, 0.25), 0 0 24px rgba(255, 204, 51, 0.6); } }
+.banner.you { color: #9be7ff; }
+.banner.foe { color: #ffa3b5; }
+.ball-card p.sup { flex: 0; color: #c9d4f2; }
+.ball-card p.sup b { color: var(--gold); }
 .foot { padding: 14px; font-size: 13px; }
 
 .overlay {

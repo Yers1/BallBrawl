@@ -1,9 +1,10 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
-import { W, H, SUDDEN } from './sim.js';
+import { W, H, SUDDEN, METER } from './sim.js';
 import { BALLS, TRAIN } from './balls.js';
 
 export const SIDE = ['#4cc9f0', '#ff4d6d']; // you · opponent
+const SIDE_RGB = ['76,201,240', '255,77,109'];
 const FONT = 'Rubik, system-ui, sans-serif';
 const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0 };
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -34,6 +35,8 @@ function burst(x, y, n, color, speed) {
   }
 }
 
+const ring = (x, y, r, grow, life, rgb, width) => fx.rings.push({ x, y, r, grow, life, rgb, width, age: 0 });
+
 function absorb(w, now) {
   for (const ev of w.events) {
     if (ev.type === 'hit') {
@@ -46,12 +49,19 @@ function absorb(w, now) {
     } else if (ev.type === 'death') {
       burst(ev.x, ev.y, 30, BALLS[ev.kind].color, 280);
       burst(ev.x, ev.y, 10, '#ffffff', 160);
-      fx.rings.push({ x: ev.x, y: ev.y, r: ev.r, age: 0 });
+      ring(ev.x, ev.y, ev.r, 2.6, 0.45, '255,255,255', 5);
       fx.shake = 10;
     } else if (ev.type === 'split') {
       burst(ev.x, ev.y, 16, BALLS.cell.color, 200);
     } else if (ev.type === 'latch') {
       burst(ev.x, ev.y, 10, '#ff8fa3', 130);
+    } else if (ev.type === 'dash') {
+      ring(ev.x, ev.y, 8, 4, 0.35, SIDE_RGB[ev.side], 3);
+    } else if (ev.type === 'super') {
+      ring(ev.x, ev.y, 40, 4.5, 0.6, '255,204,51', 8);
+      ring(ev.x, ev.y, 30, 3, 0.45, SIDE_RGB[ev.side], 5);
+      burst(ev.x, ev.y, 26, '#ffcc33', 300);
+      fx.shake = Math.max(fx.shake, 7);
     }
   }
   w.events.length = 0;
@@ -207,6 +217,20 @@ function legs(ctx, e, t) {
   }
 }
 
+// afterimages while dashing / ramming
+function trail(ctx, e, t) {
+  if (!e.boost || e.boost.until <= t) return;
+  const m = Math.hypot(e.vx, e.vy) || 1, ux = e.vx / m, uy = e.vy / m;
+  ctx.fillStyle = BALLS[e.kind].color;
+  for (let i = 4; i >= 1; i--) {
+    ctx.globalAlpha = 0.08 * (5 - i);
+    ctx.beginPath();
+    ctx.arc(e.x - ux * i * e.r * 0.6, e.y - uy * i * e.r * 0.6, e.r * (1 - i * 0.07), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 export function drawBall(ctx, e, now, t, { hp = true, rim = true } = {}) {
   const { x, y, r } = e, color = BALLS[e.kind].color;
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
@@ -269,18 +293,26 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
   fx.shake = Math.max(0, fx.shake - dt * 40);
   arena(ctx, w, now);
   for (const z of w.zones) z.kind === 'web' ? web(ctx, z, w.t) : train(ctx, z, w.t);
+  for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
+  for (const s of [0, 1]) { // golden halo: this side's super is ready
+    const lead = w.sides[s].meter >= METER.full && w.ents.find(e => e.side === s && !e.dead);
+    if (!lead) continue;
+    ctx.strokeStyle = `rgba(255,204,51,${0.55 + 0.35 * Math.sin(now * 10)})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(lead.x, lead.y, lead.r + 6 + 2 * Math.sin(now * 10), 0, Math.PI * 2); ctx.stroke();
+  }
   for (const sh of w.shots) shuriken(ctx, sh, w.t);
   if (aim != null) aimArrow(ctx, w.ents[0], aim, now);
 
   for (const r of fx.rings) {
     r.age += dt;
-    const k = r.age / 0.45;
-    ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, 1 - k)})`;
-    ctx.lineWidth = 4 * (1 - k) + 1;
-    ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (1 + k * 1.6), 0, Math.PI * 2); ctx.stroke();
+    const k = Math.min(1, r.age / r.life);
+    ctx.strokeStyle = `rgba(${r.rgb},${1 - k})`;
+    ctx.lineWidth = r.width * (1 - k) + 1;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (1 + k * (r.grow - 1)), 0, Math.PI * 2); ctx.stroke();
   }
-  fx.rings = fx.rings.filter(r => r.age < 0.45);
+  fx.rings = fx.rings.filter(r => r.age < r.life);
 
   for (const p of fx.parts) {
     p.age += dt;
