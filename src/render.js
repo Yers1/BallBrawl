@@ -1,7 +1,7 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
 import { W, H, SUDDEN, METER } from './sim.js';
-import { BALLS, TRAIN, LEECH, trackPoint } from './balls.js';
+import { BALLS, TRAIN, LEECH, POISON, trackPoint } from './balls.js';
 import { SKINS } from './progress.js';
 
 export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
@@ -31,21 +31,32 @@ export function fitCanvas(canvas, cssSize) {
   return canvas.width / (W + 2 * M);
 }
 
-function burst(x, y, n, color, speed) {
+function burst(x, y, n, color, speed, size = [2.5, 7]) {
   for (let i = 0; i < n; i++) {
     const a = rnd(0, Math.PI * 2), v = rnd(0.3, 1) * speed;
-    fx.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(0.3, 0.65), age: 0, color, size: rnd(2.5, 7) });
+    fx.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(0.3, 0.65), age: 0, color, size: rnd(size[0], size[1]) });
   }
+}
+
+// A floating number or word. Big, tilted, long-lived like the original; at most 40 on screen.
+function float(x, y, text, color, size = 22, life = 1.5, rise = 30, tilt = rnd(-0.17, 0.17)) {
+  fx.floats.push({ x, y, text, color, size, life, rise, tilt, age: 0 });
+  if (fx.floats.length > 40) fx.floats.shift();
 }
 
 const ring = (x, y, r, grow, life, rgb, width) => fx.rings.push({ x, y, r, grow, life, rgb, width, age: 0 });
 
 function absorb(w, now) {
   for (const ev of w.events) {
-    if (ev.type === 'hit') {
-      fx.flash[ev.id] = now + 0.12;
-      if (ev.amount >= 1) fx.floats.push({ x: ev.x + rnd(-10, 10), y: ev.y - 24, text: '-' + Math.round(ev.amount), age: 0, color: '#FF3B3B' });
-      burst(ev.x, ev.y, 6, '#E6EDF7', 120);
+    if (ev.type === 'hit') { // the number sits on the rim facing the attacker; ticks are smaller and don't flash
+      if (ev.amount >= 3) fx.flash[ev.id] = now + 0.1;
+      if (ev.amount >= 1) {
+        const a = fx.face[ev.id] ?? -Math.PI / 2;
+        float(ev.x + Math.cos(a) * 30 + rnd(-6, 6), ev.y + Math.sin(a) * 30 - 8, '-' + Math.round(ev.amount), '#FF3B3B', ev.amount >= 3 ? 26 : 20);
+      }
+      burst(ev.x, ev.y, 5, '#ffffff', 120, [2, 3]);
+    } else if (ev.type === 'text') {
+      float(ev.x, ev.y, ev.text, '#FFCC33', 18, 2, 10, 0);
     } else if (ev.type === 'clash') {
       burst(ev.x, ev.y, 12, '#ff9f1c', 220);
       fx.shake = Math.max(fx.shake, 3);
@@ -56,8 +67,8 @@ function absorb(w, now) {
       fx.shake = 10;
     } else if (ev.type === 'split') {
       burst(ev.x, ev.y, 16, BALLS.cell.color, 200);
-    } else if (ev.type === 'latch') {
-      burst(ev.x, ev.y, 10, '#ff8fa3', 130);
+    } else if (ev.type === 'latch') { // a few square drops of blood
+      burst(ev.x, ev.y, 8, '#c81e2c', 130, [2.5, 4]);
     } else if (ev.type === 'boom') {
       burst(ev.x, ev.y, 26, '#ff9a3c', 300);
       burst(ev.x, ev.y, 12, '#ffe08a', 180);
@@ -144,6 +155,17 @@ function web(ctx, z, t) {
 
 // Rails the train has laid: sleepers and two glowing steel rails, fading as they age; the freshest stretch is still setting.
 function track(ctx, z, t) {
+  if (z.old && z.old.length > 1) { // sleepers from expired rails stay on the floor for the round: flat, harmless, a record of the run
+    ctx.strokeStyle = '#B5702F';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    for (let i = 1; i < z.old.length; i += 2) {
+      const a = z.old[i - 1], b = z.old[i], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, nx = (-dy / l) * 12, ny = (dx / l) * 12;
+      ctx.moveTo(b.x + nx, b.y + ny); ctx.lineTo(b.x - nx, b.y - ny);
+    }
+    ctx.stroke();
+  }
   const pts = z.pts;
   if (pts.length < 2) return;
   ctx.save();
@@ -198,6 +220,40 @@ function express(ctx, x, t) {
   car(k - d, 34, 22, '#B8702A', false);
   const q = car(k, 46, 26, '#E09A2B', true);
   if (Math.random() < 0.8) fx.parts.push({ x: q.x, y: q.y + 8, vx: rnd(-90, 90), vy: rnd(10, 90), life: 0.3, age: 0, color: '#FFB347', size: rnd(2, 4) });
+}
+
+// A poison spike on the wall: a two-tone pyramid pointing into the arena, each tilted a little differently.
+function spike(ctx, z) {
+  const { x, y, nx, ny } = z, L = POISON.len * (1 + 0.25 * Math.sin(z.tilt * 9)), tx = -ny, ty = nx, bw = 9;
+  const a = Math.atan2(ny, nx) + z.tilt, ax = x + Math.cos(a) * L, ay = y + Math.sin(a) * L;
+  ctx.fillStyle = '#2E8A22';
+  ctx.beginPath(); ctx.moveTo(x + tx * bw, y + ty * bw); ctx.lineTo(ax, ay); ctx.lineTo(x, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#9FF06A';
+  ctx.beginPath(); ctx.moveTo(x - tx * bw, y - ty * bw); ctx.lineTo(ax, ay); ctx.lineTo(x, y); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(8,16,32,0.5)';
+  ctx.lineWidth = 1.2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(x + tx * bw, y + ty * bw); ctx.lineTo(ax, ay); ctx.lineTo(x - tx * bw, y - ty * bw); ctx.stroke();
+}
+
+// A chain ring: translucent crimson disc, bright glowing links alternating with dark ones; grows out of the ball, fades to a ghost.
+function ringZone(ctx, z, t) {
+  const grow = Math.min(1, (t - z.born) / 0.25), fade = Math.min(1, (z.until - t) / 0.8), r = z.r * (0.3 + 0.7 * grow);
+  const n = 12, seg = (Math.PI * 2) / n, spin = t * 0.6;
+  const links = (from, to) => { ctx.beginPath(); for (let i = 0; i < n; i++) { const a0 = spin + i * seg + from * seg; ctx.moveTo(z.x + Math.cos(a0) * r, z.y + Math.sin(a0) * r); ctx.arc(z.x, z.y, r, a0, spin + i * seg + to * seg); } ctx.stroke(); };
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, fade);
+  ctx.fillStyle = 'rgba(200,30,60,0.18)';
+  ctx.beginPath(); ctx.arc(z.x, z.y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#7A0F22';
+  links(0.5, 1);
+  ctx.strokeStyle = '#FF9EB0';
+  ctx.shadowColor = '#FF2D55';
+  ctx.shadowBlur = 12;
+  links(0, 0.5);
+  ctx.restore();
 }
 
 function bombZone(ctx, z, t, now) {
@@ -489,7 +545,75 @@ function deco(ctx, e, t) {
       }
     }
     ctx.stroke();
+  } else if (e.kind === 'poison') { // a plain green ball with a few venom spots and three stubby spikes
+    ctx.fillStyle = 'rgba(20,90,10,0.45)';
+    for (const [dx, dy, k] of [[-0.3, 0.1, 0.16], [0.25, -0.3, 0.12], [0.3, 0.35, 0.1]]) { ctx.beginPath(); ctx.arc(x + dx * r, y + dy * r, r * k, 0, P * 2); ctx.fill(); }
+    ctx.fillStyle = '#2E8A22';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    for (const sg of [-0.7, 0, 0.7]) {
+      const a = face + sg, bx = x + C(a) * r * 0.82, by = y + S(a) * r * 0.82, px = -S(a), py = C(a);
+      ctx.beginPath(); ctx.moveTo(bx + px * r * 0.14, by + py * r * 0.14); ctx.lineTo(bx - px * r * 0.14, by - py * r * 0.14); ctx.lineTo(bx + C(a) * r * 0.42, by + S(a) * r * 0.42); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  } else if (e.kind === 'chain') { // a neon chain slashed across the ball
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.98, 0, P * 2); ctx.clip();
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = r * 0.16;
+    ctx.strokeStyle = '#7A0F22';
+    ctx.beginPath(); ctx.moveTo(x - r, y - r * 0.9); ctx.lineTo(x + r, y + r * 0.9); ctx.moveTo(x - r, y + r * 0.9); ctx.lineTo(x + r, y - r * 0.9); ctx.stroke();
+    ctx.setLineDash([r * 0.22, r * 0.18]);
+    ctx.strokeStyle = '#FFB3C6';
+    ctx.shadowColor = '#FF2D55';
+    ctx.shadowBlur = r * 0.3;
+    ctx.stroke();
+    ctx.restore();
+  } else if (e.kind === 'forge') { // a hammer decal that turns with the ball
+    const hx = C(head), hy = S(head);
+    ctx.strokeStyle = '#7A4A1E';
+    ctx.lineWidth = r * 0.14;
+    ctx.beginPath(); ctx.moveTo(x - hx * r * 0.55, y - hy * r * 0.55); ctx.lineTo(x + hx * r * 0.35, y + hy * r * 0.35); ctx.stroke();
+    ctx.save();
+    ctx.translate(x + hx * r * 0.42, y + hy * r * 0.42);
+    ctx.rotate(head);
+    ctx.fillStyle = '#C9D2E0';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = Math.max(1, r * 0.05);
+    ctx.beginPath(); ctx.roundRect(-r * 0.16, -r * 0.34, r * 0.32, r * 0.68, r * 0.06); ctx.fill(); ctx.stroke();
+    ctx.restore();
   }
+  ctx.restore();
+}
+
+// Poisoned: the body tints orange-brown and a jagged chartreuse halo crackles around it.
+function poisoned(ctx, e, t) {
+  const { x, y, r } = e;
+  ctx.fillStyle = 'rgba(200,110,20,0.38)';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.save();
+  ctx.strokeStyle = `rgba(190,255,60,${0.55 + 0.25 * Math.sin(t * 9)})`;
+  ctx.shadowColor = '#BFFF3C';
+  ctx.shadowBlur = 8;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + t * 1.5, rr = r * (i % 2 ? 1.25 : 1.5);
+    i ? ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Cell fragments swirl in a lime vortex; the last 1-2 HP ones turn into a calm teal bubble (drawn by drawBall).
+function cellAura(ctx, e, t) {
+  const { x, y, r } = e;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(150,255,120,0.35)';
+  ctx.lineWidth = r * 0.35;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) { const a = t * 3 + i * 2.09; ctx.beginPath(); ctx.arc(x, y, r * 1.6, a, a + 1.1); ctx.stroke(); }
   ctx.restore();
 }
 
@@ -636,15 +760,24 @@ function hpText(ctx, e) {
   ctx.strokeText(n, x, y + r * 0.05);
   ctx.fillStyle = '#ffffff';
   ctx.fillText(n, x, y + r * 0.05);
+  if (e.lv) { // the forge's level, in gold under the HP
+    ctx.font = `900 ${Math.round(r * 0.4)}px ${FONT}`;
+    ctx.lineWidth = Math.max(2, r * 0.1);
+    ctx.strokeText('Lv' + e.lv, x, y + r * 0.62);
+    ctx.fillStyle = '#FFCC33';
+    ctx.fillText('Lv' + e.lv, x, y + r * 0.62);
+  }
 }
 
 // A glossy ball: soft floor shadow, shaded body, specular highlight, a thin glowing rim in the team colour.
 export function drawBall(ctx, e, now, t, { rim = true } = {}) {
-  const sk = e.skin && SKINS[e.skin], { x, y, r } = e, color = sk ? sk.color : BALLS[e.kind].color;
+  const sk = e.skin && SKINS[e.skin], { x, y, r } = e, bubble = e.kind === 'cell' && e.mini && e.hp <= 2;
+  const color = bubble ? '#7FD9D1' : sk ? sk.color : BALLS[e.kind].color;
   ctx.fillStyle = 'rgba(8,16,32,0.42)';
   ctx.beginPath(); ctx.ellipse(x + r * 0.16, y + r * 0.3, r * 0.98, r * 0.86, 0, 0, Math.PI * 2); ctx.fill();
   if (e.kind === 'spider') legs(ctx, e, t);
   if (e.kind === 'hedgehog') spikes(ctx, e, t);
+  if (e.kind === 'cell' && e.mini && !bubble) cellAura(ctx, e, t);
   const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
   g.addColorStop(0, shade(color, 0.5));
   g.addColorStop(0.55, color);
@@ -652,10 +785,11 @@ export function drawBall(ctx, e, now, t, { rim = true } = {}) {
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   if (sk) pattern(ctx, e, sk, t);
-  deco(ctx, e, t);
+  if (!bubble) deco(ctx, e, t);
   ctx.fillStyle = 'rgba(255,255,255,0.42)';
   ctx.beginPath(); ctx.ellipse(x - r * 0.33, y - r * 0.42, r * 0.34, r * 0.19, -0.55, 0, Math.PI * 2); ctx.fill();
   if (e.chillUntil > t) frost(ctx, e, t);
+  if (e.poisonUntil > t) poisoned(ctx, e, t);
   if (rim) {
     ctx.save();
     ctx.strokeStyle = SIDE[e.side];
@@ -676,9 +810,13 @@ export function drawBall(ctx, e, now, t, { rim = true } = {}) {
     ctx.fillStyle = 'rgba(140,255,150,0.12)';
     ctx.fill();
   }
-  if ((fx.flash[e.id] ?? 0) > now) {
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  if ((fx.flash[e.id] ?? 0) > now) { // hit: the ball goes solid white with a pink bloom
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.shadowColor = '#FF6B81';
+    ctx.shadowBlur = r * 0.8;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -737,8 +875,8 @@ function drain(ctx, e, t, dt) {
   if (fx.drain[e.id] >= 4) {
     const n = Math.round(fx.drain[e.id]);
     fx.drain[e.id] = 0;
-    fx.floats.push({ x: f.x + rnd(-6, 6), y: f.y - f.r - 8, text: '-' + n, age: 0, color: '#FF3B3B' });
-    fx.floats.push({ x: e.x + rnd(-6, 6), y: e.y - e.r - 8, text: '+' + n, age: 0, color: '#36D27A' });
+    float(f.x + rnd(-6, 6), f.y - f.r - 8, '-' + n, '#FF3B3B', 20);
+    float(e.x + rnd(-6, 6), e.y - e.r - 8, '+' + n, '#36D27A', 20);
   }
 }
 
@@ -750,7 +888,7 @@ function puff(e) {
 
 // ---------- frame ----------
 
-export function draw(ctx, w, s, { aim = null, now, dt }) {
+export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
   absorb(w, now);
   ctx.setTransform(s, 0, 0, s, M * s, M * s);
   if (fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
@@ -758,6 +896,8 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
   arena(ctx, w, now);
   for (const z of w.zones) {
     if (z.kind === 'web') web(ctx, z, w.t);
+    else if (z.kind === 'spike') spike(ctx, z);
+    else if (z.kind === 'ring') ringZone(ctx, z, w.t);
     else if (z.kind === 'track') track(ctx, z, w.t);
     else if (z.kind === 'bomb') bombZone(ctx, z, w.t, now);
     else if (z.kind === 'zap') zapZone(ctx, z, w.t);
@@ -788,6 +928,7 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
   for (const e of w.ents) if (!e.dead && e.yank && !e.yank.by.dead) chain(ctx, e.yank.by.x, e.yank.by.y, e.x, e.y);
   for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : sh.kind === 'hook' ? hookShot(ctx, sh) : shuriken(ctx, sh, w.t);
   if (aim != null) aimArrow(ctx, w.ents[0], aim, now);
+  if (foeAim != null && w.ents[1]) aimArrow(ctx, w.ents[1], foeAim, now); // the opponent's shot is no secret, like the original
 
   ctx.save();
   ctx.shadowBlur = 14;
@@ -817,22 +958,25 @@ export function draw(ctx, w, s, { aim = null, now, dt }) {
   ctx.globalAlpha = 1;
   fx.parts = fx.parts.filter(p => p.age < p.life);
 
-  ctx.font = `italic 900 22px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.lineWidth = 5;
   ctx.lineJoin = 'round';
   for (const f of fx.floats) {
     f.age += dt;
-    const k = f.age / 0.8;
+    const k = f.age / f.life;
+    ctx.save();
     ctx.globalAlpha = Math.max(0, 1 - k * k);
+    ctx.translate(f.x, f.y - k * f.rise);
+    ctx.rotate(f.tilt);
+    ctx.font = `italic 900 ${f.size}px ${FONT}`;
+    ctx.lineWidth = f.size * 0.26;
     ctx.strokeStyle = INK;
-    ctx.strokeText(f.text, f.x, f.y - k * 30);
+    ctx.strokeText(f.text, 0, 0);
     ctx.fillStyle = f.color;
-    ctx.fillText(f.text, f.x, f.y - k * 30);
+    ctx.fillText(f.text, 0, 0);
+    ctx.restore();
   }
-  ctx.globalAlpha = 1;
-  fx.floats = fx.floats.filter(f => f.age < 0.8);
+  fx.floats = fx.floats.filter(f => f.age < f.life);
 }
 
 // Static card icon: the same ball art without HP or team rim.
@@ -844,5 +988,5 @@ export function drawIcon(canvas, kind, css = 56, skin = null) {
   const k = canvas.width / 64;
   c.setTransform(k, 0, 0, k, 0, 0);
   const r = kind === 'hedgehog' ? 18 : 21; // leave room for spikes
-  drawBall(c, { id: -1, side: 0, kind, skin, x: 32, y: 34, r, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0 }, 0, 0, { rim: false });
+  drawBall(c, { id: -1, side: 0, kind, skin, x: 32, y: 34, r, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0, poisonUntil: 0 }, 0, 0, { rim: false });
 }

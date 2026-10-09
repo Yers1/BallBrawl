@@ -1,5 +1,5 @@
 // Deterministic battle simulation for one round. No DOM — runs under node --test.
-import { BALLS, ICE } from './balls.js';
+import { BALLS, ICE, POISON } from './balls.js';
 
 export const W = 400, H = 400, R = 30, SPEED = 300, DMG = 10, HIT_CD = 0.3, SUDDEN = 30;
 export const SPAWN = [[90, 310], [310, 90]];
@@ -40,7 +40,7 @@ export function spawnBall(w, side, kind, { x, y, vx = 0, vy = 0, r = R, hp, hpMu
   dmg ??= BALLS[kind].dmg ?? DMG;
   const e = {
     id: w.nextId++, side, kind, x, y, vx, vy, r, hp: maxHp, maxHp, speed, dmg, dead: false, mini, split: false,
-    slow: 1, cd: {}, latch: null, boost: null, yank: null,
+    slow: 1, cd: {}, latch: null, boost: null, yank: null, poisonUntil: 0,
     shieldUntil: 0, shieldMul: 1, chillUntil: 0, chillSlow: 1, // status effects any ball can apply
   };
   w.ents.push(e);
@@ -115,6 +115,11 @@ export function step(w, dt) {
   w.zones = w.zones.filter(z => !z.owner.dead && z.until > w.t);
   for (const e of w.ents) e.slow = e.chillUntil > w.t ? e.chillSlow : 1;
   for (const e of w.ents) if (!e.dead) BALLS[e.kind].onTick?.(w, e, dt);
+  for (const e of w.ents) { // poison keeps ticking even after the spike's owner is gone
+    if (e.dead || e.poisonUntil <= w.t || (e.cd.poisonTick ?? 0) > w.t) continue;
+    e.cd.poisonTick = w.t + POISON.every;
+    hurt(w, e, POISON.tick);
+  }
   for (const e of w.ents) if (!e.dead && !e.latch) move(w, e, dt);
   for (const e of w.ents) if (e.latch) {
     e.x = Math.min(W - e.r, Math.max(e.r, e.latch.foe.x + e.latch.ox));

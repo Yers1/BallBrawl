@@ -4,6 +4,7 @@ import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
 import { draw, drawIcon, fitCanvas, resetFx, M } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout } from './i18n.js';
+const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
 import { randomNick, nickText } from './nick.js';
@@ -25,7 +26,7 @@ const el = (tag, cls = '', html) => {
   return n;
 };
 const icon = (kind, size, skin = null) => { const c = document.createElement('canvas'); drawIcon(c, kind, size, skin); return c; };
-const STEP = 1 / 60;
+const STEP = 1 / 60, AIM_TIME = 8; // seconds to aim before the round fires itself
 
 // ---------- save (localStorage is user-editable: migrate() validates everything) ----------
 const KEY = 'ballbrawl.v1';
@@ -52,6 +53,7 @@ const S = {
   aiLevel: 1, freezeUntil: 0, // freeze = hit-stop: pauses stepping only, the sim itself is untouched
   challenge: null, // decoded friend challenge while playing one
   nextSeed: 1, // the next match's seed, fixed when you open the squad screen so its preview is the real fight
+  foeAim: 0, aimLeft: 0, watchAims: [0, 0], watchEndAt: 0, // the opponent's shot is drawn during the aim phase, like the original
   ms: { dashes: 0, supers: 0, kills: 0 }, // this match's stats, for quests
   opponent: null, // a real player's squad from the server (null = computer squad)
   ranked: false, matchId: null, matchStart: 0, // ranked = online match whose trophies the server decides
@@ -62,7 +64,8 @@ const canvas = $('#arena'), ctx = canvas.getContext('2d');
 let scale = 1;
 function layout() {
   const reserved = 56 + 44 + 110; // header, hud, controls + footer
-  const size = Math.max(260, Math.floor(Math.min(innerWidth - 24, innerHeight - reserved, 560)));
+  const width = RECORD != null ? Math.min(innerWidth, (innerHeight * 9) / 16) : innerWidth; // record mode: a 9:16 page
+  const size = Math.max(260, Math.floor(Math.min(width - 24, innerHeight - (RECORD != null ? 150 : reserved), 560)));
   document.documentElement.style.setProperty('--size', size + 'px');
   scale = fitCanvas(canvas, size);
 }
@@ -74,18 +77,38 @@ function show(screen) {
   $('#hud').hidden = !['aim', 'fight', 'ending', 'watch'].includes(S.mode);
   $('#controls').hidden = !['aim', 'fight', 'ending'].includes(S.mode);
   $('#watch-bar').hidden = S.mode !== 'watch';
-  if (screen || S.mode === 'home') $('#banner').className = 'banner';
+  if (screen || S.mode === 'home') { $('#banner').className = 'banner'; $('#cards').hidden = true; }
 }
 
-function banner(text, stay = false, tone = '') {
+function banner(text, stay = false, tone = '', html = false) {
   const b = $('#banner');
-  b.textContent = text;
+  b[html ? 'innerHTML' : 'textContent'] = text;
   b.className = 'banner';
   void b.offsetWidth; // restart the CSS animation
   b.className = `banner ${stay ? 'stay' : 'show'} ${tone}`;
 }
 
 const coinsUI = () => { $('#coins').textContent = save.coins; };
+
+// Round-start cards in the arena's top corners: who fights whom and what each ball does (hidden once the balls fly).
+let cardsHide = 0;
+function cards(a, b) {
+  clearTimeout(cardsHide);
+  const box = $('#cards');
+  box.replaceChildren(...[[a, ''], [b, ' foe']].map(([e, cls]) => {
+    const c = el('div', 'cardab' + cls);
+    c.append(icon(e.kind, 32, e.skin), el('div', '', '<b></b><small></small>'));
+    c.querySelector('b').textContent = ballName(e.kind);
+    c.querySelector('small').textContent = ballAbout(e.kind);
+    return c;
+  }));
+  box.classList.remove('fade');
+  box.hidden = false;
+}
+function hideCards() {
+  $('#cards').classList.add('fade');
+  cardsHide = setTimeout(() => { $('#cards').hidden = true; }, 400);
+}
 const myNick = () => nickText(save.nick, lang);
 
 let toastTimer = 0;
@@ -295,18 +318,21 @@ function nextRound() {
   resetFx();
   const [me, foe] = S.world.ents;
   S.aim = Math.atan2(foe.y - me.y, foe.x - me.x);
+  S.foeAim = aiAngle(foe.x, foe.y, me.x, me.y, S.aiLevel, S.world.rand); // decided now so it can be shown; nothing else draws from rand before launch
+  S.aimLeft = AIM_TIME; // counted down in frame time, so a backgrounded tab doesn't fire the round on return
   S.mode = 'aim';
   show(null);
   hud();
+  cards(me, foe);
   banner(t('round', { n: S.match.round }));
 }
 
 function fire() {
   if (S.mode !== 'aim') return;
-  const w = S.world, [me, foe] = w.ents;
-  launch(w, S.aim, aiAngle(foe.x, foe.y, me.x, me.y, S.aiLevel, w.rand));
+  launch(S.world, S.aim, S.foeAim);
   S.mode = 'fight';
   show(null);
+  hideCards();
 }
 
 const toArena = e => {
@@ -397,6 +423,7 @@ function mid() {
   const w = S.world;
   let txt = '';
   if (S.mode === 'watch') txt = `${ballName(S.watch[0])} vs ${ballName(S.watch[1])}`;
+  else if (S.mode === 'aim') txt = t('aimTimer', { n: Math.max(0, Math.ceil(S.aimLeft)) });
   else if (S.match && ['aim', 'fight', 'ending'].includes(S.mode)) {
     const left = Math.ceil(SUDDEN - w.t);
     txt = t('round', { n: S.match.round }) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
@@ -418,7 +445,9 @@ function onRoundOver(now) {
   if (S.mode === 'ending' && now >= S.endAt) {
     const r = endRound(S.match, S.world);
     r == null ? nextRound() : finishMatch(r);
-  } else if (S.mode === 'watch' && !S.watchDone) {
+  } else if (S.mode === 'watch' && !S.watchDone) { // hold the final numbers for a second: that frame is the thumbnail
+    S.watchEndAt ||= now + 1;
+    if (now < S.watchEndAt) return;
     S.watchDone = true;
     const r = S.world.result;
     banner(r === 'draw' ? t('draw') : t('wins', { name: ballName(S.watch[r]) }), true);
@@ -607,16 +636,21 @@ function startWatch() {
   resetFx();
   S.demo = false;
   S.watchDone = false;
+  S.watchEndAt = 0;
   S.mode = 'watch';
-  S.launchAt = performance.now() / 1000 + 1.4;
+  const w = S.world, [a, b] = w.ents;
+  S.watchAims = [aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand)];
+  S.launchAt = performance.now() / 1000 + (RECORD != null ? 2.5 : 1.4);
   show(null);
   hud();
-  banner(`${ballName(S.watch[0])} VS ${ballName(S.watch[1])}`);
+  cards(a, b);
+  const name = e => `<span style="color:${BALLS[e.kind].color}">${ballName(e.kind).toUpperCase()}</span>`; // the title in each ball's colour, like the clips
+  banner(`${name(a)} <b>VS</b> ${name(b)}${RECORD != null ? `<small>${t('whoWins')}</small>` : ''}`, false, '', true);
 }
 
 function watchLaunch() {
-  const w = S.world, [a, b] = w.ents;
-  launch(w, aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand));
+  launch(S.world, S.watchAims[0], S.watchAims[1]);
+  hideCards();
 }
 
 // Sound, hit-stop, super banners and quest stats from this frame's sim events (draw() consumes them right after).
@@ -662,9 +696,11 @@ function frame(ms) {
         acc -= STEP;
       }
     } else acc = 0;
+    if (S.mode === 'aim' && (S.aimLeft -= dt) <= 0) fire(); // time's up: the round fires itself
     if (!S.demo) feel(w, now);
     if (w.result != null) onRoundOver(now);
-    draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : null, now, dt });
+    const preWatch = S.mode === 'watch' && !w.launched;
+    draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : preWatch ? S.watchAims[0] : null, foeAim: S.mode === 'aim' ? S.foeAim : preWatch ? S.watchAims[1] : null, now, dt });
     mid();
     controls();
     hints();
@@ -699,7 +735,11 @@ layout();
 coinsUI();
 S.challenge = decodeChallenge(location.hash.slice(1));
 if (location.hash) history.replaceState(null, '', location.pathname + location.search); // tidy URL; a reload won't replay it
-S.challenge ? goChallenge() : goHome('lobby');
+if (RECORD != null) { // ?record=leech,train starts that fight at once; plain ?record opens the picker
+  document.body.classList.add('record');
+  const pair = RECORD.split(',');
+  if (pair.length === 2 && pair.every(id => BALLS[id])) { S.watch = pair; startWatch(); } else goWatch();
+} else S.challenge ? goChallenge() : goHome('lobby');
 requestAnimationFrame(frame);
 // Go online in the background; the game is already playable offline.
 setTimeout(async () => {

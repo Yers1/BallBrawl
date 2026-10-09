@@ -3,7 +3,7 @@
 **Play:** https://ballbrawl-5gr.pages.dev (mirror: https://ballbrawl-silk.vercel.app)
 
 A browser game where balls with superpowers fight in an arena. You build a squad of 3 balls, aim and launch. During a fight you tap the arena to dash (2 charges), and when the meter fills up you hit SUPER: every ball has its own super move.
-12 balls: Basic, Leech, Cell, Spider, Ninja, Train, Magnet, Bomb, Turtle, Lightning, Hedgehog, Ice. Each has its own ability and super.
+15 balls: Basic, Leech, Cell, Spider, Ninja, Train, Magnet, Bomb, Turtle, Lightning, Hedgehog, Ice, Spike, Shackles, Forge. Each has its own ability and super. Every round starts with an 8-second aim phase: ability cards for both balls, and the opponent's aim arrow is shown too, like in the original.
 **Trophy Road** from the main menu: wins earn trophies, and the road unlocks balls, skins and coins (rewards are kept forever, even if your trophies drop). There are skins (cosmetic only), 3 daily quests, a 7-day login reward and achievements. No random chests: every reward is known in advance.
 **Challenge a friend by link:** the squad, seed, nickname and level live right in the link, no server needed. Your friend plays with the same squad and can send back a reply challenge with their result.
 Nicknames are built only from preset words ("Fast Hedgehog 482"), never free text. The game is made for kids, so ads run in child-safe mode (non-personalized). Works offline (service worker).
@@ -34,7 +34,7 @@ npm run balance
 ```
 
 `balance` runs thousands of computer-vs-computer fights, with dashes and supers, and prints a win table: row vs column, in percent.
-Rule: keep every ball's average win rate roughly within **35–65%**. Right now all balls are within 44–56%, and there are counter-picks (e.g. Leech beats Basic, Ninja beats Leech).
+Rule: keep every ball's average win rate roughly within **35–65%**. Right now all 15 balls are within 43–57%, and there are counter-picks (e.g. Leech beats Basic, Ninja beats Leech).
 
 ## Code map
 
@@ -109,7 +109,7 @@ Project `ballbrawl` (ref `zowdpibgfnpqcvwgtryv`, Frankfurt). The game signs in *
 ## Getting players
 
 Nobody finds a website on their own. The cheapest way is **spectator mode**:
-- pick two balls, record the screen and post it to TikTok, YouTube Shorts or Reels with a caption like "Who wins — Leech or Train?";
+- open `/?record=leech,train` (any two ball ids): a chrome-free 9:16 page that starts that fight at once, with the title in the balls' colours and "WHO WINS?" — screen-record it and post it to TikTok, YouTube Shorts or Reels;
 - put the game link in your profile;
 - "which ball wins" videos tend to get good views.
 

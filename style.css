@@ -114,6 +114,23 @@ canvas { display: block; touch-action: none; cursor: crosshair; }
   100% { opacity: 0; transform: scale(1.05); }
 }
 @keyframes popstay { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+.banner b { color: #FFFFFF; margin: 0 0.2em; }
+.banner small { display: block; margin-top: 6px; font-size: 0.5em; color: #FFCC33; }
+.cards { position: absolute; left: 6px; right: 6px; top: 6px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; transition: opacity 0.3s; }
+.cards.fade { opacity: 0; }
+.cardab {
+  display: flex; align-items: center; gap: 5px; max-width: 46%; padding: 4px 7px 4px 4px; border-radius: 10px;
+  background: rgba(15, 31, 56, 0.92); border: 1.5px solid rgba(169, 193, 228, 0.5); font-size: 9.5px; line-height: 1.15;
+}
+.cardab.foe { flex-direction: row-reverse; text-align: right; }
+.cardab canvas { flex: none; border-radius: 8px; background: var(--floor); }
+.cardab b { display: block; font-size: 11px; font-weight: 900; }
+.cardab small { display: block; font-weight: 700; color: var(--muted); }
+body.record { background: #000; }
+.record header, .record footer, .record #watch-bar, .record .hud .dots { display: none !important; }
+.record .stage { flex: 1; width: min(100vw, calc(100dvh * 9 / 16)); padding: 0 12px; background: var(--sky); }
+.record .hud { grid-template-columns: 1fr; height: 70px; }
+.record .hud-mid { font-size: 18px; }
 .hint {
   position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); pointer-events: none;
   padding: 7px 14px; border-radius: 999px; background: rgba(15, 31, 56, 0.88);

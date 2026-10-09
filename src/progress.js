@@ -7,7 +7,7 @@ import { validNick } from './nick.js';
 import { rng } from './sim.js';
 
 // ---------- trophies ----------
-export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 60, ninja: 100, train: 150, magnet: 200, bomb: 280, turtle: 360, lightning: 440, hedgehog: 520, ice: 600 };
+export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 60, ninja: 100, train: 150, magnet: 200, bomb: 280, turtle: 360, lightning: 440, hedgehog: 520, ice: 600, poison: 660, chain: 720, forge: 780 };
 export const LOSE_COINS = 5;
 export const aiLevel = tr => Math.min(LEVELS, Math.max(1, 1 + Math.floor(tr / 40)));
 // past the AI cap (1160) enemies keep gaining HP, so the top of the table can't be farmed by volume
@@ -84,9 +84,10 @@ export const PATH = [
   { at: 150, ball: 'train' }, { at: 175, coins: 70 }, { at: 200, ball: 'magnet' }, { at: 240, skin: ['cell', 'candy'] },
   { at: 280, ball: 'bomb' }, { at: 320, coins: 90 }, { at: 360, ball: 'turtle' }, { at: 400, skin: ['ninja', 'galaxy'] },
   { at: 440, ball: 'lightning' }, { at: 480, coins: 110 }, { at: 520, ball: 'hedgehog' }, { at: 560, skin: ['train', 'lava'] },
-  { at: 600, ball: 'ice' }, { at: 650, coins: 130 }, { at: 700, skin: ['spider', 'gold'] }, { at: 750, coins: 150 },
-  { at: 800, skin: ['magnet', 'neon'] }, { at: 850, coins: 170 }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 950, coins: 200 },
-  { at: 1000, skin: ['lightning', 'gold'] },
+  { at: 600, ball: 'ice' }, { at: 650, coins: 130 }, { at: 660, ball: 'poison' }, { at: 700, skin: ['spider', 'gold'] },
+  { at: 720, ball: 'chain' }, { at: 750, coins: 150 }, { at: 780, ball: 'forge' }, { at: 800, skin: ['magnet', 'neon'] },
+  { at: 850, coins: 170 }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 950, coins: 200 }, { at: 1000, skin: ['lightning', 'gold'] },
+  { at: 1050, skin: ['poison', 'lava'] }, { at: 1100, skin: ['chain', 'neon'] }, { at: 1150, skin: ['forge', 'gold'] },
 ];
 // after the last reward the road goes on forever: +100 coins every 50 trophies
 export function pathNodes(upTo) {

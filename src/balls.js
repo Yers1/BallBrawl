@@ -1,9 +1,9 @@
 // Ball definitions: stats + optional event hooks called by sim.js.
 // Hooks: onWallHit(w, me, x, y) · onEnemyHit(w, me, foe) · onTick(w, me, dt) · onDeath(w, me) · onSuper(w, me)
 // Tune with `npm run balance` — keep every ball's average win rate inside ~35–65%.
-import { hurt, spawnBall, foes, W } from './sim.js';
+import { hurt, spawnBall, foes, W, DMG } from './sim.js';
 
-export const LEECH = { stick: 2, cooldown: 4, drain: 4 };
+export const LEECH = { stick: 2, cooldown: 4, drain: 4, overheal: 1.3 };
 export const CELL = { r: 20, hp: 24, dmg: 6, speed: 320 };
 export const WEB = { r: 70, life: 5, max: 3, slow: 0.4, dps: 8 };
 export const NINJA = { first: 0.8, base: 0.4, scale: 1.2, speed: 500, dmg: 6 };
@@ -14,6 +14,9 @@ export const TURTLE = { first: 1.5, every: 6, shield: 1.5, mul: 0.7, reflect: 0.
 export const BOLT = { first: 1, every: 2.8, dmg: 8, storm: 5, stormGap: 0.3 };
 export const SPIKES = { thorns: 4, needles: 16, needleDmg: 5, curl: 2.5, curlMul: 2 };
 export const ICE = { chill: 2, slow: 0.5, freeze: 2.5, freezeSlow: 0.05, brittle: 1.5 };
+export const POISON = { len: 28, hit: 7, tick: 1, every: 0.2, last: 2.5, max: 40, touchCd: 0.5, reach: 16 };
+export const CHAIN = { first: 1.4, every: 3, r: 70, life: 4, max: 3, dmg: 3, tick: 0.6, pull: 90, slow: 0.6, lead: 0.4 };
+export const FORGE = { every: 2.5, dmgPerLv: 3.5, maxLv: 8, superLv: 3 };
 export const SUPER = {
   ramTime: 0.6, ramMul: 3, ramDmg: 2,
   leechStick: 3, leechMul: 2,
@@ -144,7 +147,7 @@ export const BALLS = {
       }
       const drain = Math.min(LEECH.drain * l.mul * dt, l.foe.hp);
       hurt(w, l.foe, drain, true);
-      me.hp = Math.min(me.maxHp, me.hp + drain);
+      me.hp = Math.min(me.maxHp * LEECH.overheal, me.hp + drain); // it can overfill a little: the snowball is the point
     },
   },
 
@@ -206,7 +209,8 @@ export const BALLS = {
     onTick(w, me) { // lay rails behind; foes standing on them get hit again and again; on its own rails it picks up speed
       const z = trackOf(w, me), last = z.pts[z.pts.length - 1];
       if (!last || Math.hypot(me.x - last.x, me.y - last.y) >= TRAIN.gap) z.pts.push({ x: me.x, y: me.y, t: w.t });
-      while (z.pts.length > 1 && z.pts[0].t < w.t - TRAIN.life) z.pts.shift();
+      z.old ??= []; // expired rails stay on the floor for the whole round (drawn only, never hurt)
+      while (z.pts.length > 1 && z.pts[0].t < w.t - TRAIN.life) { z.old.push(z.pts.shift()); if (z.old.length > 900) z.old.shift(); }
       if ((!me.boost || me.boost.until <= w.t || me.boost.rails) && onTrack(z, me, TRAIN.warm, w.t)) {
         me.boost = { until: w.t + 0.1, mul: TRAIN.boostMul, dmg: TRAIN.boostDmg, rails: true };
       }
@@ -345,5 +349,83 @@ export const BALLS = {
     },
   },
 };
+
+// A spike stuck to the wall, pointing inward; tilt is derived from the position, so no RNG is spent on a cosmetic.
+function spike(w, me, x, y) {
+  const nx = x <= 0 ? 1 : x >= W ? -1 : 0, ny = y <= 0 ? 1 : y >= W ? -1 : 0;
+  w.zones.push({ kind: 'spike', owner: me, side: me.side, x, y, nx, ny, tilt: (((Math.round(x) * 7 + Math.round(y) * 13) % 9) - 4) * 0.08, born: w.t, until: Infinity, cd: {} });
+  const mine = w.zones.filter(z => z.kind === 'spike' && z.owner === me);
+  if (mine.length > POISON.max) w.zones.splice(w.zones.indexOf(mine[0]), 1);
+}
+
+function ring(w, me, x, y) {
+  w.zones.push({ kind: 'ring', owner: me, side: me.side, x, y, r: CHAIN.r, born: w.t, until: w.t + CHAIN.life, cd: {} });
+  const mine = w.zones.filter(z => z.kind === 'ring' && z.owner === me);
+  if (mine.length > CHAIN.max) w.zones.splice(w.zones.indexOf(mine[0]), 1);
+}
+
+function levelUp(w, me, n) {
+  me.lv = Math.min(FORGE.maxLv, (me.lv ?? 1) + n);
+  me.dmg = DMG + FORGE.dmgPerLv * (me.lv - 1); // Lv1 hits like a basic ball; every level adds dmgPerLv
+  w.events.push({ type: 'text', x: me.x, y: me.y - me.r - 10, text: 'UPGRADE!', side: me.side });
+}
+
+Object.assign(BALLS, {
+  poison: { // modelled on the original's Poison Spike Ball: the arena gets deadlier with every bounce
+    hp: 105, color: '#5fd03a', price: 600,
+    onWallHit(w, me, x, y) { spike(w, me, x, y); },
+    onTick(w, me) {
+      for (const z of w.zones) {
+        if (z.kind !== 'spike' || z.owner !== me) continue;
+        const tx = z.x + z.nx * POISON.len * 0.6, ty = z.y + z.ny * POISON.len * 0.6;
+        for (const f of foes(w, me)) {
+          if ((z.cd[f.id] ?? 0) > w.t || Math.hypot(f.x - tx, f.y - ty) >= f.r + POISON.reach) continue;
+          z.cd[f.id] = w.t + POISON.touchCd;
+          f.poisonUntil = w.t + POISON.last;
+          hurt(w, f, POISON.hit);
+        }
+      }
+    },
+    onSuper(w, me) { // two spikes on every wall, at a third and two thirds of its length
+      for (const k of [1 / 3, 2 / 3]) { spike(w, me, W * k, 0); spike(w, me, W * k, W); spike(w, me, 0, W * k); spike(w, me, W, W * k); }
+    },
+  },
+  chain: { // modelled on Shackles Ball: neon chain rings that hold a foe and tick
+    hp: 100, color: '#e84c9a', price: 650,
+    onTick(w, me, dt) {
+      me.cd.ring ??= CHAIN.first;
+      if (w.t >= me.cd.ring) { // a trap where the nearest foe is about to be
+        me.cd.ring = w.t + CHAIN.every;
+        const f = nearest(foes(w, me), me);
+        if (f) ring(w, me, bounceFold(f.x + f.vx * CHAIN.lead, f.r), bounceFold(f.y + f.vy * CHAIN.lead, f.r));
+      }
+      for (const z of w.zones) {
+        if (z.kind !== 'ring' || z.owner !== me) continue;
+        for (const f of foes(w, me)) {
+          const dx = z.x - f.x, dy = z.y - f.y, d = Math.hypot(dx, dy) || 1;
+          if (d >= z.r + f.r * 0.3) continue;
+          f.slow = Math.min(f.slow, CHAIN.slow); // shackled: slowed and dragged toward the middle
+          if (d > 4) { f.x += (dx / d) * CHAIN.pull * dt; f.y += (dy / d) * CHAIN.pull * dt; }
+          if ((z.cd[f.id] ?? 0) <= w.t) { z.cd[f.id] = w.t + CHAIN.tick; hurt(w, f, CHAIN.dmg); }
+        }
+      }
+    },
+    onSuper(w, me) { // three rings around the nearest foe
+      const f = nearest(foes(w, me), me);
+      if (!f) return;
+      ring(w, me, f.x, f.y);
+      for (const a of [0.6, 0.6 + (Math.PI * 2) / 3, 0.6 + (Math.PI * 4) / 3]) ring(w, me, f.x + Math.cos(a) * CHAIN.r * 0.9, f.y + Math.sin(a) * CHAIN.r * 0.9);
+    },
+  },
+  forge: { // modelled on Forge Ball: weak at first, it levels up as the round goes on and hits harder each level
+    hp: 105, color: '#e0b23a', price: 700,
+    onTick(w, me) {
+      me.lv ??= 1;
+      me.cd.forge ??= FORGE.every;
+      if (w.t >= me.cd.forge) { me.cd.forge = w.t + FORGE.every; if (me.lv < FORGE.maxLv) levelUp(w, me, 1); }
+    },
+    onSuper(w, me) { levelUp(w, me, FORGE.superLv); },
+  },
+});
 
 export const ORDER = Object.keys(BALLS);
