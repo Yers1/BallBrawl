@@ -70,7 +70,7 @@ export default {
   modeDesc_classic: "Jamoaga qarshi jamoa: sharlar navbat bilan chiqadi.", modeDesc_duo: "Ikkita sharing birdaniga ikkitaga qarshi. Yoki do'stlar bilan onlayn!", modeDesc_boss: "Uchala sharing bossga qarshi. Har jangda o'z hujumiga ega yangi boss: ogohlantirishni ko'r va qoch!",
   modeTrophies: "Onlaynda kuboklar", modeNoTrophies: "Tanga va sandiqlar, kuboksiz",
   tabShop: "Do'kon", tabMail: "Xabarlar", shOwned: "Bor", shWorn: "Kiyilgan", shWear: "Kiyish", shBuy: "Olasanmi?", shDeals: "Kunlik takliflar", shEmotes: "Emotsiyalar",
-  shAuras: "Auralar", shBanners: "Bannerlar", shDecos: "Bezaklar", shLooks: "Arena xaritalari", shAllSkins: "Barcha skinlar", shGems: "Gemlar",
+  shAuras: "Auralar", shBanners: "Bannerlar", shDecos: "Hamrohlar", shLooks: "Arena xaritalari", shAllSkins: "Barcha skinlar", shGems: "Gemlar",
   shGemsSoon: "Gemlar sandiqlardan, Shon yo'lidan, shar yo'lidan va kunlik mukofotlarning 7-kunidan keladi. Tez orada ularni sotib olish mumkin bo'ladi.", shAnimated: "Animatsiyali",
   needGems: "Gem yetmaydi", needCoins: "Tanga yetmaydi", opGems: "gem", opEmote: "YANGI EMOTSIYA", fragDone: "«{skin}» skini yig'ildi!", fragOf: "«{skin}»: {n} / {max}",
   chestInfo: "Tangalar {a}–{b} · skin bo'laklari: {f} · gemlar: {g} · yangi shar: {c}% · emotsiya: {e}%", stashHint: "Shon yo'li va shar yo'lidagi sandiqlar darhol ochiladi.",

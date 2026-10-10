@@ -70,7 +70,7 @@ export default {
   modeDesc_classic: 'Skuad lawan skuad: bola maju satu per satu.', modeDesc_duo: 'Dua bolamu melawan dua bola sekaligus. Atau bareng teman online!', modeDesc_boss: 'Ketiga bolamu melawan bos. Tiap pertarungan bos baru dengan serangannya sendiri: lihat tandanya dan menghindar!',
   modeTrophies: 'Dapat trofi saat online', modeNoTrophies: 'Koin dan peti, tanpa trofi',
   tabShop: 'Toko', tabMail: 'Pesan', shOwned: 'Punya', shWorn: 'Dipakai', shWear: 'Pakai', shBuy: 'Beli?', shDeals: 'Penawaran harian', shEmotes: 'Emote',
-  shAuras: 'Aura', shBanners: 'Banner', shDecos: 'Hiasan', shLooks: 'Peta arena', shAllSkins: 'Semua skin', shGems: 'Permata',
+  shAuras: 'Aura', shBanners: 'Banner', shDecos: 'Teman kecil', shLooks: 'Peta arena', shAllSkins: 'Semua skin', shGems: 'Permata',
   shGemsSoon: 'Permata didapat dari peti, Jalur Kejayaan, jalur bola, dan hari ke-7 hadiah harian. Segera bisa dibeli juga.', shAnimated: 'Animasi',
   needGems: 'Permata tidak cukup', needCoins: 'Koin tidak cukup', opGems: 'permata', opEmote: 'EMOTE BARU', fragDone: 'Skin "{skin}" lengkap!', fragOf: '"{skin}": {n} dari {max}',
   chestInfo: 'Koin {a}–{b} · kepingan skin: {f} · permata: {g} · bola baru: {c}% · emote: {e}%', stashHint: 'Peti dari Jalur Kejayaan dan jalur bola langsung terbuka.',

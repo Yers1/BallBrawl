@@ -70,7 +70,7 @@ export default {
   modeDesc_classic: 'Takıma karşı takım: toplar sırayla çıkar.', modeDesc_duo: 'İki topun aynı anda ikiye karşı. Ya da arkadaşlarınla çevrimiçi!', modeDesc_boss: "Üç topun bir boss'a karşı. Her savaşta kendi saldırısı olan yeni bir boss: uyarıya bak ve kaç!",
   modeTrophies: 'Çevrimiçiyken kupa', modeNoTrophies: 'Jeton ve sandık, kupa yok',
   tabShop: 'Mağaza', tabMail: 'Mesajlar', shOwned: 'Sende', shWorn: 'Giyili', shWear: 'Giy', shBuy: 'Satın al?', shDeals: 'Günün fırsatları', shEmotes: 'İfadeler',
-  shAuras: 'Auralar', shBanners: 'Afişler', shDecos: 'Süsler', shLooks: 'Arena haritaları', shAllSkins: 'Tüm kostümler', shGems: 'Mücevherler',
+  shAuras: 'Auralar', shBanners: 'Afişler', shDecos: 'Yoldaşlar', shLooks: 'Arena haritaları', shAllSkins: 'Tüm kostümler', shGems: 'Mücevherler',
   shGemsSoon: "Mücevherler sandıklardan, Şan Yolu'ndan, top yollarından ve günlük ödüllerin 7. gününden gelir. Yakında satın da alınabilecek.", shAnimated: 'Hareketli',
   needGems: 'Yeterli mücevher yok', needCoins: 'Yeterli jeton yok', opGems: 'mücevher', opEmote: 'YENİ İFADE', fragDone: '"{skin}" kostümü tamamlandı!', fragOf: '"{skin}": {n} / {max}',
   chestInfo: 'Jeton {a}–{b} · kostüm parçası: {f} · mücevher: {g} · yeni top: %{c} · ifade: %{e}', stashHint: 'Şan Yolu ve top yollarından gelen sandıklar hemen açılır.',

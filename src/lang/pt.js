@@ -70,7 +70,7 @@ export default {
   modeDesc_classic: 'Time contra time: as bolas entram uma de cada vez.', modeDesc_duo: 'Duas bolas suas contra duas, ao mesmo tempo. Ou com amigos online!', modeDesc_boss: 'Suas três bolas contra um chefe. A cada luta, um chefe novo com seu próprio ataque: veja o aviso e desvie!',
   modeTrophies: 'Troféus quando online', modeNoTrophies: 'Moedas e baús, sem troféus',
   tabShop: 'Loja', tabMail: 'Mensagens', shOwned: 'Já tem', shWorn: 'Em uso', shWear: 'Usar', shBuy: 'Comprar?', shDeals: 'Ofertas do dia', shEmotes: 'Emotes',
-  shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Enfeites', shLooks: 'Mapas de arena', shAllSkins: 'Todas as skins', shGems: 'Gemas',
+  shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Companheiros', shLooks: 'Mapas de arena', shAllSkins: 'Todas as skins', shGems: 'Gemas',
   shGemsSoon: 'Gemas vêm de baús, da Rota da Glória, das trilhas das bolas e do dia 7 dos prêmios diários. Em breve dá para comprar.', shAnimated: 'Animado',
   needGems: 'Faltam gemas', needCoins: 'Faltam moedas', opGems: 'gemas', opEmote: 'EMOTE NOVO', fragDone: 'Skin "{skin}" completa!', fragOf: '"{skin}": {n} de {max}',
   chestInfo: 'Moedas {a}–{b} · pedaços de skin: {f} · gemas: {g} · bola nova: {c}% · emote: {e}%', stashHint: 'Baús da Rota da Glória e das trilhas das bolas abrem na hora.',

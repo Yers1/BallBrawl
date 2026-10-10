@@ -70,7 +70,7 @@ export default {
   modeDesc_classic: 'Equipo contra equipo: las pelotas salen una por una.', modeDesc_duo: 'Dos de tus pelotas contra dos a la vez. ¡O con amigos en línea!', modeDesc_boss: 'Tus tres pelotas contra un jefe. Cada pelea, un jefe nuevo con su propio ataque: ¡mira el aviso y esquiva!',
   modeTrophies: 'Trofeos en línea', modeNoTrophies: 'Monedas y cofres, sin trofeos',
   tabShop: 'Tienda', tabMail: 'Mensajes', shOwned: 'Tuyo', shWorn: 'En uso', shWear: 'Usar', shBuy: '¿Comprar?', shDeals: 'Ofertas del día', shEmotes: 'Gestos',
-  shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Adornos', shLooks: 'Mapas de arena', shAllSkins: 'Todos los skins', shGems: 'Gemas',
+  shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Compañeros', shLooks: 'Mapas de arena', shAllSkins: 'Todos los skins', shGems: 'Gemas',
   shGemsSoon: 'Las gemas salen de cofres, la Ruta de gloria, el camino de cada pelota y el día 7 de premios diarios. Pronto podrás comprarlas.', shAnimated: 'Animado',
   needGems: 'Faltan gemas', needCoins: 'Faltan monedas', opGems: 'gemas', opEmote: 'GESTO NUEVO', fragDone: '¡Skin "{skin}" completo!', fragOf: '"{skin}": {n} de {max}',
   chestInfo: 'Monedas {a}–{b} · fragmentos de skin: {f} · gemas: {g} · pelota nueva: {c}% · gesto: {e}%', stashHint: 'Los cofres de la Ruta de gloria y del camino de la pelota se abren al instante.',

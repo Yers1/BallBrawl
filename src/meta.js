@@ -13,7 +13,7 @@ import {
 } from './progress.js';
 import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
-import { heroSvg } from './heroes.js';
+import { heroSvg, heroLive } from './heroes.js';
 import { setArena, drawEmote, drawFamiliar } from './render.js';
 import { MAPS } from './sim.js';
 import { PAY } from './config.js';
@@ -325,7 +325,7 @@ const CLAN_ICONS = ['star', 'sword', 'crown', 'bolt', 'flame', 'shield', 'trophy
 export const clanBadge = i => `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2l16 6v12c0 10-7 18-16 22C11 38 4 30 4 20V8z" fill="${CLAN_COLORS[i] ?? CLAN_COLORS[0]}" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>`
   + `<path d="M20 6l12 4.5v9c0 7-5 13-12 16" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5"/><g transform="translate(9 9) scale(0.55)">${DECO_SVG[CLAN_ICONS[i]] ?? ''}</g></svg>`;
 // Banner decorations: the glossy badges drawn in Stitch (decos.js); the old flat icons stay for clan emblems.
-export const decoSvg = id => (DECO_ART[id] ? `<svg viewBox="0 0 100 100" aria-hidden="true">${DECO_ART[id]}</svg>` : '');
+export const decoSvg = id => (DECO_ART[id] ? `<svg viewBox="0 0 120 120" aria-hidden="true">${DECO_ART[id]}</svg>` : '');
 const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
 const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
 const mmss = ms => { const m = Math.ceil(ms / 60e3); return m >= 60 ? `${unit(Math.floor(m / 60), 'hour')} ${unit(m % 60, 'minute')}` : unit(m, 'minute'); };
@@ -1339,6 +1339,48 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#l-gift').onclick = () => { sfx.click(); open('profile'); };
 
   // ---------- lobby ----------
+  // Big screens have room on both sides of the lobby: today's quests and the next road reward on the left; today's deal,
+  // your commander and (once ads run) a banner on the right. Every card opens its screen.
+  function wings() {
+    const L = $('#wing-l'), R = $('#wing-r'), on = tab === 'lobby' && innerWidth >= 1180;
+    L.hidden = R.hidden = !on;
+    if (!on) return;
+    const card = (title, go, ...body) => {
+      const c = el('button', 'wcard');
+      c.append(el('h4', '', title), ...body);
+      c.onclick = () => { sfx.click(); go(); };
+      return c;
+    };
+    const today = dayKey();
+    refreshQuests(save, today);
+    const qs = save.quests.list.map(q => {
+      const d = questDef(q.id), row = el('div', 'wq' + (q.claimed ? ' done' : q.progress >= d.goal ? ' ready' : ''));
+      row.innerHTML = `<b></b><span class="wq-bar"><i style="width:${Math.min(100, (q.progress / d.goal) * 100)}%"></i></span><small>${q.claimed ? '✓' : `${Math.min(q.progress, d.goal)}/${d.goal}`}</small><em><i class="coin"></i>${d.coins}</em>`;
+      row.querySelector('b').textContent = questName(q.id);
+      return row;
+    });
+    const { next, p } = nextReward(), road = el('div', 'wroad');
+    if (next) {
+      road.append(el('span', 'wr-ic'), el('div', 'wr-txt'));
+      road.firstChild.append(next.gems ? el('i', 'gem big-gem') : rewardIcon(next, 44));
+      road.lastChild.innerHTML = `<b></b><small>${t('roadToNext', { n: next.at - save.trophies })} <i class="trophy"></i></small><span class="wq-bar"><i style="width:${p}%"></i></span>`;
+      road.querySelector('b').textContent = next.gems ? t('gotGems', { n: next.gems }) : next.coins && !next.ball && !next.skin && !next.chest ? t('gotCoins', { n: next.coins }) : rewardName(next);
+    }
+    L.replaceChildren(card(t('tabQuests'), () => open('quests'), ...qs), ...(next ? [card(t('tabPath'), () => open('path'), road)] : []));
+    const d = dailyDeals(save, today).find(x => !x.sold), deal = el('div', 'wdeal');
+    if (d) {
+      const lead = save.squad[0];
+      deal.append(d.kind === 'skin' ? icon(d.ball, 64, d.style) : d.kind === 'aura' ? icon(lead, 64, save.skinOf[lead], d.id) : d.kind === 'deco' ? el('span', 'deco-prev', decoSvg(d.id)) : el('span', 'banner-prev', bannerSvg(d.id, 'wd')), el('b', ''), el('span', 'sh-price', money(d.price)));
+      deal.children[1].textContent = d.kind === 'skin' ? `${skinName(d.style)} · ${ballName(d.ball)}` : t(`${d.kind}_${d.id}`);
+      deal.prepend(el('span', 'sh-off', '-40%'));
+    }
+    const f = save.fam, cmd = el('div', 'wcmd');
+    cmd.innerHTML = `<span class="wc-art">${heroLive(f.skin)}</span><div><b></b><small>${t('famLv', { n: f.lv })}</small></div>`;
+    cmd.querySelector('b').textContent = t('fam_' + f.skin);
+    R.replaceChildren(...(d ? [card(t('shDeals'), () => open('shop'), deal)] : []), card(t('tabFam'), () => open('fam'), cmd), el('div', 'ad-wing'));
+  }
+  addEventListener('resize', () => { if (!$('#scr-home').hidden) wings(); });
+
   function lobby() {
     $('#l-fam').innerHTML = heroSvg(save.fam.skin);
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
@@ -1400,6 +1442,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   function render() {
     applyArena();
     top();
+    wings();
     if (tab === 'lobby') lobby();
     if (tab === 'path') { pathHero(); road(); }
     if (tab === 'balls') balls();

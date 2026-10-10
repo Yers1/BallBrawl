@@ -20,6 +20,13 @@ const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
 };
 
 let shakeOn = true;
+// ---------- cinema: close-ups, a spotlight and huge words for the big moments ----------
+const cam = { x: 200, y: 200, zoom: 1, at: -9, len: 1, dim: 0, focus: null };
+export function cinema(x, y, zoom, len, dim = 0, focus = null) { Object.assign(cam, { x, y, zoom, at: performance.now() / 1000, len, dim, focus }); }
+const camK = now => { const p = (now - cam.at) / cam.len; return p < 0 || p > 1 ? 0 : p < 0.15 ? p / 0.15 : p > 0.65 ? (1 - p) / 0.35 : 1; };
+let big = null;
+export function bigText(text, color = '#FFFFFF') { big = { text, color, at: performance.now() / 1000 }; }
+const COMIC = ['BAM!', 'POW!', 'WHAM!', 'BOOM!', 'SMASH!'];
 export const setShakeOn = on => { shakeOn = on; }; // settings: some players get dizzy
 export function resetFx() {
   fx.parts.length = fx.floats.length = fx.rings.length = 0;
@@ -329,6 +336,7 @@ function absorb(w, now) {
       if (ev.amount >= 1) dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
       burst(ev.x, ev.y, 5, '#ffffff', 120, [2, 3]);
       if (ev.amount >= 15) ring(ev.x, ev.y, 10, 3.2, 0.3, '255,255,255', 4);
+      if (ev.amount >= 20) { float(ev.x + rnd(-20, 20), ev.y - 24, COMIC[Math.floor(Math.random() * COMIC.length)], '#FFE38A', 26, 0.9, 36); burst(ev.x, ev.y, 14, '#FFE38A', 260, [3, 6]); }
     } else if (ev.type === 'cut') { // hit a spike or a saw: sparks
       burst(ev.x, ev.y, 12, '#FFE08A', 240, [2, 3.5]);
       fx.shake = Math.max(fx.shake, 4);
@@ -357,6 +365,13 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 10, '#ffffff', 160);
       ring(ev.x, ev.y, ev.r, 2.6, 0.45, '255,255,255', 5);
       fx.shake = 10;
+      if (!ev.mini) { // knock-out: a second shockwave, flying shards and a big K.O.
+        ring(ev.x, ev.y, ev.r * 1.5, 5, 0.7, '255,210,63', 8);
+        burst(ev.x, ev.y, 40, BALLS[ev.kind].color, 420, [4, 9]);
+        burst(ev.x, ev.y, 20, '#FFE38A', 340, [3, 6]);
+        float(ev.x, ev.y - 30, 'K.O.!', '#FFD23F', 46, 1.6, 50, 0);
+        fx.shake = 16;
+      }
     } else if (ev.type === 'split') {
       burst(ev.x, ev.y, 16, BALLS.cell.color, 200);
     } else if (ev.type === 'latch') { // a few square drops of blood
@@ -1842,6 +1857,12 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   absorb(w, now);
   ctx.setTransform(s, 0, 0, s, M * s, M * s);
   if (shakeOn && fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
+  const ck = camK(now);
+  if (ck > 0) { // zoom toward the moment, never past the arena's edge
+    const z = 1 + (cam.zoom - 1) * ck, half = (W + 2 * M) / (2 * z);
+    const cx = Math.min(W + M - half, Math.max(half - M, cam.x)), cy = Math.min(H + M - half, Math.max(half - M, cam.y));
+    ctx.translate(cx, cy); ctx.scale(z, z); ctx.translate(-cx, -cy);
+  }
   fx.shake = Math.max(0, fx.shake - dt * 40);
   arena(ctx, w, now);
   if (chessBoard(ctx, w, w.t)) obstacles(ctx, w, now); // rocks and pools stay visible on the board
@@ -1860,6 +1881,19 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
+  if (ck > 0 && cam.dim > 0) { // the arena goes dark around the moment
+    const f = cam.focus != null ? w.ents.find(e => e.id === cam.focus) : null, fx0 = f ? f.x : cam.x, fy0 = f ? f.y : cam.y;
+    const g = ctx.createRadialGradient(fx0, fy0, 30, fx0, fy0, 260);
+    g.addColorStop(0, 'rgba(5,8,20,0)'); g.addColorStop(0.35, `rgba(5,8,20,${0.35 * cam.dim * ck})`); g.addColorStop(1, `rgba(5,8,20,${0.85 * cam.dim * ck})`);
+    ctx.fillStyle = g; ctx.fillRect(-M, -M, W + 2 * M, H + 2 * M);
+    if (f && !f.dead) drawBall(ctx, f, now, w.t);
+  }
+  for (const e of w.ents) if (!e.dead && e.boost && e.boost.until > w.t && (e.vx || e.vy)) { // speed lines behind a dashing ball
+    const m = Math.hypot(e.vx, e.vy), ux = e.vx / m, uy = e.vy / m;
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    for (const k of [-0.6, 0, 0.6]) { const ox = e.x - ux * e.r * 1.1 - uy * k * e.r, oy = e.y - uy * e.r * 1.1 + ux * k * e.r, l = e.r * (1.2 + Math.random() * 0.8); ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox - ux * l, oy - uy * l); ctx.stroke(); }
+    ctx.restore();
+  }
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t, z.side);
@@ -1939,6 +1973,25 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     ctx.restore();
   }
   drawEmotes(ctx, w, dt);
+  const mineE = w.ents.find(e => !e.dead && (me != null ? e.id === me : e.side === 0));
+  if (w.launched && w.result == null && mineE && mineE.hp < mineE.maxHp * 0.25) { // nearly out: the edges pulse red, like a heartbeat
+    const a = 0.22 + 0.16 * Math.max(0, Math.sin(now * 7));
+    const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.35, W / 2, H / 2, W * 0.78);
+    g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${a})`);
+    ctx.fillStyle = g; ctx.fillRect(-M, -M, W + 2 * M, H + 2 * M);
+  }
+  if (big) { // huge words in the middle: FIGHT!
+    const p = now - big.at;
+    if (p > 1.1) big = null;
+    else {
+      const s = p < 0.18 ? 2.2 - (p / 0.18) * 1.2 : 1 + (p - 0.18) * 0.15, a = p > 0.8 ? 1 - (p - 0.8) / 0.3 : 1;
+      ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.rotate(-0.06);
+      ctx.font = '400 64px "Russo One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.lineWidth = 14; ctx.strokeStyle = INK; ctx.strokeText(big.text, 0, 0);
+      ctx.fillStyle = big.color; ctx.fillText(big.text, 0, 0);
+      ctx.restore();
+    }
+  }
   for (const e of w.ents) if (e.boss && !e.dead) bossTop(ctx, e, now);
   bossBar(ctx, w, now);
   const mine = me != null && w.ents.find(e => e.id === me && !e.dead);

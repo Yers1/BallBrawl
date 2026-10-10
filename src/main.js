@@ -3,7 +3,7 @@ import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METE
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -18,6 +18,8 @@ import {
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
 import { heroLive } from './heroes.js';
+import { LOGO } from './logo.js';
+document.querySelector('.brand').innerHTML = LOGO; // the Stitch wordmark (the plain text stays for no-JS)
 import * as online from './net.js';
 const { net } = online;
 
@@ -53,7 +55,7 @@ const S = {
   watch: ['leech', 'train'], launchAt: 0, watchDone: false,
   endAt: 0, outcome: null, earned: 0, delta: 0, adAfter: 0,
   ai: null, ais: [], dashed: false, // ai = opponent in a match; ais = both sides in demo / watch
-  aiLevel: 1, freezeUntil: 0, // freeze = hit-stop: pauses stepping only, the sim itself is untouched
+  aiLevel: 1, freezeUntil: 0, slowUntil: 0, // freeze = hit-stop: pauses stepping only, the sim itself is untouched
   challenge: null, // decoded friend challenge while playing one
   nextSeed: 1, // the next match's seed, fixed when you open the squad screen so its preview is the real fight
   foeAim: 0, aimLeft: 0, watchAims: [0, 0], watchEndAt: 0, // the opponent's shot is drawn during the aim phase, like the original
@@ -402,6 +404,8 @@ function fire() {
   if (S.mode !== 'aim') return;
   launch(S.world, S.aim, S.foeAim);
   S.mode = 'fight';
+  bigText(t('fight'), '#FFD23F');
+  sfx.round();
   playMusic(S.match.mode === 'boss' ? 'boss' : 'battle');
   show(null);
   hideCards();
@@ -792,19 +796,24 @@ function feel(w, now) {
     if (ev.type === 'death') {
       sfx.death();
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.12);
+      if (!ev.mini) { cinema(ev.x, ev.y, 1.3, 1.1, 0.25, null); if (!S.party) S.slowUntil = now + 0.9; sfx.ko(); } // a knock-out: slow motion, close up
       if (mine && ev.side === 1 && !ev.mini) S.ms.kills++;
     }
     if (ev.type === 'super') {
       sfx.super(ev.kind);
       cmdReact(ev.side, 'cast', true);
-    } else if (ev.type === 'rage') {
-      banner(t('bossRage'), false, 'foe');
-      sfx.super('bomb');
-    } else if (ev.type === 'quake' || ev.type === 'rockets' || ev.type === 'spit') {
-      sfx.skill(ev.type === 'quake' ? 'bomb' : ev.type === 'rockets' ? 'hedgehog' : 'cell');
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
       banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
       if (mine && ev.side === 0) S.ms.supers++;
+      const e = w.ents.find(x => x.side === ev.side && !x.dead);
+      cinema(ev.x, ev.y, 1.14, 0.75, 0.6, e?.id ?? null); // the caster in a spotlight, the arena dark around it
+      if (!S.party) S.slowUntil = now + 0.4;
+    } else if (ev.type === 'rage') {
+      banner(t('bossRage'), false, 'foe');
+      sfx.super('bomb');
+      cinema(ev.x, ev.y, 1.12, 0.8, 0.5, null);
+    } else if (ev.type === 'quake' || ev.type === 'rockets' || ev.type === 'spit') {
+      sfx.skill(ev.type === 'quake' ? 'bomb' : ev.type === 'rockets' ? 'hedgehog' : 'cell');
     }
   }
 }
@@ -812,7 +821,7 @@ function feel(w, now) {
 // ---------- loop ----------
 let last = performance.now() / 1000, acc = 0;
 function tick(ms) {
-  const now = ms / 1000, real = Math.max(0, now - last), dt = Math.min(0.05, real);
+  const now = ms / 1000, real = Math.max(0, now - last), dt = Math.min(0.05, real) * (now < S.slowUntil ? 0.33 : 1);
   last = now;
   const w = S.world;
   if (w) {
