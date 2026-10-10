@@ -799,10 +799,17 @@ function web(ctx, z, t) {
 }
 
 // Rails: wooden sleepers across the path and two steel rails; the expired part stays as faded sleepers.
-function rails(ctx, pts, alpha, steel) {
+function rails(ctx, pts, alpha, steel, side = null) { // side: whose rails — a glow in the team's colour underneath
   if (pts.length < 2) return;
   ctx.save();
   ctx.globalAlpha = alpha;
+  if (side != null) {
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.lineJoin = ctx.lineCap = 'round';
+    ctx.strokeStyle = SIDE[side]; ctx.globalAlpha = alpha * 0.45; ctx.lineWidth = 34; ctx.stroke();
+    ctx.globalAlpha = alpha;
+  }
   ctx.lineCap = 'butt';
   ctx.beginPath();
   for (let i = 1; i < pts.length; i++) {
@@ -822,30 +829,33 @@ function rails(ctx, pts, alpha, steel) {
       });
       ctx.lineJoin = 'round';
       ctx.strokeStyle = '#2A3142'; ctx.lineWidth = 4; ctx.stroke();
-      ctx.strokeStyle = '#D9DEE8'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = side == null ? '#D9DEE8' : side ? '#FFC2C8' : '#BDEBFF'; ctx.lineWidth = 2; ctx.stroke();
     }
   }
   ctx.restore();
 }
 function track(ctx, z, t) { // the fresh rails behind the ball (they vanish after a few seconds) and the ones under a running train
-  rails(ctx, z.pts, 1, true);
-  for (const tr of z.trains) rails(ctx, tr.path.pts, 1, true);
+  rails(ctx, z.pts, 1, true, z.side);
+  for (const tr of z.trains) rails(ctx, tr.path.pts, 1, true, z.side);
 }
 
 // A train: a locomotive with a cab, chimney and headlight, then cars with lit windows, all following the track.
-function trainDraw(ctx, tr, t) {
+function trainDraw(ctx, tr, t, side = 0) { // side: the team — its colour glows under every car and paints the locomotive
   const cars = trainCars(tr, t);
   for (const pass of [0, 1]) for (const c of [...cars].reverse()) { // shadows first, then bodies back to front
     ctx.save();
     ctx.translate(c.x, c.y);
     ctx.rotate(c.a);
     const L = 30, Wd = 21;
-    if (!pass) { ctx.fillStyle = 'rgba(8,16,32,0.45)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 3, -Wd / 2 + 5, L, Wd, 5); ctx.fill(); ctx.restore(); continue; }
+    if (!pass) {
+      ctx.fillStyle = SIDE[side]; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.roundRect(-L / 2 - 3, -Wd / 2 - 3, L + 6, Wd + 6, 8); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(8,16,32,0.45)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 3, -Wd / 2 + 5, L, Wd, 5); ctx.fill(); ctx.restore(); continue;
+    }
     ctx.strokeStyle = INK;
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     if (c.i === 0) { // locomotive
-      ctx.fillStyle = tr.express ? '#F2B632' : '#D9452B';
+      ctx.fillStyle = tr.express ? '#F2B632' : side ? '#D9452B' : '#2E7BE0'; // your engine is blue, theirs red
       ctx.beginPath(); ctx.roundRect(-L / 2, -Wd / 2, L, Wd, [4, 9, 9, 4]); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#2A2A38';
       ctx.beginPath(); ctx.roundRect(-L / 2 + 2, -Wd / 2 + 3, 11, Wd - 6, 3); ctx.fill();
@@ -1715,7 +1725,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   familiars(ctx, w, w.t);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
-  for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t);
+  for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t, z.side);
   for (const e of w.ents) {
     if (!e.dead && e.kind === 'train' && (e.vx || e.vy) && Math.random() < 0.3) puff(e);
     if (!e.dead && e.chillUntil > w.t && Math.random() < 0.6) fx.parts.push({ x: e.x + rnd(-e.r, e.r) * 0.6, y: e.y + rnd(-e.r, e.r) * 0.6, vx: 0, vy: 12, life: 0.6, age: 0, color: '#CFF4FF', size: rnd(3, 5), round: true }); // an icy trail
