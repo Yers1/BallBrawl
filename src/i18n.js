@@ -1,5 +1,5 @@
 // Seven languages. Russian and English live here; the others are in ./lang/ with the same keys.
-// The player can pick one in the profile (saved on this device); otherwise the browser language decides,
+// The player can pick one in the profile (saved on this device); otherwise the phone's languages decide (first one we have),
 // with Russian for other Russian-reading countries and English for everyone else. Missing texts fall back to English.
 import uz from './lang/uz.js';
 import tr from './lang/tr.js';
@@ -8,12 +8,15 @@ import pt from './lang/pt.js';
 import id from './lang/id.js';
 
 export const LANGS = { ru: 'Русский', en: 'English', uz: "O'zbekcha", tr: 'Türkçe', es: 'Español', pt: 'Português', id: 'Bahasa Indonesia' };
+const nav = globalThis.navigator ?? {};
+const fromPhone = [...(nav.languages ?? []), nav.language ?? ''].map(l => String(l).toLowerCase().slice(0, 2))
+  .map(l => (LANGS[l] ? l : /^(kk|uk|be|ky|tg)$/.test(l) ? 'ru' : null)).find(Boolean); // undefined: none of the phone's languages
 function pickLang() {
   try { const saved = localStorage.getItem('ballbrawl.lang'); if (LANGS[saved]) return saved; } catch { /* no storage */ }
-  const nav = String(globalThis.navigator?.language || '').toLowerCase().slice(0, 2);
-  return LANGS[nav] ? nav : /^(kk|uk|be|ky|tg)$/.test(nav) ? 'ru' : 'en';
+  return fromPhone ?? 'en';
 }
 export const lang = pickLang();
+export const langFromPhone = !!fromPhone; // then the first launch skips the language screen
 export function setLang(code) { try { localStorage.setItem('ballbrawl.lang', code); } catch { /* no storage */ } }
 export const langChosen = () => { try { return !!LANGS[localStorage.getItem('ballbrawl.lang')]; } catch { return true; } };
 

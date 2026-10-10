@@ -4,7 +4,7 @@ import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec, upgradeChoices, applyUpgrade, SURVIVAL } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
 import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText } from './render.js';
-import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
+import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen, langFromPhone } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
@@ -1276,7 +1276,7 @@ $('#set-close').onclick = () => { $('#scr-settings').hidden = true; };
 $('#set-account').onclick = () => { $('#scr-settings').hidden = true; if (S.mode === 'home') home.open('profile'); };
 $('#set-version').textContent = `BallBrawl · v${VERSION}` + (save.profileId ? ` · ID ${save.profileId.slice(0, 8).toUpperCase()}` : ''); // the ID helps find a player's report
 setFoeEmotes(save.foeEmotes);
-if (!langChosen() && RECORD == null) { // first launch: choose the language before anything else
+if (!langChosen() && !langFromPhone && RECORD == null) { // first launch on a phone in a language we lack: choose one before anything else
   $('#lang-list').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {
     const b = el('button', 'chip' + (code === lang ? ' on' : ''));
     b.textContent = name;
