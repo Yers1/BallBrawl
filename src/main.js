@@ -13,7 +13,7 @@ import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS, creditPurchases,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -1200,12 +1200,23 @@ if (RECORD != null) { // ?record=leech,train starts that fight at once; plain ?r
   if (pair.length === 2 && pair.every(id => BALLS[id])) { S.watch = pair; startWatch(); } else goWatch();
 } else S.challenge ? goChallenge() : goHome('lobby');
 requestAnimationFrame(frame);
+// Gem packs paid on Dodo's page: the webhook may land a few seconds after we're back, so keep asking for half a minute.
+async function claimPaid(back) {
+  if (back) history.replaceState(null, '', location.pathname);
+  for (let i = 0; i < (back ? 10 : 1); i++) {
+    if (i) await new Promise(r => setTimeout(r, 3000));
+    const got = creditPurchases(save, await online.claimPurchases().catch(() => []));
+    if (got) { persist(); coinsUI(); home.reward({ gems: got }); confetti(50); sfx.coin(); return; }
+  }
+  if (back) toast(t('payWait'));
+}
 // Go online in the background; the game is already playable offline.
 setTimeout(async () => {
   const { save: merged } = await online.connect(save);
   const invite = new URLSearchParams(location.search).get('party')?.toUpperCase();
   if (invite) history.replaceState(null, '', location.pathname); // a reload must not rejoin the old party
   if (invite && CODE_RE.test(invite) && net.online) setTimeout(() => partyOpen(invite, false), 600);
+  if (net.online) claimPaid(new URLSearchParams(location.search).get('paid'));
   if (merged === save) return; // offline: connect hands back our own save untouched — nothing to swap in
   for (const k of Object.keys(save)) delete save[k]; // swap contents in place: home & the match hold this object
   Object.assign(save, merged);

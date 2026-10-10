@@ -1493,3 +1493,12 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .rep-field input:focus, .rep-field textarea:focus { outline: 2px solid var(--you); }
 .report .chip-row { margin-top: 6px; }
 .parents-body { white-space: pre-line; text-align: left; line-height: 1.5; font-size: 14px; }
+
+/* ---------- gem packs (Dodo Payments) ---------- */
+.pay-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.pay-pack { position: relative; padding-top: 18px; }
+.pay-pack.best { border-color: var(--gold); box-shadow: 0 5px 0 var(--stroke), 0 0 16px rgba(255, 210, 63, 0.45); }
+.pay-gems { display: flex; justify-content: center; gap: 0; min-height: 40px; align-items: center; }
+.pay-gems .gem { width: 30px; height: 30px; margin: 0 -5px; }
+.pay-pack b { font: 400 20px var(--display); }
+#sl-paid { margin: 4px 0 0; }

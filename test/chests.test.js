@@ -285,3 +285,25 @@ test('familiar: XP from fights, a coin price to level up, capped by the arena; l
   assert.ok(m.fam.own.includes('owl'));
   assert.equal(migrate({ fam: { lv: 99, skin: 'nope', own: ['nope'] } }).fam.lv, 10, 'validated');
 });
+
+test('bought gems: each payment once, cosmetics spend them first, never a chest', async () => {
+  const { freeGems, creditPurchases, pay, openSlot, migrate } = await import('../src/progress.js');
+  const s = freshSave();
+  s.gems = 100; // earned in the game
+  assert.equal(creditPurchases(s, [{ id: 'pay_1', gems: 450 }, { id: 'pay_1', gems: 450 }, { id: 'x', gems: -5 }]), 450);
+  assert.equal(creditPurchases(s, [{ id: 'pay_1', gems: 450 }]), 0, 'the same payment never pays twice');
+  assert.equal(s.gems, 550);
+  assert.equal(freeGems(s), 100);
+  pay(s, 'gems', 300); // a cosmetic: paid gems go first
+  assert.equal(freeGems(s), 100);
+  pay(s, 'gems', 200); // more than the paid ones: now earned gems go too
+  assert.equal(s.gems, 50);
+  assert.equal(freeGems(s), 50);
+  s.slots[0] = { id: 'c1', kind: 'box', start: Date.now() };
+  assert.ok(openSlot(s, 0, Date.now(), Math.random, true), 'earned gems still open a chest');
+  const t = freshSave();
+  creditPurchases(t, [{ id: 'pay_2', gems: 1000 }]);
+  t.slots[0] = { id: 'c2', kind: 'box', start: Date.now() };
+  assert.equal(openSlot(t, 0, Date.now(), Math.random, true), null, 'only bought gems: no chest');
+  assert.deepEqual(migrate(JSON.parse(JSON.stringify(t))).bought, [{ id: 'pay_2', gems: 1000 }], 'survives a reload');
+});

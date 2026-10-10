@@ -9,13 +9,14 @@ import {
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
   ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, RARITY, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
-  SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
+  SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY, freeGems,
 } from './progress.js';
 import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
 import { heroSvg } from './heroes.js';
 import { setArena, drawEmote, drawFamiliar } from './render.js';
 import { MAPS } from './sim.js';
+import { PAY } from './config.js';
 import { offerReward } from './ads.js';
 import { sfx, confetti } from './sfx.js';
 
@@ -1120,7 +1121,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#sl-time').textContent = sl.at == null ? t('slotWait', { t: mmss(left) }) : t('slotLeft', { t: clock(left) });
     $('#sl-info').textContent = (sl.at == null ? t('slotBusy') + ' ' : '') + odds(sl.kind); // what's inside, before any gems are spent
     $('#sl-gems').innerHTML = `${t('slotNow')} · <i class="gem"></i>${cost}`;
-    $('#sl-gems').disabled = save.gems < cost;
+    $('#sl-gems').disabled = freeGems(save) < cost;
+    $('#sl-paid').hidden = !(save.gems >= cost && freeGems(save) < cost); // has the gems, but they were bought: not for chests
     $('#sl-gems').onclick = () => openFromSlot(i, true);
     const box = $('#sl-ad');
     box.replaceChildren();
@@ -1228,8 +1230,23 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     skinsBtn.onclick = () => { sfx.click(); open('skins'); };
     const gems = el('div', 'sh-gems');
     gems.innerHTML = '<h3></h3><p class="muted"></p>';
-    gems.querySelector('h3').textContent = t('shGems');
-    gems.querySelector('p').textContent = t('shGemsSoon');
+    gems.querySelector('h3').textContent = t(PAY.on ? 'payTitle' : 'shGems');
+    gems.querySelector('p').textContent = t(PAY.on ? 'payNote' : 'shGemsSoon');
+    if (PAY.on) { // support the game: fixed gem packs, paid through Dodo's own checkout page
+      const row = el('div', 'pay-row');
+      row.append(...PAY.packs.map(p => {
+        const b = el('button', 'sh-tile pay-pack' + (p.best ? ' best' : ''));
+        b.innerHTML = `${p.best ? `<span class="sh-off">${t('payBest')}</span>` : ''}<span class="pay-gems">${'<i class="gem"></i>'.repeat(p.id === 'l' ? 3 : p.id === 'm' ? 2 : 1)}</span><b>${p.gems}</b><span class="sh-price">${p.price}</span>`;
+        b.onclick = async () => {
+          if (!net.online) return toast(t('repOffline'));
+          if (!confirm(t('payAsk', { n: p.gems, price: p.price }))) return;
+          b.disabled = true;
+          try { location.href = await online.checkout(p.id); } catch { toast(t('payFail')); b.disabled = false; }
+        };
+        return b;
+      }));
+      gems.append(row);
+    }
     body.append(skinsBtn, gems);
     clearInterval(shopAnim); // animated emotes move in the shop too
     shopAnim = setInterval(() => {
@@ -1580,5 +1597,5 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     });
   }
 
-  return { open, render, settings, vs, hide: () => { $('#scr-home').hidden = true; } };
+  return { open, render, settings, vs, reward, hide: () => { $('#scr-home').hidden = true; } };
 }

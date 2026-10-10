@@ -143,6 +143,13 @@ export const clanCreate = (name, badge) => rpc('clan_create', { p_name: name, p_
 export const clanJoin = id => rpc('clan_join', { p_clan: id });
 export const clanLeave = () => rpc('clan_leave');
 export const sendFeedback = (kind, body, about, meta) => rpc('send_feedback', { p_kind: kind, p_body: body, p_about: about || null, p_meta: meta });
+export const claimPurchases = () => rpc('claim_purchases');
+export async function checkout(pack) { // a Dodo checkout page for this gem pack (made server-side, see supabase/functions)
+  if (!sb) throw new Error('offline');
+  const { data, error } = await timeout(sb.functions.invoke('dodo-checkout', { body: { pack, back: location.origin } }), 15000);
+  if (error || !data?.url) throw error || new Error('no url');
+  return data.url;
+}
 export const logEvent = type => (net.online ? rpc('log_event', { p_type: type }).catch(() => {}) : null);
 export async function deleteProfile() {
   await rpc('delete_profile');

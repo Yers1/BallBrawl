@@ -154,7 +154,7 @@ export function leagueFor(tr) {
 
 // Titles shown under your nickname. Unlocked by playing; you pick one in the profile.
 export const TITLES = [
-  { id: 'rookie' },
+  { id: 'rookie' }, { id: 'supporter', stat: 'supporter', goal: 1 }, // supporter: bought a gem pack
   { id: 'fighter', stat: 'wins', goal: 10 }, { id: 'veteran', stat: 'wins', goal: 50 }, { id: 'hero', stat: 'wins', goal: 200 },
   { id: 'flawless', stat: 'flawless', goal: 10 }, { id: 'superstar', stat: 'supers', goal: 100 },
   { id: 'social', stat: 'challenges', goal: 10 }, { id: 'stylish', stat: 'skins', goal: 10 }, { id: 'collector', stat: 'balls', goal: ORDER.length },
@@ -162,13 +162,14 @@ export const TITLES = [
   ...ORDER.map(b => ({ id: 'master_' + b, ball: b, goal: RANKS.length })),
 ];
 const titleValue = (s, x) => (x.ball ? ballRank(s.mastery[x.ball] ?? 0) : x.stat === 'skins' ? s.skins.length
-  : x.stat === 'balls' ? s.owned.length : x.stat === 'maxTrophies' ? s.maxTrophies : s.stats[x.stat] ?? 0);
+  : x.stat === 'balls' ? s.owned.length : x.stat === 'supporter' ? s.bought.length : x.stat === 'maxTrophies' ? s.maxTrophies : s.stats[x.stat] ?? 0);
 export const titleOk = (s, id) => { const x = TITLES.find(t => t.id === id); return !!x && (!x.goal || titleValue(s, x) >= x.goal); };
 
 // ---------- save ----------
 export function freshSave() {
   return {
-    v: 2, coins: 0, spent: { coins: 0, gems: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
+    bought: [], // gem packs paid with money, by payment id
+    v: 2, coins: 0, spent: { coins: 0, gems: 0, chest: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
     nick: null, muted: false, music: true, avatar: 'basic', fav: null, // fav: the ball on the profile stand (null: the avatar)
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
@@ -199,7 +200,8 @@ export function migrate(raw) {
   const int = (v, min = 0, max = 1e9) => (Number.isFinite(v) ? Math.min(max, Math.max(min, Math.floor(v))) : null);
   const list = (a, ok) => (Array.isArray(a) ? [...new Set(a.filter(ok))] : []);
   s.coins = int(r.coins) ?? 0;
-  s.spent = { coins: int(r.spent?.coins) ?? 0, gems: int(r.spent?.gems) ?? 0 };
+  s.spent = { coins: int(r.spent?.coins) ?? 0, gems: int(r.spent?.gems) ?? 0, chest: int(r.spent?.chest) ?? 0 };
+  s.bought = Array.isArray(r.bought) ? r.bought.filter(b => typeof b?.id === 'string' && b.id.length < 80 && Number.isInteger(b.gems) && b.gems > 0 && b.gems <= 1e5).slice(-200) : [];
   s.owned = ['basic', ...list(r.owned, id => BALLS[id] && id !== 'basic')];
   if (Array.isArray(r.squad) && r.squad.length === 3) s.squad = r.squad.map(id => (s.owned.includes(id) ? id : 'basic'));
   s.trophies = int(r.trophies) ?? (int(r.level, 1, LEVELS) ? (int(r.level, 1, LEVELS) - 1) * 15 : 0); // v1 ladder level → trophies
@@ -351,6 +353,24 @@ export const hasSkin = (s, ball, style) =>
   SKINS[style]?.gift ? s.accountGift && s.owned.includes(ball)
     : s.skins.includes(`${ball}:${style}`) || (!!SKINS[style]?.path && s.owned.includes(ball) && ballRank(s.mastery?.[ball] ?? 0) >= SKINS[style].path);
 // Every coin or gem spent goes through here: the running total lets a cloud merge work out the real balance.
+// Gems bought with money never open a chest (its contents are random — that would be buying a lottery ticket).
+// Cosmetics spend the bought gems first; what's left of the earned ones is all a chest can take.
+export const paidGems = s => s.bought.reduce((n, b) => n + b.gems, 0);
+export function freeGems(s) {
+  const paid = paidGems(s), nonChest = s.spent.gems - s.spent.chest;
+  return Math.max(0, Math.min(s.gems, s.gems + s.spent.gems - paid - s.spent.chest - Math.max(0, nonChest - paid)));
+}
+// Paid packs the server confirmed (claim_purchases): each payment once, ever. Returns the gems added.
+export function creditPurchases(s, rows) {
+  let got = 0;
+  for (const r of Array.isArray(rows) ? rows : []) {
+    if (typeof r?.id !== 'string' || !Number.isInteger(r.gems) || r.gems <= 0 || s.bought.some(b => b.id === r.id)) continue;
+    s.bought.push({ id: r.id, gems: r.gems });
+    s.gems += r.gems;
+    got += r.gems;
+  }
+  return got;
+}
 export function pay(s, cur, n) {
   s[cur] -= n;
   s.spent[cur] += n;
@@ -445,8 +465,9 @@ export function openSlot(s, i, now, rand, withGems = false) {
   if (!slot) return null;
   const left = slotLeft(slot, now);
   if (left > 0) {
-    if (!withGems || s.gems < gemsToOpen(left)) return null;
+    if (!withGems || freeGems(s) < gemsToOpen(left)) return null;
     pay(s, 'gems', gemsToOpen(left));
+    s.spent.chest += gemsToOpen(left);
   }
   s.slots[i] = null;
   s.slotsOpened = [...s.slotsOpened, slot.id].slice(-40);
@@ -646,6 +667,8 @@ export function mergeSave(local, cloudRaw, server) {
     s.spent[cur] = Math.max(s.spent[cur], cloud.spent[cur]);
     s[cur] = Math.max(0, earned - s.spent[cur]);
   }
+  s.spent.chest = Math.max(s.spent.chest, cloud.spent.chest);
+  s.bought = [...s.bought, ...cloud.bought.filter(b => !s.bought.some(x => x.id === b.id))];
   s.owned = union(s.owned, cloud.owned);
   s.fav ??= cloud.fav;
   s.skins = union(s.skins, cloud.skins);
