@@ -131,7 +131,7 @@ body.record { background: #000; }
   font-weight: 800; font-size: 13px; white-space: nowrap; animation: bob 1.6s ease-in-out infinite;
 }
 @keyframes bob { 50% { transform: translate(-50%, -4px); } }
-.controls { width: var(--size); height: 88px; display: flex; align-items: center; justify-content: space-between; }
+.controls { position: relative; width: var(--size); height: 88px; display: flex; align-items: center; justify-content: space-between; }
 .pips { display: flex; gap: 10px; }
 .pip {
   --p: 0; width: 48px; height: 54px; display: grid; place-items: center; border-radius: 14px;
@@ -298,10 +298,15 @@ body.record { background: #000; }
 }
 .ah { position: relative; width: min(100cqw, (100cqh - 20px) * 0.8136); aspect-ratio: 358 / 440; }
 .ah-art svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.ah-name {
-  position: absolute; left: 50%; top: 5.5%; translate: -50% 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
-  white-space: nowrap; pointer-events: none;
+.hero-wrap { position: relative; flex: 1; min-height: 0; display: flex; container-type: size; }
+.ah-name { /* the arena name over the back wall: tap to swipe through every arena */
+  position: absolute; z-index: 3; left: 50%; top: calc(min(100cqw / 0.8136, 100cqh - 20px) * 0.05); translate: -50% 0;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; white-space: nowrap; cursor: pointer;
+  padding: 4px 14px; border: 0; border-radius: 12px; background: rgba(10, 14, 31, 0.35); color: var(--text);
 }
+.ah-name b::before { content: '\2039  '; color: var(--muted); }
+.ah-name b::after { content: '  \203A'; color: var(--muted); }
+.ah-name:active { transform: scale(0.96); }
 .ah-name small { font-weight: 900; font-size: 10px; line-height: 1; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
 .ah-name b { font: 400 clamp(14px, 5.4cqw, 20px)/1 var(--display); letter-spacing: 0.5px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
 .trio { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: center; }
@@ -355,7 +360,7 @@ body.record { background: #000; }
 .dock { flex: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
 .sbtn {
   position: relative; min-width: 0; height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  padding: 0 1px; cursor: pointer; border: 0; border-radius: 12px; background: var(--panel); color: #D7E0F5; letter-spacing: -0.2px;
+  padding: 0 1px; cursor: pointer; border: 0; border-radius: 12px; background: var(--panel); color: #D7E0F5; letter-spacing: -0.35px;
   box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); font-weight: 800; font-size: 11px; line-height: 1; transition: transform 0.06s, box-shadow 0.06s;
 }
 .sbtn:active { transform: translateY(3px); box-shadow: inset 0 2px 0 var(--hi), 0 1px 0 var(--stroke); }
@@ -718,3 +723,94 @@ body.record { background: #000; }
 /* arenas: the next one on the Glory Road page, and the new-arena popup */
 .ph-arena { flex-basis: 100%; width: 100%; font-weight: 800; font-size: 13px; color: var(--muted); }
 .arena-pop svg { display: block; width: 168px; height: auto; filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.35)); }
+
+/* lobby: title under the nickname, league emblem */
+.me { align-items: center; }
+.me-title { font-size: 11px; font-weight: 800; line-height: 1.1; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.league-ic { display: inline-grid; flex: none; }
+.league-ic svg { display: block; width: 30px; height: auto; }
+.league-ic.sm svg { width: 18px; }
+.lrow .sc { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.league-card { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; padding: 10px 14px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
+.league-card svg { width: 54px; height: auto; flex: none; }
+.league-card div { display: flex; flex-direction: column; gap: 2px; }
+.league-card small { font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.league-card b { font: 400 22px/1.1 var(--display); }
+.league-card span { font-size: 13px; color: var(--muted); }
+/* chips: titles and languages */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 16px; }
+.chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border-radius: 12px; cursor: pointer;
+  border: 2px solid transparent; background: var(--panel); color: var(--text); font-weight: 800; font-size: 13px; box-shadow: 0 3px 0 var(--stroke);
+}
+.chip.on { border-color: var(--gold); color: var(--gold); }
+.chip.locked { opacity: 0.55; cursor: default; }
+.chip small { font-size: 11px; font-weight: 700; color: var(--muted); }
+/* ball ranks */
+.rk-badge {
+  display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 8px; flex: none;
+  font: 400 13px/1 var(--display); color: #0A0E1F; border: 2px solid #0A0E1F; background: #B98B5E;
+}
+.rk-badge.t-bronze { background: #E39A5B; } .rk-badge.t-silver { background: #E3E9F2; } .rk-badge.t-gold { background: #FFD23F; }
+.rk-badge.t-diamond { background: #8EEBFF; } .rk-badge.t-master { background: #FF7A88; color: #fff; text-shadow: 0 1px 0 #0A0E1F; }
+.tile { position: relative; }
+.tile .rk-badge { position: absolute; top: 6px; left: 6px; }
+.bpath { margin: 4px 0 12px; padding: 10px; border-radius: 16px; background: var(--panel-2); text-align: left; }
+.bp-head { display: flex; align-items: center; gap: 10px; }
+.bp-head .rk-badge { min-width: 34px; height: 34px; font-size: 18px; border-radius: 10px; }
+.bp-head div { display: flex; flex-direction: column; }
+.bp-head small { color: var(--muted); font-size: 12px; }
+.bp-bar { height: 8px; margin: 8px 0; border-radius: 4px; background: var(--stroke); overflow: hidden; }
+.bp-bar i { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+.bp-steps { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.bp-step { flex: none; width: 64px; min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 4px; padding: 6px 4px; border-radius: 12px; background: var(--panel); opacity: 0.6; }
+.bp-step.done { opacity: 1; background: #24406A; }
+.bp-step.next { opacity: 1; box-shadow: inset 0 0 0 2px var(--gold); }
+.bp-step .chest-ico svg { width: 40px; height: 36px; display: block; }
+.bp-coins { display: flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 900; color: var(--gold); }
+.bp-coins .coin { width: 14px; height: 14px; }
+.bp-title { font-size: 10px; font-weight: 900; line-height: 1.1; text-align: center; color: var(--gold); }
+.rank-line { color: #8EEBFF; }
+/* skins page */
+.sk-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; }
+.sk-row { padding: 10px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
+.sk-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sk-head b { flex: 1; font-size: 16px; }
+.sk-opts { margin: 0; }
+/* arenas page */
+.ar-list { display: flex; flex-direction: column; align-items: center; gap: 26px; padding: 6px 0 20px; }
+.ar-card {
+  position: relative; width: min(84%, 320px); display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 12px 14px; border-radius: 18px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke);
+}
+.ar-card:not(:last-child)::after { /* the road down to the previous arena */
+  content: ''; position: absolute; left: 50%; bottom: -27px; height: 22px; margin-left: -3px; border-left: 6px dotted var(--muted); opacity: 0.6;
+}
+.ar-card.cur { box-shadow: inset 0 0 0 3px var(--gold), 0 5px 0 var(--stroke), 0 0 40px rgba(255, 204, 51, 0.25); }
+.ar-art { position: relative; width: 100%; }
+.ar-art svg { display: block; width: 100%; height: auto; }
+.ar-card.locked .ar-art svg { filter: saturate(0.55) brightness(0.62); }
+.ar-card.locked .ar-art::after {
+  content: ''; position: absolute; left: 50%; top: 45%; width: 56px; height: 64px; translate: -50% -50%;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 32'><path d='M7 14V9a7 7 0 0 1 14 0v5' fill='none' stroke='%230A0E1F' stroke-width='6'/><path d='M7 14V9a7 7 0 0 1 14 0v5' fill='none' stroke='%23C9D4E6' stroke-width='3'/><rect x='2' y='13' width='24' height='18' rx='4' fill='%23FFCC33' stroke='%230A0E1F' stroke-width='2.5'/><circle cx='14' cy='21' r='2.6' fill='%230A0E1F'/></svg>") center / contain no-repeat;
+}
+.ar-card small { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.ar-card b { font: 400 22px/1.1 var(--display); }
+.ar-st { display: flex; align-items: center; gap: 4px; font-weight: 900; color: var(--gold); }
+.watch-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 12px; }
+.watch-btn svg { width: 24px; height: 24px; }
+
+/* emotes in battle */
+.emote-btn {
+  width: 54px; height: 54px; padding: 0; display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  border: 3px solid var(--stroke); background: var(--panel); box-shadow: 0 4px 0 var(--stroke);
+}
+.emote-btn svg { width: 32px; height: 32px; }
+.emote-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--stroke); }
+.emote-tray {
+  position: absolute; z-index: 6; left: 50%; bottom: 86px; translate: -50% 0; display: grid; grid-template-columns: repeat(3, 58px); gap: 8px;
+  padding: 10px; border-radius: 18px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke); animation: trayIn 0.18s ease-out;
+}
+.emote-tray button { width: 58px; height: 58px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 14px; background: var(--panel-2); cursor: pointer; }
+.emote-tray button:active { transform: scale(0.9); }
+@keyframes trayIn { from { opacity: 0; transform: translateY(12px) scale(0.9); } }

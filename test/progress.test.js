@@ -76,9 +76,9 @@ test('skins: buy with coins, equip per ball', () => {
   const s = freshSave();
   s.coins = 1000;
   assert.ok(Object.keys(SKINS).length >= 6);
-  assert.equal(buySkin(s, 'basic', 'gold'), true);
-  assert.equal(s.skinOf.basic, 'gold');
-  assert.equal(buySkin(s, 'basic', 'gold'), false, 'not twice');
+  assert.equal(buySkin(s, 'basic', 'candy'), true);
+  assert.equal(s.skinOf.basic, 'candy');
+  assert.equal(buySkin(s, 'basic', 'candy'), false, 'not twice');
   assert.equal(buySkin(s, 'train', 'neon'), false, 'not for balls you do not own');
 });
 

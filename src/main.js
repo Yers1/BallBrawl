@@ -2,8 +2,8 @@
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
-import { draw, drawIcon, fitCanvas, resetFx, M } from './render.js';
-import { lang, t, ballName, ballAbout, superName, superAbout } from './i18n.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, EMOTES, emote, drawEmote, setAutoEmote } from './render.js';
+import { lang, t, ballName, ballAbout, superName, superAbout, skinName } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
@@ -12,7 +12,7 @@ import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss, winTowardChest, CHEST_WINS,
-  claimable, pathNodes, track, dayKey, refreshQuests,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery,
 } from './progress.js';
 import { createHome } from './meta.js';
 import * as online from './net.js';
@@ -277,6 +277,7 @@ function renderSquad() {
 const enemySquad = () => (S.opponent ? S.opponent.squad : enemySquadFor(save.trophies, rng(S.nextSeed)));
 
 async function startMatch() {
+  setAutoEmote([1]);
   if (S.mode !== 'squad') return;
   cancelReward();
   S.mode = 'starting';
@@ -473,6 +474,7 @@ function finishMatch(r) {
   }
   save.coins += S.earned;
   S.chestDrop = won ? winTowardChest(save) : null; // every CHEST_WINS wins drop a chest
+  S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   save.matches++;
   track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, ...S.ms });
   S.ms = { dashes: 0, supers: 0, kills: 0 };
@@ -549,6 +551,10 @@ function showResult() {
   $('#r-chest').hidden = S.chestDrop == null;
   if (S.chestDrop != null) $('#r-chest').textContent = S.chestDrop ? t('resultChestGot') : t('resultChest', { n: save.chestWins, max: CHEST_WINS });
   $('#r-reward').hidden = true;
+  const ups = S.ups ?? [];
+  $('#r-rank').hidden = !ups.length;
+  $('#r-rank').textContent = ups.map(u => t('rankUp', { name: ballName(u.id), n: u.rank })
+    + (u.skin ? ` · ${skinName(u.skin)}` : u.chest ? ` · ${t('chest_' + u.chest)}` : u.coins ? ` · +${u.coins}` : '')).join('  ');
   if (c) { // challenge result: no ads, the main action is "challenge them back"
     const name = nickText(c.nick, lang);
     $('#r-sub').textContent = won ? t('challengeWin', { nick: name }) : r === 'draw' ? t('draw') : t('challengeLose', { nick: name });
@@ -637,6 +643,7 @@ function startWatch() {
   S.watchDone = false;
   S.watchEndAt = 0;
   S.mode = 'watch';
+  setAutoEmote([0, 1]);
   const w = S.world, [a, b] = w.ents;
   S.watchAims = [aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand)];
   S.launchAt = performance.now() / 1000 + (RECORD != null ? 2.5 : 1.4);
@@ -710,7 +717,30 @@ function frame(ms) {
 
 // ---------- boot ----------
 document.documentElement.lang = lang;
-if (lang === 'en') document.title = 'BallBrawl — ball battle';
+if (lang !== 'ru') document.title = 'BallBrawl — ball battle';
+
+// Emotes: a tray of preset stickers; the computer sometimes answers.
+const REPLY = { laugh: ['laugh', 'cool'], cool: ['wow', 'cool'], wow: ['laugh', 'wow'], angry: ['laugh', 'cool'], cry: ['laugh', 'gg'], gg: ['gg'] };
+$('#emote-tray').append(...EMOTES.map(kind => {
+  const b = el('button', '');
+  b.setAttribute('aria-label', kind);
+  const c = document.createElement('canvas');
+  drawEmote(c, kind, 44);
+  b.append(c);
+  b.onclick = e => {
+    e.stopPropagation();
+    $('#emote-tray').hidden = true;
+    if (!emote(0, kind)) return;
+    sfx.click();
+    if (S.mode !== 'watch' && Math.random() < 0.55) {
+      const r = REPLY[kind];
+      setTimeout(() => emote(1, r[Math.floor(Math.random() * r.length)]), 700 + Math.random() * 800);
+    }
+  };
+  return b;
+}));
+$('#emote-btn').onclick = e => { e.stopPropagation(); sfx.click(); $('#emote-tray').hidden = !$('#emote-tray').hidden; };
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#emote-tray, #emote-btn')) $('#emote-tray').hidden = true; });
 for (const n of document.querySelectorAll('[data-t]')) n.textContent = t(n.dataset.t);
 $('#s-back').onclick = () => goHome();
 $('#s-fight').onclick = startMatch;

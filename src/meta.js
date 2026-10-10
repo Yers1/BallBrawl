@@ -1,10 +1,11 @@
 // Home: the lobby (main menu) and the pages it opens — Glory Road, chests, balls with skins, quests, leaders, profile.
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
-import { t, lang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
+import { t, lang, LANGS, setLang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
 import { nickText, randomNick, validNick } from './nick.js';
 import {
-  pathNodes, claimable, claim, UNLOCK, SKINS, SKIN_PRICE, hasSkin, buySkin, equipSkin, buyBall,
+  pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin, buyBall,
+  RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
   ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, CHEST_WINS, openChest, ARENAS, arenaFor, arenaIndex,
 } from './progress.js';
@@ -105,6 +106,22 @@ export function arenaSvg(id, k) {
 <rect x="1" y="1" width="356" height="438" fill="none" stroke="#0A0E1F" stroke-width="2"/></svg>`;
 }
 
+// League emblem: a gem-cut shield in the league colour with the tier (I–III) or a star for Masters.
+const LEAGUE_COLORS = {
+  bronze: ['#E39A5B', '#8A4E1E'], silver: ['#E3E9F2', '#8E9AB0'], gold: ['#FFD23F', '#B07A00'], diamond: ['#8EEBFF', '#2B7FC0'],
+  mythic: ['#DDB0FF', '#7A3FC8'], legend: ['#FF7A88', '#A81F36'], master: ['#FFE38A', '#6E1424'],
+};
+export function leagueSvg({ id, tier }) {
+  const [c, d] = LEAGUE_COLORS[id] ?? LEAGUE_COLORS.bronze;
+  const mark = tier ? `<text x="18" y="28.5" text-anchor="middle" font-family="Russo One, sans-serif" font-size="11" fill="#0A0E1F">${['', 'I', 'II', 'III'][tier]}</text>`
+    : '<path d="M18 13l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z" fill="#0A0E1F"/>';
+  return `<svg viewBox="0 0 36 40" aria-hidden="true"><path d="M18 2 L33 10 V28 L18 38 L3 28 V10 Z" fill="${d}" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>`
+    + `<path d="M18 6.5 L29 12.5 V26 L18 33.5 L7 26 V12.5 Z" fill="${c}"/><path d="M18 6.5 L29 12.5 V17.5 L18 12.5 L7 17.5 V12.5 Z" fill="rgba(255,255,255,0.45)"/>${mark}</svg>`;
+}
+export const leagueName = lg => t('league_' + lg.id) + (lg.tier ? ' ' + ['', 'I', 'II', 'III'][lg.tier] : '');
+export const titleName = id => (id.startsWith('master_') ? t('ttlMaster', { name: ballName(id.slice(7)) }) : t('ttl_' + id));
+export const rankBadge = r => `<span class="rk-badge t-${rankTier(r)}">${r}</span>`;
+
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
   const { net, leaderboard, deleteProfile } = online;
   let tab = 'lobby';
@@ -160,6 +177,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#h-avatar').replaceChildren(icon(save.avatar, 44, save.skinOf[save.avatar]));
     $('#h-nick').textContent = nickText(save.nick, lang);
     $('#h-trophies').textContent = save.trophies;
+    $('#h-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
+    $('#h-league').innerHTML = leagueSvg(leagueFor(save.trophies));
   }
 
   // ---------- trophy road (horizontal, left → right, like Brawl Stars) ----------
@@ -287,6 +306,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       tile.style.setProperty('--c', BALLS[id].color);
       tile.append(icon(id, 72, save.skinOf[id]), el('b', ''), el('small', '', own ? `${BALLS[id].hp} ${t('hp')}` : `<i class="trophy"></i>${UNLOCK[id]}`));
       tile.children[1].textContent = ballName(id);
+      if (own) tile.insertAdjacentHTML('beforeend', rankBadge(ballRank(save.mastery[id] ?? 0)));
       tile.onclick = () => { sfx.click(); openBall(id); };
       return tile;
     }));
@@ -310,30 +330,90 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }
     $('#ball-skins-title').hidden = !own;
     $('#ball-skins').hidden = !own;
+    $('#ball-path').hidden = !own;
     if (own) {
-      const opt = (style, label) => {
-        const ownSkin = style == null || hasSkin(save, id, style), on = (save.skinOf[id] ?? null) === style, gift = SKINS[style]?.gift;
-        const b = el('button', `skin ${on ? 'on' : ''} ${ownSkin ? '' : 'locked'}`);
-        b.append(icon(id, 44, style), document.createTextNode(label));
-        if (!ownSkin) b.append(el('span', 'price', gift ? t('skinGift') : `<i class="coin"></i>${SKIN_PRICE}`));
-        b.onclick = () => {
-          if (!ownSkin && gift) { $('#scr-ball').hidden = true; open('profile'); return; } // the rainbow comes with an account
-          if (ownSkin) equipSkin(save, id, style);
-          else if (!buySkin(save, id, style)) return;
-          else sfx.coin();
-          sfx.click();
-          persist();
-          coinsUI();
-          render();
-          openBall(id);
-        };
-        return b;
-      };
-      $('#ball-skins').replaceChildren(opt(null, t('skinDefault')), ...Object.keys(SKINS).map(s => opt(s, skinName(s))));
+      $('#ball-skins').replaceChildren(skinOpt(id, null, () => openBall(id)), ...Object.keys(SKINS).map(st => skinOpt(id, st, () => openBall(id))));
+      ballPath(id);
     }
     $('#scr-ball').hidden = false;
   }
   $('#ball-close').onclick = () => { $('#scr-ball').hidden = true; };
+
+  // One skin button: owned → wear it; Silver and the rest → buy with coins; Gold → the ball's rank 7; Rainbow → an account.
+  function skinOpt(id, style, again) {
+    const ownSkin = style == null || hasSkin(save, id, style), on = (save.skinOf[id] ?? null) === style, sk = SKINS[style];
+    const b = el('button', `skin ${on ? 'on' : ''} ${ownSkin ? '' : 'locked'}`);
+    b.append(icon(id, 44, style), document.createTextNode(style == null ? t('skinDefault') : skinName(style)));
+    if (!ownSkin) b.append(el('span', 'price', sk.gift ? t('skinGift') : sk.path ? t('skinRankLock') : `<i class="coin"></i>${skinPrice(style)}`));
+    b.onclick = () => {
+      if (!ownSkin && sk.gift) { $('#scr-ball').hidden = true; open('profile'); return; } // the rainbow comes with an account
+      if (!ownSkin && sk.path) { openBall(id); return; } // show the ball's path
+      if (ownSkin) equipSkin(save, id, style);
+      else if (!buySkin(save, id, style)) return;
+      else sfx.coin();
+      sfx.click();
+      persist();
+      coinsUI();
+      render();
+      again();
+    };
+    return b;
+  }
+
+  // The ball's own path: its rank, points to the next one, and what every rank gives.
+  function ballPath(id) {
+    const pts = save.mastery[id] ?? 0, r = ballRank(pts), next = RANKS[r], prev = RANKS[r - 1];
+    const box = $('#ball-path');
+    box.innerHTML = `<div class="bp-head">${rankBadge(r)}<div><b></b><small></small></div></div>`
+      + `<div class="bp-bar"><i style="width:${next == null ? 100 : Math.round(((pts - prev) / (next - prev)) * 100)}%"></i></div><div class="bp-steps"></div><p class="muted small"></p>`;
+    box.querySelector('b').textContent = t('pathTitle');
+    box.querySelector('small').textContent = next == null ? t('rankMax') : t('rankPts', { n: pts, max: next });
+    box.querySelector('p').textContent = t('pathHint');
+    box.querySelector('.bp-steps').replaceChildren(...Object.entries(BALL_PATH).map(([k, rw]) => {
+      const n = Number(k), step = el('div', 'bp-step' + (n <= r ? ' done' : n === r + 1 ? ' next' : ''));
+      step.insertAdjacentHTML('beforeend', rankBadge(n));
+      if (rw.skin) step.append(icon(id, 30, rw.skin));
+      else if (rw.chest) step.append(el('span', 'chest-ico', chestSvg(rw.chest)));
+      else if (rw.title) step.append(el('span', 'bp-title', titleName('master_' + id)));
+      else step.append(el('span', 'bp-coins', `<i class="coin"></i>${rw.coins}`));
+      return step;
+    }));
+  }
+
+  // ---------- skins: every ball you own with all of its skins ----------
+  function skins() {
+    const order = [...new Set([save.squad[0], ...save.owned])].filter(id => save.owned.includes(id));
+    $('#sk-list').replaceChildren(...order.map(id => {
+      const row = el('div', 'sk-row'), head = el('div', 'sk-head');
+      head.append(icon(id, 34, save.skinOf[id]), el('b', ''));
+      head.lastChild.textContent = ballName(id);
+      head.insertAdjacentHTML('beforeend', rankBadge(ballRank(save.mastery[id] ?? 0)));
+      const opts = el('div', 'skin-row sk-opts');
+      opts.append(skinOpt(id, null, skins), ...Object.keys(SKINS).map(st => skinOpt(id, st, skins)));
+      row.append(head, opts);
+      return row;
+    }));
+  }
+
+  // ---------- arenas: a road from the bottom up, like Clash Royale (arena 1 at the bottom) ----------
+  function arenas() {
+    const cur = arenaIndex(arenaFor(save.maxTrophies).id), list = $('#ar-list');
+    list.replaceChildren(...ARENAS.map((a, i) => [a, i]).reverse().map(([a, i]) => {
+      const card = el('div', 'ar-card' + (i > cur ? ' locked' : '') + (i === cur ? ' cur' : ''));
+      card.innerHTML = `<span class="ar-art">${arenaSvg(a.id, 'g' + i)}</span><small></small><b></b><span class="ar-st"></span>`;
+      card.querySelector('small').textContent = t('arenaN', { n: i + 1 });
+      card.querySelector('b').textContent = t('arena_' + a.id);
+      const st = card.querySelector('.ar-st');
+      if (i > cur) st.innerHTML = `<i class="trophy"></i>${a.at}`;
+      else st.textContent = i === cur ? t('arenaHere') : t('arenaOpen');
+      return card;
+    }));
+    setTimeout(() => { // open on the arena you're in
+      const c = list.children[ARENAS.length - 1 - cur], box = $('#tab-body');
+      if (c) box.scrollTop += c.getBoundingClientRect().top - box.getBoundingClientRect().top - (box.clientHeight - c.clientHeight) / 2;
+    }, 0);
+  }
+  $('#l-arena-btn').onclick = () => { sfx.click(); open('arenas'); };
 
   // ---------- quests ----------
   function quests() {
@@ -394,7 +474,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
         name.textContent = validNick(r.nick) ? nickText(r.nick, lang) : '???'; // never trust text from the network
         const ball = BALLS[r.avatar] ? r.avatar : 'basic', skin = SKINS[r.skin] ? r.skin : null;
         row.append(el('div', 'rk', String(Number(r.rank) || '')), icon(ball, 32, skin), name,
-          el('div', 'sc', `<i class="trophy"></i>${Number(r.score) || 0}`));
+          el('div', 'sc', `<span class="league-ic sm">${leagueSvg(leagueFor(Number(r.score) || 0))}</span><i class="trophy"></i>${Number(r.score) || 0}`));
         return row;
       }));
     } catch {
@@ -411,6 +491,28 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const b = el('button', 'pick' + (save.avatar === id ? ' sel-avatar' : ''));
       b.append(icon(id, 40, save.skinOf[id]), document.createTextNode(ballName(id)));
       b.onclick = () => { save.avatar = id; persist(); render(); };
+      return b;
+    }));
+    const lg = leagueFor(save.trophies);
+    $('#p-league').innerHTML = `${leagueSvg(lg)}<div><small></small><b></b><span></span></div>`;
+    $('#p-league small').textContent = t('leagueTitle');
+    $('#p-league b').textContent = leagueName(lg);
+    $('#p-league span').textContent = lg.next ? t('leagueNext', { n: lg.next - save.trophies }) : t('leagueTop');
+    const how = x => (x.ball ? t('ttlHowMaster', { name: ballName(x.ball) }) : x.arena ? t('ttlHowArena', { name: t('arena_' + x.arena) })
+      : x.stat === 'balls' ? t('ttlHowAll') : t({ wins: 'ttlHowWins', flawless: 'ttlHowFlawless', supers: 'ttlHowSupers', challenges: 'ttlHowChallenges', skins: 'ttlHowSkins' }[x.stat], { n: x.goal }));
+    $('#p-titles').replaceChildren(...TITLES.filter(x => !x.ball || titleOk(save, x.id)).map(x => {
+      const ok = titleOk(save, x.id), b = el('button', 'chip' + (save.title === x.id ? ' on' : '') + (ok ? '' : ' locked'));
+      b.append(el('b', ''));
+      b.firstChild.textContent = titleName(x.id);
+      if (!ok) { b.append(el('small', '')); b.lastChild.textContent = how(x); }
+      b.disabled = !ok;
+      b.onclick = () => { save.title = x.id; persist(); sfx.click(); render(); };
+      return b;
+    }));
+    $('#p-langs').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {
+      const b = el('button', 'chip' + (code === lang ? ' on' : ''));
+      b.textContent = name;
+      b.onclick = () => { if (code !== lang) { setLang(code); location.reload(); } };
       return b;
     }));
     $('#p-online').hidden = !net.online;
@@ -700,7 +802,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#l-chest').onclick = () => { sfx.click(); chests(); };
   $('#l-squad').onclick = onPlay;
   $('#l-challenge').onclick = onChallenge;
-  $('#l-watch').onclick = onWatch;
+  $('#b-watch').onclick = onWatch;
   $('#h-play').onclick = onPlay;
   $('#sub-back').onclick = () => { sfx.click(); open('lobby'); };
 
@@ -735,12 +837,14 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (tab === 'quests') quests();
     if (tab === 'profile') { profile(); account(); }
     if (tab === 'leaders') leaders();
+    if (tab === 'skins') skins();
+    if (tab === 'arenas') arenas();
     badges();
   }
 
   function open(next = tab) {
     tab = next;
-    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile']) $('#tab-' + name).hidden = name !== tab;
+    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'arenas']) $('#tab-' + name).hidden = name !== tab;
     $('#lobby').hidden = tab !== 'lobby';
     $('#sub').hidden = tab === 'lobby';
     if (tab !== 'lobby') $('#sub-title').textContent = t('tab' + tab[0].toUpperCase() + tab.slice(1));

@@ -6,6 +6,8 @@ A browser game where balls with superpowers fight in an arena. You build a squad
 15 balls: Basic, Leech, Cell, Spider, Ninja, Train, Magnet, Bomb, Turtle, Lightning, Hedgehog, Ice, Spike, Shackles, Forge. Each has its own ability and super. Every round starts with an 8-second aim phase: ability cards for both balls, and the opponent's aim arrow is shown too, like in the original.
 **Arenas, Clash Royale style:** Night Arena, Canyon, Frost Peak, Jungle, Lava Crater and Space unlock at 0, 120, 350, 700, 1200 and 1900 best trophies. Each arena repaints the battle floor and walls and the whole menu, and the first visit gets a celebration.
 **Glory Road** from the main menu: wins earn trophies, and the road (to 3000 trophies) unlocks balls, skins, coins and chests. Rewards are kept forever, even if your trophies drop. **Chests** are earned only, every 3 wins and on the road. They are never sold, and the chest screen shows the real odds for the player. There are skins (cosmetic only), 3 daily quests, a 7-day login reward and achievements.
+**Brawl Stars style progression:** every ball has its own path with ranks 1–10 (coins, chests, the Gold skin at rank 7, a Master title at rank 10). Leagues from Bronze I to Masters by trophies, titles under your nickname, the Silver skin for coins.
+**Emotes** in battle (six preset stickers, the computer answers). **8 languages:** Russian, English, Kazakh, Uzbek, Turkish, Spanish, Portuguese, Indonesian, with a picker in the profile.
 **Email account** (optional): turns the anonymous player into an account that can sign in on another device, and gives the Rainbow skin as a thank-you.
 **Challenge a friend by link:** the squad, seed, nickname and level live right in the link, no server needed. Your friend plays with the same squad and can send back a reply challenge with their result.
 Nicknames are built only from preset words ("Fast Hedgehog 482"), never free text. The game is made for kids, so ads run in child-safe mode (non-personalized). Works offline (service worker).
@@ -13,7 +15,7 @@ Revenue comes from Google AdSense ads (H5 Games Ads); haram categories are block
 
 Plain JavaScript and Canvas, no dependencies and no build step. The folder is the website.
 
-The game UI is in Russian and English (picked from the browser language).
+The game UI is in 8 languages (`src/i18n.js` for Russian and English, `src/lang/` for the rest). The browser language picks one; the player can change it in the profile.
 
 ## Run locally
 

@@ -37,6 +37,58 @@ export const ARENAS = [
 export const arenaFor = maxTrophies => ARENAS.reduce((a, x) => (maxTrophies >= x.at ? x : a), ARENAS[0]);
 export const arenaIndex = id => Math.max(0, ARENAS.findIndex(a => a.id === id));
 
+// ---------- Brawl-Stars-style progression: ball ranks, leagues, titles ----------
+// Every ball has its own path (Brawl Stars mastery): each ball in your squad earns points from each fight
+// (a win +10, otherwise +3), and every rank pays out. Rank 7 gives that ball the Gold skin (it can't be
+// bought or dropped), rank 10 gives the "Master" title. No stat boosts: ranks are pride and rewards only.
+export const RANKS = [0, 20, 50, 90, 140, 200, 280, 380, 500, 650]; // points needed for rank 1..10
+export const BALL_PATH = {
+  2: { coins: 25 }, 3: { chest: 'box' }, 4: { coins: 50 }, 5: { chest: 'big' }, 6: { coins: 80 },
+  7: { skin: 'gold' }, 8: { coins: 120 }, 9: { chest: 'mega' }, 10: { title: true, coins: 200 },
+};
+export const ballRank = pts => RANKS.reduce((r, at, i) => (pts >= at ? i + 1 : r), 1);
+export const rankTier = r => (r >= 10 ? 'master' : r >= 9 ? 'diamond' : r >= 7 ? 'gold' : r >= 5 ? 'silver' : r >= 3 ? 'bronze' : 'wood');
+export function gainMastery(s, squad, won) {
+  const ups = [];
+  for (const id of new Set(squad)) {
+    if (!s.owned.includes(id)) continue; // a trial ball doesn't level
+    const before = ballRank(s.mastery[id] ?? 0);
+    s.mastery[id] = (s.mastery[id] ?? 0) + (won ? 10 : 3);
+    for (let rank = before + 1; rank <= ballRank(s.mastery[id]); rank++) {
+      const r = BALL_PATH[rank] ?? {};
+      s.coins += r.coins ?? 0;
+      if (r.chest) { s.chests[r.chest]++; s.chestsGot[r.chest]++; }
+      ups.push({ id, rank, ...r });
+    }
+  }
+  return ups;
+}
+
+// Leagues by current trophies, each split into I–II–III like Brawl Stars ranked; Master has no tiers.
+export const LEAGUES = [
+  { id: 'bronze', at: 0 }, { id: 'silver', at: 100 }, { id: 'gold', at: 250 }, { id: 'diamond', at: 450 },
+  { id: 'mythic', at: 700 }, { id: 'legend', at: 1000 }, { id: 'master', at: 1400 },
+];
+export function leagueFor(tr) {
+  const i = LEAGUES.reduce((a, l, k) => (tr >= l.at ? k : a), 0), l = LEAGUES[i], next = LEAGUES[i + 1];
+  if (!next) return { id: l.id, tier: 0, next: null };
+  const step = (next.at - l.at) / 3, tier = Math.min(3, 1 + Math.floor((tr - l.at) / step));
+  return { id: l.id, tier, next: tier < 3 ? Math.ceil(l.at + step * tier) : next.at };
+}
+
+// Titles shown under your nickname. Unlocked by playing; you pick one in the profile.
+export const TITLES = [
+  { id: 'rookie' },
+  { id: 'fighter', stat: 'wins', goal: 10 }, { id: 'veteran', stat: 'wins', goal: 50 }, { id: 'hero', stat: 'wins', goal: 200 },
+  { id: 'flawless', stat: 'flawless', goal: 10 }, { id: 'superstar', stat: 'supers', goal: 100 },
+  { id: 'social', stat: 'challenges', goal: 10 }, { id: 'stylish', stat: 'skins', goal: 10 }, { id: 'collector', stat: 'balls', goal: ORDER.length },
+  ...ARENAS.slice(1).map(a => ({ id: 'arena_' + a.id, arena: a.id, stat: 'maxTrophies', goal: a.at })),
+  ...ORDER.map(b => ({ id: 'master_' + b, ball: b, goal: RANKS.length })),
+];
+const titleValue = (s, x) => (x.ball ? ballRank(s.mastery[x.ball] ?? 0) : x.stat === 'skins' ? s.skins.length
+  : x.stat === 'balls' ? s.owned.length : x.stat === 'maxTrophies' ? s.maxTrophies : s.stats[x.stat] ?? 0);
+export const titleOk = (s, id) => { const x = TITLES.find(t => t.id === id); return !!x && (!x.goal || titleValue(s, x) >= x.goal); };
+
 // ---------- save ----------
 export function freshSave() {
   return {
@@ -48,6 +100,7 @@ export function freshSave() {
     chestsGot: { box: 0, big: 0, mega: 0 }, chestsOpened: { box: 0, big: 0, mega: 0 }, // ever earned / ever opened: only grow, so merges can't revive opened chests
     accountGift: false, // made an email account: the rainbow skin is theirs on every ball
     arenaSeen: 'night', // the newest arena the player has been welcomed to (the unlock celebration shows once)
+    mastery: {}, title: 'rookie', // ball rank points per ball; the title picked in the profile
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
     // cloud bookkeeping
@@ -74,6 +127,7 @@ export function migrate(raw) {
   s.answered = list(r.answered, Number.isInteger).slice(-100);
   s.claimed = list(r.claimed, Number.isInteger);
   s.accountGift = r.accountGift === true;
+  for (const id of ORDER) { const v = int(r.mastery?.[id]); if (v) s.mastery[id] = v; }
   s.skins = list(r.skins, k => typeof k === 'string' && /^[a-z]+:[a-z]+$/.test(k) && BALLS[k.split(':')[0]] && SKINS[k.split(':')[1]] && !SKINS[k.split(':')[1]].gift);
   for (const [b, st] of Object.entries(r.skinOf || {})) if (hasSkin(s, b, st)) s.skinOf[b] = st;
   for (const k of Object.keys(CHESTS)) {
@@ -83,6 +137,7 @@ export function migrate(raw) {
   }
   s.chestWins = int(r.chestWins, 0, CHEST_WINS - 1) ?? 0;
   if (ARENAS.some(a => a.id === r.arenaSeen)) s.arenaSeen = r.arenaSeen;
+  if (TITLES.some(x => x.id === r.title)) s.title = r.title;
   if (r.quests && typeof r.quests.day === 'string' && Array.isArray(r.quests.list)) {
     s.quests = { day: r.quests.day, list: r.quests.list.filter(q => QUESTS.some(d => d.id === q?.id)).map(q => ({ id: q.id, progress: int(q.progress) ?? 0, claimed: q.claimed === true })) };
   }
@@ -157,7 +212,8 @@ export function claim(s, node) {
 
 // ---------- skins (looks only) ----------
 export const SKINS = {
-  gold: { color: '#f5c542', pattern: 'shine' },
+  silver: { color: '#c9d4e6', pattern: 'shine', price: 60 }, // cheap, for coins
+  gold: { color: '#f5c542', pattern: 'shine', path: 7 }, // only from the ball's own path (rank 7)
   neon: { color: '#151b30', pattern: 'neon' },
   candy: { color: '#ff7eb6', pattern: 'stripes' },
   galaxy: { color: '#3b2a7a', pattern: 'stars' },
@@ -166,11 +222,13 @@ export const SKINS = {
   rainbow: { color: '#ff4d6d', pattern: 'rainbow', gift: true }, // the email-account gift: every ball, never sold
 };
 export const SKIN_PRICE = 150;
+export const skinPrice = style => SKINS[style]?.price ?? SKIN_PRICE;
 export const hasSkin = (s, ball, style) =>
-  SKINS[style]?.gift ? s.accountGift && s.owned.includes(ball) : s.skins.includes(`${ball}:${style}`);
+  SKINS[style]?.gift ? s.accountGift && s.owned.includes(ball)
+    : s.skins.includes(`${ball}:${style}`) || (!!SKINS[style]?.path && s.owned.includes(ball) && ballRank(s.mastery?.[ball] ?? 0) >= SKINS[style].path);
 export function buySkin(s, ball, style) {
-  if (!s.owned.includes(ball) || !SKINS[style] || SKINS[style].gift || hasSkin(s, ball, style) || s.coins < SKIN_PRICE) return false;
-  s.coins -= SKIN_PRICE;
+  if (!s.owned.includes(ball) || !SKINS[style] || SKINS[style].gift || SKINS[style].path || hasSkin(s, ball, style) || s.coins < skinPrice(style)) return false;
+  s.coins -= skinPrice(style);
   s.skins.push(`${ball}:${style}`);
   s.skinOf[ball] = style;
   return true;
@@ -206,7 +264,7 @@ export function openChest(s, kind, rand) {
   const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), ball: null, skin: null };
   const balls = ORDER.filter(id => !s.owned.includes(id));
   if (balls.length && rand() < c.ball) { out.ball = balls[Math.floor(rand() * balls.length)]; s.owned.push(out.ball); }
-  const skins = s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !hasSkin(s, b, st)).map(st => [b, st]));
+  const skins = s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !SKINS[st].path && !hasSkin(s, b, st)).map(st => [b, st]));
   if (skins.length && rand() < c.skin) { out.skin = skins[Math.floor(rand() * skins.length)]; s.skins.push(out.skin.join(':')); }
   s.coins += out.coins;
   return out;
@@ -335,6 +393,7 @@ export function mergeSave(local, cloudRaw, server) {
   }
   s.accountGift ||= cloud.accountGift;
   if (arenaIndex(cloud.arenaSeen) > arenaIndex(s.arenaSeen)) s.arenaSeen = cloud.arenaSeen;
+  for (const [id, v] of Object.entries(cloud.mastery)) s.mastery[id] = Math.max(s.mastery[id] ?? 0, v);
   if (dayNum(cloud.quests.day) > dayNum(s.quests.day)) s.quests = cloud.quests;
   else if (cloud.quests.day === s.quests.day) {
     for (const q of s.quests.list) {

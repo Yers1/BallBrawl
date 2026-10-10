@@ -1,5 +1,21 @@
-// RU for Russian-reading browsers (ru/kk/uk/be/uz/ky), EN for everyone else.
-export const lang = /^(ru|kk|uk|be|uz|ky)/i.test(navigator.language || '') ? 'ru' : 'en';
+// Eight languages. Russian and English live here; the others are in ./lang/ with the same keys.
+// The player can pick one in the profile (saved on this device); otherwise the browser language decides,
+// with Russian for other Russian-reading countries and English for everyone else. Missing texts fall back to English.
+import kk from './lang/kk.js';
+import uz from './lang/uz.js';
+import tr from './lang/tr.js';
+import es from './lang/es.js';
+import pt from './lang/pt.js';
+import id from './lang/id.js';
+
+export const LANGS = { ru: 'Русский', en: 'English', kk: 'Қазақша', uz: "O'zbekcha", tr: 'Türkçe', es: 'Español', pt: 'Português', id: 'Bahasa Indonesia' };
+function pickLang() {
+  try { const saved = localStorage.getItem('ballbrawl.lang'); if (LANGS[saved]) return saved; } catch { /* no storage */ }
+  const nav = String(globalThis.navigator?.language || '').toLowerCase().slice(0, 2);
+  return LANGS[nav] ? nav : /^(uk|be|ky|tg)$/.test(nav) ? 'ru' : 'en';
+}
+export const lang = pickLang();
+export function setLang(code) { try { localStorage.setItem('ballbrawl.lang', code); } catch { /* no storage */ } }
 
 export const dict = {
   ru: {
@@ -56,6 +72,19 @@ export const dict = {
     acctTaken: 'Эта почта уже занята. Нажми «Войти».', acctWrong: 'Неверная почта или пароль.', acctWeak: 'Пароль слишком короткий: нужно минимум 6 символов.',
     acctBadEmail: 'Проверь, правильно ли написана почта.', acctSlow: 'Слишком много попыток. Подожди минуту.', acctNeedOk: 'Поставь галочку согласия.',
     tabLeaders: 'Лидеры', duel: 'Вызов', watchShort: 'Зритель', yourSquad: 'Твой отряд · сменить',
+    tabArenas: 'Арены', tabSkins: 'Скины', arenaHere: 'Ты здесь', arenaOpen: 'Открыта', arenaLocked: 'Откроется с {n}', arenaSwipe: 'Листай, чтобы увидеть все арены',
+    league_bronze: 'Бронза', league_silver: 'Серебро', league_gold: 'Золото', league_diamond: 'Алмаз', league_mythic: 'Мифик', league_legend: 'Легенда', league_master: 'Мастер',
+    leagueTitle: 'Лига', leagueNext: 'До следующей лиги: {n}', leagueTop: 'Высшая лига!',
+    titlesTitle: 'Титулы', titlesHint: 'Титул виден под твоим ником. Новые открываются за игру.',
+    ttl_rookie: 'Новичок', ttl_fighter: 'Боец', ttl_veteran: 'Ветеран', ttl_hero: 'Герой арены', ttl_flawless: 'Без царапин', ttl_superstar: 'Суперзвезда',
+    ttl_social: 'Заводила', ttl_stylish: 'Модник', ttl_collector: 'Коллекционер', ttl_arena_canyon: 'Покоритель каньона', ttl_arena_frost: 'Ледяное сердце',
+    ttl_arena_jungle: 'Царь джунглей', ttl_arena_lava: 'Повелитель лавы', ttl_arena_space: 'Космонавт', ttlMaster: 'Мастер: {name}',
+    ttlHowWins: '{n} побед', ttlHowFlawless: '{n} побед без потерь', ttlHowSupers: '{n} суперударов', ttlHowChallenges: '{n} вызовов друзьям', ttlHowSkins: '{n} скинов',
+    ttlHowAll: 'Собери все шары', ttlHowArena: 'Дойди до арены «{name}»', ttlHowMaster: 'Ранг 10 у шара «{name}»',
+    rank: 'Ранг {n}', rankPts: '{n} из {max} очков', rankMax: 'Максимальный ранг!', pathTitle: 'Путь шара',
+    pathHint: 'Играй этим шаром: победа даёт +10 очков, иначе +3. На 7 ранге — Золотой скин, на 10 — титул.',
+    rankUp: '{name}: ранг {n}!', rwTitle: 'Новый титул: {name}', langTitle: 'Язык', watchBtn: 'Смотреть бой шаров', emotes: 'Эмоции',
+    skinsHint: 'Серебро — за монеты. Золото — на 7 ранге шара. Остальные — из сундуков и за монеты.', skinRankLock: 'Ранг 7',
     arena_night: 'Ночная арена', arena_canyon: 'Каньон', arena_frost: 'Ледяной пик', arena_jungle: 'Джунгли', arena_lava: 'Лавовый кратер', arena_space: 'Космос',
     arenaN: 'Арена {n}', arenaNew: 'Новая арена: {name}!', arenaNewSub: 'Теперь твои бои проходят здесь. И меню тоже сменилось!', arenaNext: 'Следующая арена: {name} · ещё {n}', arenaLast: 'Ты на последней арене!', modeRanked: 'Рейтинговый бой', modeTraining: 'Тренировка · без сети', allTime: 'Все', thisWeek: 'Неделя', yourRank: 'Ты на {n}-м месте', loading: 'Загрузка…',
     needNet: 'Нужен интернет — таблица лидеров и перенос профиля работают только онлайн.', emptyBoard: 'Пока никого — стань первым!',
@@ -65,7 +94,7 @@ export const dict = {
     deleteProfile: 'Удалить профиль', deleteConfirm: 'Удалить профиль насовсем? Кубки и весь прогресс пропадут.',
     quests: { win3: 'Выиграй 3 боя', dash15: 'Сделай 15 рывков', super3: 'Используй 3 супера', kills10: 'Выбей 10 вражеских шаров', flawless1: 'Выиграй бой, не потеряв ни одного шара', challenge1: 'Вызови друга или прими вызов', matches5: 'Сыграй 5 боёв' },
     achievements: { firstWin: 'Первая победа', wins10: '10 побед', wins50: '50 побед', tr100: '100 кубков', tr500: '500 кубков', tr1000: '1000 кубков', collector: 'Собери все шары', supers25: '25 суперов', challenger: '5 вызовов', flawless5: '5 побед без потерь' },
-    skins: { gold: 'Золото', neon: 'Неон', candy: 'Леденец', galaxy: 'Галактика', lava: 'Лава', mint: 'Мята', rainbow: 'Радуга' },
+    skins: { silver: 'Серебро', gold: 'Золото', neon: 'Неон', candy: 'Леденец', galaxy: 'Галактика', lava: 'Лава', mint: 'Мята', rainbow: 'Радуга' },
     names: { basic: 'Обычный', leech: 'Пиявка', cell: 'Клетка', spider: 'Паук', ninja: 'Ниндзя', train: 'Поезд', magnet: 'Магнит', bomb: 'Бомба', turtle: 'Черепаха', lightning: 'Молния', hedgehog: 'Ёж', ice: 'Лёд', poison: 'Шип', chain: 'Оковы', forge: 'Кузнец' },
     supers: { basic: 'Таран', leech: 'Прыжок', cell: 'Деление', spider: 'Ловушка', ninja: 'Веер', train: 'Экспресс', magnet: 'Притяжение', bomb: 'Ковёр', turtle: 'Крепость', lightning: 'Гроза', hedgehog: 'Иглы', ice: 'Заморозка', poison: 'Частокол', chain: 'Капкан', forge: 'Закалка' },
     superAbout: {
@@ -157,6 +186,19 @@ export const dict = {
     acctTaken: 'This email is taken. Tap "Sign in".', acctWrong: 'Wrong email or password.', acctWeak: 'Password too short: at least 6 characters.',
     acctBadEmail: 'Check the email address.', acctSlow: 'Too many tries. Wait a minute.', acctNeedOk: 'Tick the consent box.',
     tabLeaders: 'Leaders', duel: 'Duel', watchShort: 'Watch', yourSquad: 'Your squad · change',
+    tabArenas: 'Arenas', tabSkins: 'Skins', arenaHere: 'You are here', arenaOpen: 'Unlocked', arenaLocked: 'Unlocks at {n}', arenaSwipe: 'Swipe to see every arena',
+    league_bronze: 'Bronze', league_silver: 'Silver', league_gold: 'Gold', league_diamond: 'Diamond', league_mythic: 'Mythic', league_legend: 'Legendary', league_master: 'Masters',
+    leagueTitle: 'League', leagueNext: '{n} to the next league', leagueTop: 'Top league!',
+    titlesTitle: 'Titles', titlesHint: 'Your title shows under your nickname. New ones unlock as you play.',
+    ttl_rookie: 'Rookie', ttl_fighter: 'Fighter', ttl_veteran: 'Veteran', ttl_hero: 'Arena Hero', ttl_flawless: 'Untouchable', ttl_superstar: 'Superstar',
+    ttl_social: 'Ringleader', ttl_stylish: 'Trendsetter', ttl_collector: 'Collector', ttl_arena_canyon: 'Canyon Climber', ttl_arena_frost: 'Frozen Heart',
+    ttl_arena_jungle: 'Jungle King', ttl_arena_lava: 'Lava Lord', ttl_arena_space: 'Astronaut', ttlMaster: '{name} Master',
+    ttlHowWins: '{n} wins', ttlHowFlawless: '{n} flawless wins', ttlHowSupers: '{n} supers', ttlHowChallenges: '{n} friend challenges', ttlHowSkins: '{n} skins',
+    ttlHowAll: 'Collect every ball', ttlHowArena: 'Reach {name}', ttlHowMaster: 'Rank 10 with {name}',
+    rank: 'Rank {n}', rankPts: '{n} of {max} points', rankMax: 'Max rank!', pathTitle: 'Ball path',
+    pathHint: 'Play with this ball: a win gives +10 points, otherwise +3. Rank 7 gives the Gold skin, rank 10 a title.',
+    rankUp: '{name}: rank {n}!', rwTitle: 'New title: {name}', langTitle: 'Language', watchBtn: 'Watch a ball fight', emotes: 'Emotes',
+    skinsHint: 'Silver is for coins. Gold comes at the ball\'s rank 7. The rest drop from chests or cost coins.', skinRankLock: 'Rank 7',
     arena_night: 'Night Arena', arena_canyon: 'Canyon', arena_frost: 'Frost Peak', arena_jungle: 'Jungle', arena_lava: 'Lava Crater', arena_space: 'Space',
     arenaN: 'Arena {n}', arenaNew: 'New arena: {name}!', arenaNewSub: 'Your battles happen here now, and the menu changed too!', arenaNext: 'Next arena: {name} · {n} to go', arenaLast: 'You reached the final arena!', modeRanked: 'Ranked battle', modeTraining: 'Training · offline', allTime: 'All time', thisWeek: 'This week', yourRank: 'You are #{n}', loading: 'Loading…',
     needNet: 'Needs internet — leaderboards and profile transfer only work online.', emptyBoard: 'Nobody yet — be the first!',
@@ -166,7 +208,7 @@ export const dict = {
     deleteProfile: 'Delete profile', deleteConfirm: 'Delete your profile forever? Trophies and all progress will be gone.',
     quests: { win3: 'Win 3 matches', dash15: 'Dash 15 times', super3: 'Use 3 supers', kills10: 'Knock out 10 enemy balls', flawless1: 'Win without losing a ball', challenge1: 'Challenge a friend or take a challenge', matches5: 'Play 5 matches' },
     achievements: { firstWin: 'First win', wins10: '10 wins', wins50: '50 wins', tr100: '100 trophies', tr500: '500 trophies', tr1000: '1000 trophies', collector: 'Collect every ball', supers25: '25 supers', challenger: '5 challenges', flawless5: '5 flawless wins' },
-    skins: { gold: 'Gold', neon: 'Neon', candy: 'Candy', galaxy: 'Galaxy', lava: 'Lava', mint: 'Mint', rainbow: 'Rainbow' },
+    skins: { silver: 'Silver', gold: 'Gold', neon: 'Neon', candy: 'Candy', galaxy: 'Galaxy', lava: 'Lava', mint: 'Mint', rainbow: 'Rainbow' },
     names: { basic: 'Basic', leech: 'Leech', cell: 'Cell', spider: 'Spider', ninja: 'Ninja', train: 'Train', magnet: 'Magnet', bomb: 'Bomb', turtle: 'Turtle', lightning: 'Lightning', hedgehog: 'Hedgehog', ice: 'Ice', poison: 'Spike', chain: 'Shackles', forge: 'Forge' },
     supers: { basic: 'Ram', leech: 'Pounce', cell: 'Mitosis', spider: 'Trap', ninja: 'Fan', train: 'Express', magnet: 'Pull', bomb: 'Carpet', turtle: 'Fortress', lightning: 'Storm', hedgehog: 'Needles', ice: 'Freeze', poison: 'Palisade', chain: 'Snare', forge: 'Temper' },
     superAbout: {
@@ -206,12 +248,15 @@ export const dict = {
   },
 };
 
+Object.assign(dict, { kk, uz, tr, es, pt, id });
+
 export const t = (key, vars = {}) =>
   String(dict[lang][key] ?? dict.en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
-export const ballName = id => dict[lang].names[id];
-export const ballAbout = id => dict[lang].about[id];
-export const superName = id => dict[lang].supers[id];
-export const superAbout = id => dict[lang].superAbout[id];
-export const questName = id => dict[lang].quests[id];
-export const achievementName = id => dict[lang].achievements[id];
-export const skinName = id => dict[lang].skins[id];
+const pick = (group, key) => dict[lang][group]?.[key] ?? dict.en[group][key];
+export const ballName = id => pick('names', id);
+export const ballAbout = id => pick('about', id);
+export const superName = id => pick('supers', id);
+export const superAbout = id => pick('superAbout', id);
+export const questName = id => pick('quests', id);
+export const achievementName = id => pick('achievements', id);
+export const skinName = id => pick('skins', id);

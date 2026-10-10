@@ -10,7 +10,7 @@ const SIDE_RGB = ['76,201,240', '255,77,94'];
 const FONT = 'Nunito, system-ui, sans-serif';
 const INK = '#0A0F1C'; // outline for numbers and small shapes
 export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
-const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {} };
+const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {} };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
@@ -21,7 +21,7 @@ const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
 
 export function resetFx() {
   fx.parts.length = fx.floats.length = fx.rings.length = 0;
-  fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {};
+  fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {}; fx.emotes = {};
   fx.shake = 0;
 }
 
@@ -76,6 +76,99 @@ function dmgFloat(w, id, amount, color, sign = '-') {
 
 const ring = (x, y, r, grow, life, rgb, width) => fx.rings.push({ x, y, r, grow, life, rgb, width, age: 0 });
 
+// ---------- emotes: preset stickers only (no free text, kid-safe), popping in a bubble over that side's ball ----------
+export const EMOTES = ['laugh', 'cool', 'wow', 'angry', 'cry', 'gg'];
+let autoSides = [1]; // which sides react to kills by themselves (the computer; both when you're only watching)
+export const setAutoEmote = sides => { autoSides = sides; };
+export function emote(side, kind) {
+  const cur = fx.emotes[side];
+  if (!EMOTES.includes(kind) || (cur && cur.age < 1.3)) return false; // no spam: one at a time
+  fx.emotes[side] = { kind, age: 0 };
+  return true;
+}
+const FACE = { laugh: '#FFCC33', cool: '#FFCC33', wow: '#FFCC33', angry: '#FF6B4A', cry: '#7FC8FF' };
+function emoteFace(ctx, kind, s) { // drawn around (0,0), radius s
+  ctx.save();
+  ctx.scale(s / 17, s / 17);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (kind === 'gg') {
+    ctx.font = `italic 900 22px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.strokeText('GG', 0, 1);
+    ctx.fillStyle = '#FFCC33'; ctx.fillText('GG', 0, 1);
+    ctx.restore();
+    return;
+  }
+  ctx.fillStyle = FACE[kind];
+  ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath(); ctx.ellipse(-6, -8, 6, 3.4, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
+  const dot = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+  const arc = (x, y, r, a, b) => { ctx.beginPath(); ctx.arc(x, y, r, a, b); ctx.stroke(); };
+  if (kind === 'laugh') {
+    arc(-6, -1, 3.6, Math.PI * 1.15, Math.PI * 1.85); arc(6, -1, 3.6, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.beginPath(); ctx.moveTo(-8, 3); ctx.quadraticCurveTo(0, 17, 8, 3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#FF4D5E'; ctx.beginPath(); ctx.ellipse(0, 9, 3.4, 2, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'cool') {
+    ctx.beginPath(); ctx.roundRect(-13, -7, 11, 7, 3); ctx.roundRect(2, -7, 11, 7, 3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(3, -5); ctx.stroke();
+    arc(2, 4, 6, Math.PI * 0.2, Math.PI * 0.75);
+  } else if (kind === 'wow') {
+    ctx.fillStyle = '#FFFFFF';
+    for (const x of [-6, 6]) { ctx.beginPath(); ctx.arc(x, -4, 4.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = INK; dot(-6, -3.5, 2); dot(6, -3.5, 2);
+    ctx.beginPath(); ctx.ellipse(0, 8, 3.6, 4.6, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'angry') {
+    ctx.beginPath(); ctx.moveTo(-12, -9); ctx.lineTo(-3, -5); ctx.moveTo(12, -9); ctx.lineTo(3, -5); ctx.stroke();
+    dot(-6, -1, 2.2); dot(6, -1, 2.2);
+    arc(0, 13, 6.5, Math.PI * 1.2, Math.PI * 1.8);
+  } else if (kind === 'cry') {
+    arc(-6, -4, 3.6, Math.PI * 0.15, Math.PI * 0.85); arc(6, -4, 3.6, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.fillStyle = '#2E8FD0';
+    for (const x of [-8, 8]) { ctx.beginPath(); ctx.ellipse(x, 5, 2.4, 4, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = INK;
+    arc(0, 12, 5, Math.PI * 1.2, Math.PI * 1.8);
+  }
+  ctx.restore();
+}
+export function drawEmote(canvas, kind, css = 40) { // the emote buttons
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.height = Math.round(css * dpr);
+  canvas.style.width = canvas.style.height = css + 'px';
+  const c = canvas.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, css / 2 * dpr, css / 2 * dpr);
+  emoteFace(c, kind, css * 0.42);
+}
+function drawEmotes(ctx, w, dt) {
+  for (const side of [0, 1]) {
+    const em = fx.emotes[side];
+    if (!em) continue;
+    em.age += dt;
+    if (em.age > 2.4) { delete fx.emotes[side]; continue; }
+    const e = w.ents.find(b => b.side === side && !b.dead);
+    if (!e) continue;
+    const p = em.age, pop = p < 0.12 ? 0.3 + p * 9 : p < 0.26 ? 1.38 - (p - 0.12) * 2.7 : 1;
+    const below = e.y - e.r - 38 < 26, dir = below ? -1 : 1; // near the top wall the bubble hangs under the ball
+    const x = Math.max(32, Math.min(W - 32, e.x)), y = below ? e.y + e.r + 38 : e.y - e.r - 38;
+    ctx.save();
+    ctx.globalAlpha = p > 2 ? Math.max(0, (2.4 - p) / 0.4) : 1;
+    ctx.translate(x, y + Math.sin(p * 5) * 1.5);
+    ctx.scale(pop, pop);
+    const tail = () => { ctx.beginPath(); ctx.moveTo(-8, 18 * dir); ctx.lineTo(Math.max(-20, Math.min(20, e.x - x)) * 0.3, 32 * dir); ctx.lineTo(8, 18 * dir); ctx.closePath(); };
+    const box = () => { ctx.beginPath(); ctx.roundRect(-25, -23, 50, 46, 14); };
+    ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.lineJoin = 'round';
+    box(); ctx.stroke(); tail(); ctx.stroke();
+    ctx.fillStyle = side === 0 ? '#E8F8FF' : '#FFECEE';
+    box(); ctx.fill(); tail(); ctx.fill();
+    emoteFace(ctx, em.kind, 17);
+    ctx.restore();
+  }
+}
+
 function absorb(w, now) {
   for (const ev of w.events) {
     if (ev.type === 'hit') { // small ticks don't flash; big hits get a white star burst
@@ -89,6 +182,9 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 12, '#ff9f1c', 220);
       fx.shake = Math.max(fx.shake, 3);
     } else if (ev.type === 'death') {
+      const pick = a => a[Math.floor(Math.random() * a.length)], killer = 1 - ev.side;
+      if (!ev.mini && autoSides.includes(killer) && Math.random() < 0.35) emote(killer, pick(['laugh', 'cool', 'wow']));
+      else if (!ev.mini && autoSides.includes(ev.side) && Math.random() < 0.25) setTimeout(() => emote(ev.side, pick(['cry', 'angry'])), 500);
       burst(ev.x, ev.y, 30, BALLS[ev.kind].color, 280);
       burst(ev.x, ev.y, 10, '#ffffff', 160);
       ring(ev.x, ev.y, ev.r, 2.6, 0.45, '255,255,255', 5);
@@ -1125,6 +1221,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
     ctx.fillText(f.text, 0, 0);
     ctx.restore();
   }
+  drawEmotes(ctx, w, dt);
   fx.floats = fx.floats.filter(f => f.age < f.life);
 }
 
