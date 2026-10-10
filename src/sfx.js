@@ -35,6 +35,20 @@ export function initAudio(isMuted) {
   for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, start, { once: true, capture: true });
 }
 
+// The announcer: says a word out loud in the game's language, deep and slow (the browser's own voices; none = silent).
+const VOICE = { ru: 'ru', en: 'en', es: 'es', pt: 'pt', tr: 'tr', id: 'id', uz: 'uz' };
+export function say(text, lang) {
+  if (muted || typeof speechSynthesis === 'undefined') return;
+  const voices = speechSynthesis.getVoices(), code = VOICE[lang] ?? 'en';
+  const mine = voices.filter(v => v.lang.toLowerCase().startsWith(code));
+  const voice = mine.find(v => /pavel|dmitri|yuri|david|mark|daniel|guy|male|google/i.test(v.name)) ?? mine[0];
+  if (!voice) return; // no voice for this language on this device: the hit and the words on screen still play
+  const u = new SpeechSynthesisUtterance(text);
+  Object.assign(u, { voice, lang: voice.lang, rate: 0.9, pitch: 0.5, volume: 1 });
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+if (typeof speechSynthesis !== 'undefined') speechSynthesis.getVoices(); // some browsers load the voices lazily
 export function setMuted(m) {
   muted = m;
   if (master) master.gain.value = m ? 0 : 0.5;
@@ -134,7 +148,12 @@ export const sfx = {
     }
     tone(65, at + 0.2, { type: 'sawtooth', vol: 0.05, slide: 0.85, delay: 0.25 });
   },
-  super: kind => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, { type: 'triangle', vol: 0.12, delay: i * 0.045 })); SUPER_FX[kind]?.(); },
+  super: kind => { // power up: a charge sweeping up, a deep drop, the fanfare, then the ball's own sound
+    tone(180, 0.35, { type: 'sawtooth', vol: 0.08, slide: 5 }); noise(0.35, { vol: 0.18, freq: 400, sweep: 8, q: 1.5 });
+    tone(90, 0.5, { type: 'sine', vol: 0.4, slide: 0.5, delay: 0.3 }); noise(0.6, { vol: 0.12, freq: 6000, q: 0.5, delay: 0.3, type: 'highpass' });
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.12, delay: 0.3 + i * 0.045 }));
+    setTimeout(() => SUPER_FX[kind]?.(), 300);
+  },
   skill: kind => SUPER_FX[kind]?.(),
   ko: () => { tone(110, 0.6, { type: 'sine', vol: 0.45, slide: 0.4 }); noise(0.8, { vol: 0.25, freq: 900, sweep: 0.2, q: 0.8 }); tone(880, 0.3, { type: 'square', vol: 0.05, slide: 0.5, delay: 0.05 }); }, // a deep boom for a knock-out // just the ball's own sound, for a boss attack
   death: () => { const j = J(0.2); noise(0.45, { vol: 0.4, freq: 200 * j, sweep: 0.3 }); tone(90 * j, 0.4, { type: 'sine', vol: 0.3, slide: 0.4 }); tone(700 * j, 0.06, { type: 'triangle', vol: 0.08 }); },
@@ -160,7 +179,19 @@ export const sfx = {
     [196, 247, 294, 392].forEach(f => tone(f, 0.6, { type: 'sawtooth', vol: 0.04, delay: 0.34 }));
     tone(98, 0.5, { type: 'square', vol: 0.08, delay: 0.34 });
   },
-  chess: () => { noise(0.05, { vol: 0.16, freq: 1600, q: 5 }); tone(196, 0.08, { type: 'square', vol: 0.07 }); }, // a wooden piece set down
+  chess: () => { // a heavy wooden piece set down on the board: click, knock, and a soft felt thump
+    noise(0.025, { vol: 0.3, freq: 3200 * J(0.1), q: 6 });
+    tone(520 * J(0.08), 0.07, { type: 'sine', vol: 0.18, slide: 0.8 });
+    tone(150, 0.12, { type: 'sine', vol: 0.22, slide: 0.7, delay: 0.005 });
+  },
+  chessStep: () => { noise(0.02, { vol: 0.2, freq: 2800 * J(0.15), q: 7 }); tone(440 * J(0.12), 0.05, { type: 'sine', vol: 0.12, slide: 0.85 }); }, // sliding to the next square
+  fight: () => { // FIGHT!: a rising whoosh, then a big hit, a cymbal and a brass stab
+    noise(0.5, { vol: 0.3, freq: 300, sweep: 10, q: 1.2 });
+    tone(70, 0.7, { type: 'sine', vol: 0.55, slide: 0.45, delay: 0.42 });
+    noise(0.35, { vol: 0.35, freq: 600, sweep: 0.3, q: 0.6, delay: 0.42 });
+    noise(1.2, { vol: 0.2, freq: 7000, q: 0.4, delay: 0.44, type: 'highpass' });
+    [220, 277, 330, 440].forEach(f => tone(f, 0.5, { type: 'sawtooth', vol: 0.05, delay: 0.44 }));
+  },
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
 };
 

@@ -25,7 +25,10 @@ const cam = { x: 200, y: 200, zoom: 1, at: -9, len: 1, dim: 0, focus: null };
 export function cinema(x, y, zoom, len, dim = 0, focus = null) { Object.assign(cam, { x, y, zoom, at: performance.now() / 1000, len, dim, focus }); }
 const camK = now => { const p = (now - cam.at) / cam.len; return p < 0 || p > 1 ? 0 : p < 0.15 ? p / 0.15 : p > 0.65 ? (1 - p) / 0.35 : 1; };
 let big = null;
-export function bigText(text, color = '#FFFFFF') { big = { text, color, at: performance.now() / 1000 }; }
+export function bigText(text, color = '#FFFFFF') { // with a shockwave, sparks and a shake when it slams in
+  big = { text, color, at: performance.now() / 1000 };
+  setTimeout(() => { ring(W / 2, H / 2, 20, 9, 0.6, '255,210,63', 9); ring(W / 2, H / 2, 10, 6, 0.45, '255,255,255', 5); burst(W / 2, H / 2, 46, '#FFD23F', 420, [3, 7]); burst(W / 2, H / 2, 18, '#FFFFFF', 300); fx.shake = 10; }, 180);
+}
 const COMIC = ['BAM!', 'POW!', 'WHAM!', 'BOOM!', 'SMASH!'];
 export const setShakeOn = on => { shakeOn = on; }; // settings: some players get dizzy
 export function resetFx() {
@@ -1985,6 +1988,10 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     if (p > 1.1) big = null;
     else {
       const s = p < 0.18 ? 2.2 - (p / 0.18) * 1.2 : 1 + (p - 0.18) * 0.15, a = p > 0.8 ? 1 - (p - 0.8) / 0.3 : 1;
+      ctx.save(); ctx.globalAlpha = Math.max(0, a) * 0.5; ctx.translate(W / 2, H / 2); ctx.rotate(p * 0.8); // light rays behind the words
+      ctx.fillStyle = '#FFE38A';
+      for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18, -260); ctx.lineTo(18, -260); ctx.fill(); }
+      ctx.restore();
       ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.rotate(-0.06);
       ctx.font = '400 64px "Russo One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
       ctx.lineWidth = 14; ctx.strokeStyle = INK; ctx.strokeText(big.text, 0, 0);

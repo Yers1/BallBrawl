@@ -167,7 +167,8 @@ function chessAim(w, me) {
     m.lines = DIRS[m.piece].map(([dx, dy]) => rayEnd(me.x, me.y, dx, dy, me.r));
     Object.assign(m, { legs: 2, strike: pathOf([from, ...m.lines.flatMap(e => [e, from])]) });
   }
-  Object.assign(m, { stage: 'aim', at: w.t, from, d: 0 });
+  Object.assign(m, { stage: 'aim', at: w.t, from, d: 0, line: -1 });
+  w.events.push({ type: 'chess', x: me.x, y: me.y, piece: m.piece }); // the piece set down on its square
 }
 function chessTick(w, me, dt) {
   const m = me.chess;
@@ -182,6 +183,7 @@ function chessTick(w, me, dt) {
   if (m.stage === 'hit') {
     let line = 0; // which line it is on: out and back along one line (or one L) is one line
     while (m.legs * (line + 1) < path.cum.length && path.cum[m.legs * (line + 1)] <= m.d) line++;
+    if (line !== m.line) { m.line = line; w.events.push({ type: 'chessStep', x: me.x, y: me.y }); } // a clack for every line it runs
     for (const f of foes(w, me)) if (m.hit[f.id] !== line && Math.hypot(f.x - me.x, f.y - me.y) < f.r + me.r) { m.hit[f.id] = line; hurt(w, f, m.dmg); }
   }
   if (m.d < path.len) return;

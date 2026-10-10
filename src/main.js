@@ -10,7 +10,7 @@ import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
 import { randomNick, nickText, validNick, validClan } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
-import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
+import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn, say } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
   claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS, creditPurchases,
@@ -405,7 +405,8 @@ function fire() {
   launch(S.world, S.aim, S.foeAim);
   S.mode = 'fight';
   bigText(t('fight'), '#FFD23F');
-  sfx.round();
+  sfx.fight();
+  setTimeout(() => say(t('fight').replace(/!/g, ''), lang), 380); // the announcer, right on the hit
   playMusic(S.match.mode === 'boss' ? 'boss' : 'battle');
   show(null);
   hideCards();
@@ -793,6 +794,7 @@ function feel(w, now) {
     if (ev.type === 'dash') { sfx.dash(); cmdReact(ev.side, 'point'); if (mine && ev.side === 0) S.ms.dashes++; }
     if (ev.type === 'train') sfx.train(ev.express);
     if (ev.type === 'chess') sfx.chess();
+    if (ev.type === 'chessStep') sfx.chessStep();
     if (ev.type === 'death') {
       sfx.death();
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.12);
@@ -801,6 +803,7 @@ function feel(w, now) {
     }
     if (ev.type === 'super') {
       sfx.super(ev.kind);
+      if (S.party ? w.ents.find(x => x.id === S.party.fight?.me.ent)?.side === ev.side : ev.side === 0) setTimeout(() => say(superName(ev.kind), lang), 250); // the announcer names your super
       cmdReact(ev.side, 'cast', true);
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
       banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
