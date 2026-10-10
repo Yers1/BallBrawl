@@ -36,20 +36,6 @@ export function initAudio(isMuted) {
   for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, start, { once: true, capture: true });
 }
 
-// The announcer: says a word out loud in the game's language, deep and slow (the browser's own voices; none = silent).
-const VOICE = { ru: 'ru', en: 'en', es: 'es', pt: 'pt', tr: 'tr', id: 'id', uz: 'uz' };
-export function say(text, lang) {
-  if (muted || typeof speechSynthesis === 'undefined') return;
-  const voices = speechSynthesis.getVoices(), code = VOICE[lang] ?? 'en';
-  const mine = voices.filter(v => v.lang.toLowerCase().startsWith(code));
-  const voice = mine.find(v => /pavel|dmitri|yuri|david|mark|daniel|guy|male|google/i.test(v.name)) ?? mine[0];
-  if (!voice) return; // no voice for this language on this device: the hit and the words on screen still play
-  const u = new SpeechSynthesisUtterance(text);
-  Object.assign(u, { voice, lang: voice.lang, rate: 0.9, pitch: 0.5, volume: 1 });
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-}
-if (typeof speechSynthesis !== 'undefined') speechSynthesis.getVoices(); // some browsers load the voices lazily
 export function setMuted(m) {
   muted = m;
   if (master) master.gain.value = m ? 0 : 0.5;

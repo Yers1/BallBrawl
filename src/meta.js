@@ -732,7 +732,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const rows = Array.isArray(data?.top) ? data.top : [];
       note.textContent = rows.length ? (data.me ? t('yourRank', { n: data.me.rank }) : '') : t('emptyBoard');
       list.replaceChildren(...rows.map(r => {
-        const row = el('div', `lrow ${r.me ? 'me' : ''} ${r.rank <= 3 ? 'top' + r.rank : ''}`);
+        const row = el('div', `lrow ${r.me ? 'mine' : ''} ${r.rank <= 3 ? 'top' + r.rank : ''}`);
         const name = el('div', 'nm');
         name.textContent = validNick(r.nick) ? nickText(r.nick, lang) : '???'; // never trust text from the network
         const ball = BALLS[r.avatar] ? r.avatar : 'basic', skin = SKINS[r.skin] ? r.skin : null;
@@ -1010,7 +1010,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     head.querySelector('small').innerHTML = `${t('clanMembers', { n: members.length, max: CLAN_MAX })} · <i class="trophy"></i>${total}`;
     const list = el('div', 'llist');
     list.append(...members.map((m, i) => {
-      const row = el('div', `lrow ${m.me ? 'me' : ''}`), name = el('div', 'nm');
+      const row = el('div', `lrow ${m.me ? 'mine' : ''}`), name = el('div', 'nm');
       name.textContent = (validNick(m.nick) ? nickText(m.nick, lang) : '???') + (m.leader ? ` · ${t('clanLeader')}` : '');
       const ball = BALLS[m.avatar] ? m.avatar : 'basic', skin = SKINS[m.skin] ? m.skin : null;
       row.append(el('div', 'rk', String(i + 1)), icon(ball, 32, skin), name, el('div', 'sc', `<i class="trophy"></i>${Number(m.trophies) || 0}`));
@@ -1626,7 +1626,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     loadMyClan();
     const me = { nick: nickText(save.nick, lang), banner: save.wear.banner, deco: save.wear.deco, avatar: save.avatar, skin: save.skinOf[save.avatar], level: levelOf(save.xp).lv, trophies: save.trophies, clan: myClan ?? null, fam };
     const scr = $('#scr-vs');
-    scr.replaceChildren(vsCard(foe, 'foe'), el('div', 'vs-shield', '<b>VS</b>'), vsCard(me, 'me'));
+    scr.replaceChildren(vsCard(foe, 'foe'), el('div', 'vs-shield', '<b>VS</b>'), vsCard(me, 'mine'));
     scr.hidden = false;
     sfx.vs();
     return new Promise(done => {

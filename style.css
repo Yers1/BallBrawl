@@ -503,7 +503,7 @@ body.record { background: #000; }
   display: grid; grid-template-columns: 34px 36px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px;
   border-radius: 14px; background: var(--panel); border: 3px solid var(--stroke);
 }
-.lrow.me { border-color: var(--you); }
+.lrow.mine { border-color: var(--you); }
 .lrow .rk { font-weight: 900; text-align: center; color: var(--muted); }
 .lrow.top1 .rk { color: #FFD23F; } .lrow.top2 .rk { color: #D6DDE8; } .lrow.top3 .rk { color: #E59A5B; }
 .lrow canvas { border-radius: 50%; }
@@ -1134,7 +1134,7 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .vs-intro.out { animation: vsOut 0.28s ease-in forwards; }
 .vs-card { position: relative; z-index: 0; width: min(94%, 520px); height: 104px; display: flex; align-items: center; gap: 12px; padding: 0 30px 0 18px; }
 .vs-card.foe { align-self: flex-end; flex-direction: row-reverse; padding: 0 18px 0 30px; text-align: right; animation: vsFromRight 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
-.vs-card.me { align-self: flex-start; animation: vsFromLeft 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) 0.12s both; }
+.vs-card.mine { align-self: flex-start; animation: vsFromLeft 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) 0.12s both; }
 .vs-bg { position: absolute; inset: 0; z-index: -1; filter: drop-shadow(0 6px 0 rgba(10, 14, 31, 0.6)); }
 .vs-bg svg { display: block; width: 100%; height: 100%; }
 .vs-card.foe .vs-bg svg { transform: scaleX(-1); }
@@ -1150,7 +1150,7 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .vs-meta .trophy { width: 16px; height: 16px; }
 .vs-deco { flex: none; }
 .vs-deco svg { width: 46px; height: 46px; display: block; }
-.vs-card.me .vs-deco { margin-left: auto; }
+.vs-card.mine .vs-deco { margin-left: auto; }
 .vs-card.foe .vs-deco { margin-right: auto; }
 .vs-shield {
   align-self: center; width: 96px; height: 108px; display: grid; place-items: center; animation: vsPop 0.5s 0.32s both;
@@ -1228,7 +1228,7 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 
 /* the face-to-face lands hard: a white flash and a shake when the VS shield hits */
 .vs-intro::after { content: ''; position: absolute; inset: 0; background: #FFFFFF; opacity: 0; pointer-events: none; animation: vsFlash 0.5s 0.34s ease-out; }
-.vs-intro .vs-card.me { animation: vsFromLeft 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) 0.12s both, vsShake 0.35s 0.6s; }
+.vs-intro .vs-card.mine { animation: vsFromLeft 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) 0.12s both, vsShake 0.35s 0.6s; }
 .vs-intro .vs-card.foe { animation: vsFromRight 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both, vsShake 0.35s 0.6s; }
 @keyframes vsFlash { 0% { opacity: 0.75; } 100% { opacity: 0; } }
 @keyframes vsShake { 20% { translate: -8px 3px; } 40% { translate: 7px -2px; } 60% { translate: -5px 2px; } 80% { translate: 3px -1px; } }

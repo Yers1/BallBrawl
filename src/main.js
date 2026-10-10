@@ -10,7 +10,7 @@ import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
 import { randomNick, nickText, validNick, validClan } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
-import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn, say } from './sfx.js';
+import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
   claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS, creditPurchases,
@@ -693,7 +693,7 @@ function showResult() {
   $('#r-squad').classList.toggle('sad', !won);
   const rc = $('#r-cmds'), fams = S.fams;
   rc.hidden = !fams; // challenges and parties have no commanders
-  if (fams) rc.replaceChildren(...[0, 1].filter(side => !side || S.match?.mode !== 'boss').map(side => {
+  if (fams) rc.replaceChildren(...[0, 1].filter(side => !side || !['boss', 'survival'].includes(S.match?.mode)).map(side => {
     const happy = side ? r === 1 : won;
     return el('div', `r-cmd ${side ? 'them' : 'you'} ${happy ? 'win' : 'sad'}`, heroLive(fams[side].id) + (happy ? '' : RAIN_CLOUD));
   }));
@@ -837,12 +837,11 @@ function feel(w, now) {
     if (ev.type === 'death') {
       sfx.death();
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.12);
-      if (!ev.mini) { cinema(ev.x, ev.y, 1.3, 1.1, 0.25, null); if (!S.party) S.slowUntil = now + 0.9; sfx.ko(); } // a knock-out: slow motion, close up
+      if (!ev.mini && !w.ents.some(e => e.side === ev.side && !e.dead)) { cinema(ev.x, ev.y, 1.3, 1.1, 0.25, null); if (!S.party) S.slowUntil = now + 0.9; sfx.ko(); } // the last one out: slow motion, close up
       if (mine && ev.side === 1 && !ev.mini) S.ms.kills++;
     }
     if (ev.type === 'super') {
       sfx.super(ev.kind);
-      if (S.party ? w.ents.find(x => x.id === S.party.fight?.me.ent)?.side === ev.side : ev.side === 0) setTimeout(() => say(superName(ev.kind), lang), 250); // the announcer names your super
       cmdReact(ev.side, 'cast', true);
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
       banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');

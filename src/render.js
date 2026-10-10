@@ -368,7 +368,7 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 10, '#ffffff', 160);
       ring(ev.x, ev.y, ev.r, 2.6, 0.45, '255,255,255', 5);
       fx.shake = 10;
-      if (!ev.mini) { // knock-out: a second shockwave, flying shards and a big K.O.
+      if (!ev.mini && !w.ents.some(e => e.side === ev.side && !e.dead)) { // the knock-out that ends it: a second shockwave, flying shards and a big K.O.
         ring(ev.x, ev.y, ev.r * 1.5, 5, 0.7, '255,210,63', 8);
         burst(ev.x, ev.y, 40, BALLS[ev.kind].color, 420, [4, 9]);
         burst(ev.x, ev.y, 20, '#FFE38A', 340, [3, 6]);
