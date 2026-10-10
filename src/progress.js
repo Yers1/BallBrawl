@@ -183,7 +183,8 @@ export function freshSave() {
     own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
     deals: [], adGems: { day: null, n: 0 },
     mailRead: [], mailClaimed: [], foeEmotes: true, shake: true, vibrate: true, // inbox ids read / gifts taken; show the opponent's emotes
-    mode: 'classic', // classic | duo | boss
+    mode: 'classic', // classic | duo | boss | survival
+    best: { survival: 0 }, // best results in the other modes (survival: waves cleared)
     xp: 0, // experience: the player level
     fam: { lv: 1, xp: 0, skin: 'king', own: ['king'] }, // the familiar: its level, XP toward the next one, look, looks owned
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
@@ -252,7 +253,8 @@ export function migrate(raw) {
   s.foeEmotes = r.foeEmotes !== false;
   s.shake = r.shake !== false;
   s.vibrate = r.vibrate !== false;
-  if (['classic', 'duo', 'boss'].includes(r.mode)) s.mode = r.mode;
+  if (['classic', 'duo', 'boss', 'survival'].includes(r.mode)) s.mode = r.mode;
+  s.best = { survival: int(r.best?.survival, 0, 9999) ?? 0 };
   s.xp = int(r.xp) ?? 0;
   if (r.fam && typeof r.fam === 'object') {
     const own = ['king', ...list(r.fam.own, id => FAMILIARS[id] && id !== 'king')];
@@ -676,6 +678,7 @@ export function mergeSave(local, cloudRaw, server) {
   s.achieved = union(s.achieved, cloud.achieved);
   s.created = union(s.created, cloud.created).slice(-100);
   s.answered = union(s.answered, cloud.answered).slice(-100);
+  s.best.survival = Math.max(s.best.survival, cloud.best.survival);
   s.matches = Math.max(s.matches, cloud.matches);
   for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);
   for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;

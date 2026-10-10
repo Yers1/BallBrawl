@@ -1,7 +1,7 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
-import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec } from './match.js';
+import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec, upgradeChoices, applyUpgrade, SURVIVAL } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
 import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
@@ -321,6 +321,7 @@ async function startMatch() {
     mode,
     map: arenaFor(save.maxTrophies).id, // your arena decides the map
     boss: nextBoss(),
+    pool: mode === 'survival' ? [...enemySquadFor(save.trophies, Math.random), ...enemySquadFor(save.trophies, Math.random)] : null,
   });
   S.aiLevel = aiLevel(save.trophies);
   commanders(S.fams, foeCard().nick);
@@ -343,7 +344,7 @@ function commanders(fams, foeNick) {
     box.querySelector('.cmd-art').innerHTML = heroLive(f.id);
     box.querySelector('.cmd-name').textContent = `${side ? foeNick : nickText(save.nick, lang)} · ${t('famLv', { n: f.lv })}`;
     box.className = 'cmd ' + cls;
-    box.hidden = side === 1 && S.match?.mode === 'boss'; // the boss leads itself
+    box.hidden = side === 1 && ['boss', 'survival'].includes(S.match?.mode); // the boss (and the waves) lead themselves
   }
 }
 function cmdReact(side, kind, talk = false) {
@@ -365,6 +366,7 @@ function cmdReact(side, kind, talk = false) {
 // How the opponent looks on the VS screen: a real player's banner, clan and level; the computer shows its lead ball.
 function foeCard() {
   const o = S.opponent, lead = S.match.b[0];
+  if (S.match.mode === 'survival') return { nick: t('mode_survival'), banner: 'night', deco: 'none', avatar: S.match.pool[0], skin: null, level: null, trophies: save.trophies, clan: null, fam: S.fams[1] };
   if (S.match.mode === 'boss') return { nick: t('boss_' + S.match.boss), banner: 'lava', deco: 'none', avatar: BOSSES[S.match.boss].ball, skin: BOSSES[S.match.boss].skin ?? null, level: null, trophies: save.trophies, clan: null, fam: S.fams[1] };
   if (!o) return { nick: t('enemy'), banner: 'night', deco: 'none', avatar: lead.id, skin: lead.skin, level: null, trophies: save.trophies, clan: null, fam: S.fams[1] };
   const ok = (v, list) => (typeof v === 'string' && Object.hasOwn(list, v) ? v : null);
@@ -385,7 +387,8 @@ function beginMatch() {
 
 function nextRound() {
   S.world = roundWorld(S.match);
-  S.ai = createAI(1, S.aiLevel, S.match.seed + S.match.round);
+  const wave = S.match.mode === 'survival' ? S.match.wave : 0;
+  S.ai = createAI(1, Math.min(30, S.aiLevel + Math.floor(wave / 2)), S.match.seed + S.match.round); // the waves get sharper too
   resetFx();
   const me = S.world.ents.find(e => e.side === 0), foe = S.world.ents.find(e => e.side === 1);
   S.aim = Math.atan2(foe.y - me.y, foe.x - me.x);
@@ -395,7 +398,7 @@ function nextRound() {
   show(null);
   hud();
   cards(me, foe);
-  banner(t('round', { n: S.match.round }));
+  banner(wave ? (wave % SURVIVAL.boss ? t('wave', { n: wave }) : t('bossWave')) : t('round', { n: S.match.round }));
   playMusic(null);
   sfx.round();
 }
@@ -407,7 +410,7 @@ function fire() {
   bigText(t('fight'), '#FFD23F');
   sfx.fight();
   setTimeout(() => say(t('fight').replace(/!/g, ''), lang), 380); // the announcer, right on the hit
-  playMusic(S.match.mode === 'boss' ? 'boss' : 'battle');
+  playMusic(S.match.mode === 'boss' || (S.match.wave ?? 1) % SURVIVAL.boss === 0 ? 'boss' : 'battle');
   show(null);
   hideCards();
 }
@@ -470,6 +473,11 @@ function hud() {
     return;
   }
   const { a, b, mode } = S.match, dead = n => Array.from({ length: Math.max(0, 3 - n) }, () => dot(null, 'dead'));
+  if (mode === 'survival') { // your balls still standing against this wave
+    you.replaceChildren(...a.filter(x => !x.dead).reverse().map(x => dot(x.id, 'cur', x.skin)), ...a.filter(x => x.dead).map(() => dot(null, 'dead')));
+    foe.replaceChildren(...S.world.ents.filter(e => e.side === 1 && !e.mini).map(e => dot(e.kind, 'cur', e.skin)));
+    return;
+  }
   if (mode === 'duo' || mode === 'boss') { // everyone is on the field at once — show just them
     you.replaceChildren(...a.slice(0, mode === 'duo' ? 2 : 3).reverse().map(x => dot(x.id, 'cur', x.skin)));
     foe.replaceChildren(...b.slice(0, mode === 'duo' ? 2 : 1).map(x => dot(x.id, 'cur', x.skin)));
@@ -517,7 +525,7 @@ function mid() {
   else if (S.mode === 'aim') txt = t('aimTimer', { n: Math.max(0, Math.ceil(S.aimLeft)) });
   else if (S.match && ['aim', 'fight', 'ending'].includes(S.mode)) {
     const left = Math.ceil(SUDDEN - w.t);
-    txt = t('round', { n: S.match.round }) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
+    txt = (S.match.mode === 'survival' ? t('wave', { n: S.match.wave }) : t('round', { n: S.match.round })) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
   }
   if (txt === midText) return;
   midText = txt;
@@ -535,7 +543,7 @@ function onRoundOver(now) {
   if (S.mode === 'fight') { S.mode = 'ending'; S.endAt = now + 1.2; return; }
   if (S.mode === 'ending' && now >= S.endAt) {
     const r = endRound(S.match, S.world);
-    r == null ? nextRound() : finishMatch(r);
+    r == null ? (S.match.mode === 'survival' ? pickUpgrade() : nextRound()) : finishMatch(r);
   } else if (S.mode === 'watch' && !S.watchDone) { // hold the final numbers for a second: that frame is the thumbnail
     S.watchEndAt ||= now + 1;
     if (now < S.watchEndAt) return;
@@ -543,6 +551,35 @@ function onRoundOver(now) {
     const r = S.world.result;
     banner(r === 'draw' ? t('draw') : t('wins', { name: ballName(S.watch[r]) }), true);
   }
+}
+
+// Survival: between waves, one of three upgrades
+const UP_IC = {
+  dmg: '<path d="M6 26 20 12l2 2L8 28zM19 5h8v8l-4 4-8-8z" fill="#E8ECF4" stroke="#0A0E1F" stroke-width="2" stroke-linejoin="round"/><path d="M5 23l4 4" stroke="#FFCC33" stroke-width="4" stroke-linecap="round"/>',
+  hp: '<path d="M16 28S4 21 4 12c0-4 3-7 6.5-7 2.5 0 4.3 1.5 5.5 3.5C17.2 6.5 19 5 21.5 5 25 5 28 8 28 12c0 9-12 16-12 16z" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 11v9M11.5 15.5h9" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>',
+  armor: '<path d="M16 3 27 7v8c0 7-5 12-11 14C10 27 5 22 5 15V7z" fill="#4CC9F0" stroke="#0A0E1F" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 7v18" stroke="#FFFFFF" stroke-width="2.5" opacity=".6"/>',
+  speed: '<path d="M4 12h10M2 17h12M5 22h9" stroke="#A6FF4D" stroke-width="3" stroke-linecap="round"/><circle cx="21" cy="17" r="8" fill="#A6FF4D" stroke="#0A0E1F" stroke-width="2.2"/>',
+  dash: '<path d="M18 2 6 18h8l-2 12 12-16h-8z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.2" stroke-linejoin="round"/>',
+  meter: '<path d="M16 3l3.6 7.6 8.4 1.1-6.1 5.8 1.5 8.3L16 21.8 8.6 25.8l1.5-8.3L4 11.7l8.4-1.1z" fill="#C890FF" stroke="#0A0E1F" stroke-width="2.2" stroke-linejoin="round"/>',
+  heal: '<rect x="4" y="9" width="24" height="16" rx="4" fill="#FFFFFF" stroke="#0A0E1F" stroke-width="2.2"/><path d="M16 12v10M11 17h10" stroke="#1FA35C" stroke-width="3.5" stroke-linecap="round"/>',
+  revive: '<circle cx="16" cy="18" r="9" fill="#FFE38A" stroke="#0A0E1F" stroke-width="2.2"/><ellipse cx="16" cy="6" rx="8" ry="3" fill="none" stroke="#FFCC33" stroke-width="2.5"/><path d="M4 16c-2-4 0-8 4-8M28 16c2-4 0-8-4-8" stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round"/>',
+};
+function pickUpgrade() {
+  const m = S.match, done = m.wave - 1;
+  S.mode = 'upgrade';
+  playMusic(null);
+  sfx.win();
+  confetti(24);
+  $('#up-title').textContent = t('waveDone', { n: done });
+  $('#up-sub').textContent = t('upPick');
+  $('#up-list').replaceChildren(...upgradeChoices(m).map(k => {
+    const b = el('button', 'up-card', `<svg viewBox="0 0 32 32" aria-hidden="true">${UP_IC[k]}</svg><b></b><small></small>`);
+    b.querySelector('b').textContent = t('up_' + k);
+    b.querySelector('small').textContent = t('upd_' + k);
+    b.onclick = () => { sfx.click(); applyUpgrade(m, k); $('#scr-upgrade').hidden = true; nextRound(); };
+    return b;
+  }));
+  $('#scr-upgrade').hidden = false;
 }
 
 // ---------- results ----------
@@ -565,7 +602,9 @@ function finishMatch(r) {
     S.earned = fresh ? CHALLENGE_BONUS : 0;
     if (fresh) save.answered = [...save.answered, c.seed].slice(-100);
   } else {
-    S.earned = won ? winCoinsFor(before) : LOSE_COINS;
+    const waves = S.match.mode === 'survival' ? S.match.wave - 1 : 0;
+    S.earned = waves ? 5 + waves * 4 : won ? winCoinsFor(before) : LOSE_COINS;
+    if (S.match.mode === 'survival') { S.newBest = waves > (save.best.survival ?? 0); save.best.survival = Math.max(save.best.survival ?? 0, waves); }
     if (S.ranked) { // the server decides; show the expected change until it answers
       S.delta = won ? 8 + (flawless ? 1 : 0) : r === 1 ? -Math.min(save.trophies, trophyLoss(save.trophies)) : 0;
       save.pendingFinish = { match: S.matchId, result: won ? 'won' : r === 1 ? 'lost' : 'draw', flawless };
@@ -574,7 +613,7 @@ function finishMatch(r) {
     }
   }
   save.coins += S.earned;
-  S.chestDrop = won ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
+  S.chestDrop = won || (S.match.mode === 'survival' && S.match.wave > 3) ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   S.xpGot = won ? XP_WIN : XP_PLAY;
   S.lvlUps = gainXp(save, S.xpGot); // the player level
@@ -647,9 +686,9 @@ async function settle() {
 }
 
 function showResult() {
-  const r = S.outcome, won = r === 0, title = $('#r-title');
-  title.textContent = won ? t('win') : r === 'draw' ? t('draw') : t('lose');
-  title.className = won ? 'win' : 'lose';
+  const r = S.outcome, won = r === 0, title = $('#r-title'), surv = S.match?.mode === 'survival' && !S.challenge;
+  title.textContent = surv ? t('survResult', { n: S.match.wave - 1 }) : won ? t('win') : r === 'draw' ? t('draw') : t('lose');
+  title.className = won || (surv && S.newBest) ? 'win' : 'lose';
   const squad = S.challenge ? S.challenge.squad : save.squad;
   $('#r-squad').replaceChildren(...squad.map((id, i) => icon(id, i ? 60 : 84, save.skinOf[id])));
   $('#r-squad').classList.toggle('sad', !won);
@@ -683,6 +722,7 @@ function showResult() {
     return;
   }
   trophyLine();
+  if (surv) $('#r-sub').textContent = S.newBest ? t('survNewBest') : t('survBest', { n: save.best.survival });
   $('#r-next').textContent = won ? t('next') : t('retry');
   $('#r-next').onclick = () => leaveResult(goSquad);
   $('#r-share').hidden = !won;

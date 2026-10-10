@@ -317,6 +317,7 @@ export function bannerSvg(id, k) {
 const MODE_ICON = {
   classic: '<svg viewBox="0 0 32 32"><path d="M6 6l14 14M26 6L12 20" stroke="#0A0E1F" stroke-width="5" stroke-linecap="round"/><path d="M6 6l14 14M26 6L12 20" stroke="#E6EDF7" stroke-width="2.6" stroke-linecap="round"/><path d="M8.5 19.5l4 4M23.5 19.5l-4 4" stroke="#FFCC33" stroke-width="3.5" stroke-linecap="round"/><path d="M6 26l3-3M26 26l-3-3" stroke="#8A5A1A" stroke-width="3.5" stroke-linecap="round"/></svg>',
   duo: '<svg viewBox="0 0 32 32"><circle cx="12" cy="18" r="8" fill="#4CC9F0" stroke="#0A0E1F" stroke-width="2.2"/><circle cx="21" cy="13" r="7.5" fill="#36D27A" stroke="#0A0E1F" stroke-width="2.2"/><circle cx="18.5" cy="10.5" r="2.2" fill="#FFFFFF" opacity=".7"/><circle cx="9.5" cy="15.5" r="2.2" fill="#FFFFFF" opacity=".7"/></svg>',
+  survival: '<svg viewBox="0 0 32 32"><path d="M3 21q4-6 8 0t8 0 8 0" fill="none" stroke="#4CC9F0" stroke-width="3" stroke-linecap="round"/><path d="M3 27q4-6 8 0t8 0 8 0" fill="none" stroke="#1E9BE0" stroke-width="3" stroke-linecap="round"/><path d="M16 3 25 6.5V12c0 5-4 8.5-9 10-5-1.5-9-5-9-10V6.5z" fill="#A6FF4D" stroke="#0A0E1F" stroke-width="2" stroke-linejoin="round"/><path d="M12 12l3 3 5-6" fill="none" stroke="#0A0E1F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   boss: '<svg viewBox="0 0 32 32"><circle cx="16" cy="19" r="11" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.2"/><path d="M8 9l2-6 4 4 2-5 2 5 4-4 2 6z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2" stroke-linejoin="round"/><path d="M11 18l3 1.5M21 18l-3 1.5" stroke="#0A0E1F" stroke-width="2.2" stroke-linecap="round"/><circle cx="12.5" cy="15.5" r="2.5" fill="#FFFFFF" opacity=".6"/></svg>',
 };
 // Clan emblems: a shield in one of 8 colours with an icon from the decorations.
@@ -1069,12 +1070,12 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // ---------- modes: classic (trophies), 2 vs 2, boss ----------
   function modes() {
-    $('#md-list').replaceChildren(...['classic', 'duo', 'boss'].map(m => {
+    $('#md-list').replaceChildren(...['classic', 'survival', 'duo', 'boss'].map(m => {
       const b = el('button', 'md-card' + (save.mode === m ? ' on' : ''));
       b.innerHTML = `<span class="mode-ic">${MODE_ICON[m]}</span><span class="md-txt"><b></b><small></small><em></em></span>`;
       b.querySelector('b').textContent = t('mode_' + m);
       b.querySelector('small').textContent = t('modeDesc_' + m);
-      b.querySelector('em').textContent = m === 'classic' ? t('modeTrophies') : t('modeNoTrophies');
+      b.querySelector('em').textContent = m === 'classic' ? t('modeTrophies') : m === 'survival' && save.best.survival ? t('survBest', { n: save.best.survival }) : t('modeNoTrophies');
       b.onclick = () => { save.mode = m; persist(); sfx.click(); $('#scr-modes').hidden = true; render(); };
       return b;
     }));

@@ -89,3 +89,30 @@ test('party bot whose ball is out just waits (no crash)', async () => {
   bot.dead = true;
   assert.doesNotThrow(() => createAI(1, 3, 1, { ent: bot.id }).think(w));
 });
+
+test('survival: waves grow, the fallen stay down, every 5th is a boss, upgrades stick, the run ends', async () => {
+  const { upgradeChoices, applyUpgrade } = await import('../src/match.js');
+  const m = createMatch({ squadA: ['basic', 'ninja', 'ice'], squadB: ['leech', 'cell', 'bomb'], mode: 'survival', seed: 11 });
+  assert.equal(m.wave, 1);
+  let w = roundWorld(m);
+  assert.equal(w.ents.filter(e => e.side === 1).length, 1, 'wave 1: one enemy');
+  for (const e of w.ents) if (e.side === 1) e.hp = 0, e.dead = true;
+  w.ents[0].hp = 10; w.ents[1].dead = true; w.result = 0;
+  assert.equal(endRound(m, w), null);
+  assert.equal(m.wave, 2);
+  assert.ok(m.a[1].dead && !m.a[0].dead && m.a[0].hp > 10, 'the fallen stay down, the rest heal a little');
+  const picks = upgradeChoices(m);
+  assert.equal(picks.length, 3);
+  assert.deepEqual(upgradeChoices(m), picks, 'the same choices for the same fight');
+  applyUpgrade(m, 'revive');
+  assert.ok(!m.a[1].dead && m.a[1].hp > 0, 'revive brings one back');
+  applyUpgrade(m, 'dmg');
+  w = roundWorld(m);
+  assert.equal(w.ents.filter(e => e.side === 0).length, 3);
+  assert.ok(w.ents[0].dmg > 10, 'the upgrade is in the fight');
+  m.wave = 5;
+  w = roundWorld(m);
+  assert.ok(w.ents.find(e => e.side === 1).boss, 'wave 5: a boss');
+  w.result = 1;
+  assert.equal(endRound(m, w), 1, 'the wave won: the run is over');
+});
