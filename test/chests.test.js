@@ -222,3 +222,13 @@ test('new achievements count chests, skins, level, ball rank', async () => {
   assert.equal(v('rank10'), 10);
   assert.equal(new Set(ACHIEVEMENTS.map(a => a.id)).size, ACHIEVEMENTS.length);
 });
+
+test('every arena opens its own balls, and the road gives each one at its mark', async () => {
+  const { UNLOCK, ARENAS, arenaFor, PATH } = await import('../src/progress.js');
+  const per = Object.fromEntries(ARENAS.map(a => [a.id, ORDER.filter(id => arenaFor(UNLOCK[id]).id === a.id).length]));
+  assert.deepEqual(per, { night: 4, canyon: 3, frost: 3, jungle: 2, lava: 2, space: 1 });
+  for (const id of ORDER) if (id !== 'basic') assert.ok(PATH.some(n => n.ball === id && n.at === UNLOCK[id]), id);
+  const ats = PATH.map(n => n.at);
+  assert.equal(new Set(ats).size, ats.length, 'one reward per mark');
+  assert.deepEqual([...ats].sort((a, b) => a - b), ats, 'in order');
+});

@@ -52,6 +52,7 @@ export default {
   acctTaken: 'Este e-mail já está em uso. Toque em "Entrar".', acctWrong: 'E-mail ou senha errados.', acctWeak: 'Senha muito curta: no mínimo 6 caracteres.',
   acctBadEmail: 'Confira o endereço de e-mail.', acctSlow: 'Tentativas demais. Espere um minuto.', acctNeedOk: 'Marque a caixa de consentimento.',
   tabLeaders: 'Líderes', duel: 'Duelo', watchShort: 'Assistir', yourSquad: 'Seu time · trocar',
+  arenaUnlocks: 'Libera:', ballOnRoad: 'Pegue na Rota da Glória', ballAtArena: 'Libera na Arena {n}: {name}',
   slotLocked: 'Trancado', slotTapStart: 'Toque!', slotReadyTop: 'Pronto',
   tabClan: 'Clã', clanCreate: 'Criar um clã', clanReroll: 'Outro nome', clanBadge: 'Emblema', clanJoin: 'Entrar', clanLeave: 'Sair do clã',
   clanLeaveConfirm: 'Sair do clã?', clanMembers: 'Membros: {n}/{max}', clanLeader: 'líder', clanTop: 'Melhores clãs', clanFull: 'O clã está cheio',

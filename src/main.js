@@ -11,8 +11,8 @@ import { randomNick, nickText } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
-  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, gainXp, XP_WIN, XP_PLAY,
+  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, gainXp, XP_WIN, XP_PLAY,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -258,12 +258,7 @@ function renderSquad() {
     const small = tile.lastChild;
     if (ok) small.textContent = save.owned.includes(id) ? superName(id) : '★ ' + t('trial');
     else {
-      small.innerHTML = `<i class="trophy"></i>${UNLOCK[id]}`;
-      const buy = el('button', 'btn sm primary', `<span class="price"><i class="coin"></i>${d.price}</span>`);
-      buy.disabled = save.coins < d.price;
-      buy.title = buy.disabled ? t('notEnough') : t('buy');
-      buy.onclick = e => { e.stopPropagation(); if (buyBall(save, id)) { sfx.coin(); coinsUI(); place(id); } };
-      tile.append(buy);
+      small.textContent = t('arenaN', { n: ARENAS.findIndex(a => a.id === arenaFor(UNLOCK[id]).id) + 1 });
       if (S.tryPlay && !S.trial) {
         const tr = el('button', 'btn sm ad', t('trial'));
         tr.onclick = e => { e.stopPropagation(); S.pendingTrial = id; S.tryPlay(); };

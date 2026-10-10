@@ -52,6 +52,7 @@ export default {
   acctTaken: "Bu pochta band. «Kirish»ni bos.", acctWrong: "Pochta yoki parol noto'g'ri.", acctWeak: "Parol juda qisqa: kamida 6 ta belgi.",
   acctBadEmail: "Pochta manzilini tekshir.", acctSlow: "Urinishlar juda ko'p. Bir daqiqa kut.", acctNeedOk: "Rozilik belgisini qo'y.",
   tabLeaders: "Liderlar", duel: "Duel", watchShort: "Tomosha", yourSquad: "Jamoang · almashtirish",
+  arenaUnlocks: "Ochiladi:", ballOnRoad: "Shon yo'lida ol", ballAtArena: "{n}-arenada ochiladi: {name}",
   slotLocked: "Yopiq", slotTapStart: "Bos!", slotReadyTop: "Tayyor",
   tabClan: "Klan", clanCreate: "Klan ochish", clanReroll: "Boshqa nom", clanBadge: "Emblema", clanJoin: "Qo'shilish", clanLeave: "Klandan chiqish",
   clanLeaveConfirm: "Klandan chiqasanmi?", clanMembers: "A'zolar: {n}/{max}", clanLeader: "lider", clanTop: "Eng zo'r klanlar", clanFull: "Klan to'la",

@@ -52,6 +52,7 @@ export default {
   acctTaken: 'Bu e-posta zaten kullanılıyor. "Giriş yap" düğmesine dokun.', acctWrong: 'E-posta veya şifre yanlış.', acctWeak: 'Şifre çok kısa: en az 6 karakter.',
   acctBadEmail: 'E-posta adresini kontrol et.', acctSlow: 'Çok fazla deneme. Bir dakika bekle.', acctNeedOk: 'Onay kutusunu işaretle.',
   tabLeaders: 'Liderler', duel: 'Düello', watchShort: 'İzle', yourSquad: 'Takımın · değiştir',
+  arenaUnlocks: 'Açılanlar:', ballOnRoad: 'Şan Yolu’nda al', ballAtArena: 'Arena {n} ile açılır: {name}',
   slotLocked: 'Kilitli', slotTapStart: 'Dokun!', slotReadyTop: 'Hazır',
   tabClan: 'Klan', clanCreate: 'Klan kur', clanReroll: 'Başka isim', clanBadge: 'Amblem', clanJoin: 'Katıl', clanLeave: 'Klandan ayrıl',
   clanLeaveConfirm: 'Klandan ayrılınsın mı?', clanMembers: 'Üyeler: {n}/{max}', clanLeader: 'lider', clanTop: 'En iyi klanlar', clanFull: 'Klan dolu',

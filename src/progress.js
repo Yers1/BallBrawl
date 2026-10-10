@@ -8,7 +8,9 @@ import { validNick } from './nick.js';
 import { rng } from './sim.js';
 
 // ---------- trophies ----------
-export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 60, ninja: 100, train: 150, magnet: 200, bomb: 280, turtle: 360, lightning: 440, hedgehog: 520, ice: 600, poison: 660, chain: 720, forge: 780 };
+// Every arena opens its own balls (Clash Royale style): Night 4, Canyon 3, Frost 3, Jungle 2, Lava 2, Space 1.
+// The Glory Road gives each ball at its mark. leech/cell keep their old marks (players already claimed them).
+export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 910, poison: 1210, chain: 1520, forge: 1910 };
 export const LOSE_COINS = 5;
 export const aiLevel = tr => Math.min(LEVELS, Math.max(1, 1 + Math.floor(tr / 40)));
 // past the AI cap (1160) enemies keep gaining HP, so the top of the table can't be farmed by volume
@@ -208,15 +210,15 @@ export function migrate(raw) {
 // Claims are keyed by `at`, so a node's position must never move once it has shipped (a moved node pays twice).
 export const PATH = [
   { at: 5, chest: 'box' }, { at: 10, ball: 'leech' }, { at: 20, coins: 30 }, { at: 30, ball: 'cell' }, { at: 40, chest: 'box' },
-  { at: 45, skin: ['basic', 'silver'] }, { at: 60, ball: 'spider' }, { at: 70, chest: 'box' }, { at: 80, coins: 50 }, { at: 90, gems: 10 },
-  { at: 100, ball: 'ninja' }, { at: 115, chest: 'big' }, { at: 125, skin: ['leech', 'neon'] }, { at: 150, ball: 'train' },
-  { at: 175, coins: 70 }, { at: 190, chest: 'box' }, { at: 200, ball: 'magnet' }, { at: 230, gems: 15 }, { at: 240, skin: ['cell', 'candy'] },
-  { at: 260, chest: 'big' }, { at: 280, ball: 'bomb' }, { at: 320, coins: 90 }, { at: 340, chest: 'box' },
-  { at: 360, ball: 'turtle' }, { at: 400, skin: ['ninja', 'galaxy'] }, { at: 420, chest: 'big' }, { at: 440, ball: 'lightning' }, { at: 470, gems: 20 },
-  { at: 480, coins: 110 }, { at: 500, chest: 'mega' }, { at: 520, ball: 'hedgehog' }, { at: 560, skin: ['train', 'lava'] },
-  { at: 580, chest: 'big' }, { at: 600, ball: 'ice' }, { at: 630, gems: 20 }, { at: 650, coins: 130 }, { at: 660, ball: 'poison' },
-  { at: 690, chest: 'box' }, { at: 700, skin: ['spider', 'mint'] }, { at: 720, ball: 'chain' }, { at: 740, chest: 'big' },
-  { at: 750, coins: 150 }, { at: 780, ball: 'forge' }, { at: 800, skin: ['magnet', 'neon'] }, { at: 825, chest: 'big' },
+  { at: 45, skin: ['basic', 'silver'] }, { at: 60, coins: 40 }, { at: 70, chest: 'box' }, { at: 80, coins: 50 }, { at: 90, gems: 10 },
+  { at: 100, coins: 60 }, { at: 115, chest: 'big' }, { at: 125, skin: ['leech', 'neon'] }, { at: 150, coins: 70 },
+  { at: 175, coins: 70 }, { at: 190, chest: 'box' }, { at: 200, coins: 80 }, { at: 230, gems: 15 }, { at: 240, skin: ['cell', 'candy'] },
+  { at: 260, chest: 'big' }, { at: 280, coins: 90 }, { at: 320, coins: 90 }, { at: 340, chest: 'box' },
+  { at: 360, coins: 100 }, { at: 400, skin: ['ninja', 'galaxy'] }, { at: 420, chest: 'big' }, { at: 440, coins: 110 }, { at: 470, gems: 20 },
+  { at: 480, coins: 110 }, { at: 500, chest: 'mega' }, { at: 520, coins: 120 }, { at: 560, skin: ['train', 'lava'] },
+  { at: 580, chest: 'big' }, { at: 600, coins: 130 }, { at: 630, gems: 20 }, { at: 650, coins: 130 }, { at: 660, coins: 130 },
+  { at: 690, chest: 'box' }, { at: 700, skin: ['spider', 'mint'] }, { at: 720, coins: 140 }, { at: 740, chest: 'big' },
+  { at: 750, coins: 150 }, { at: 780, coins: 150 }, { at: 800, skin: ['magnet', 'neon'] }, { at: 825, chest: 'big' },
   { at: 850, coins: 170 }, { at: 860, gems: 25 }, { at: 875, chest: 'box' }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 925, chest: 'big' },
   { at: 950, coins: 200 }, { at: 975, chest: 'box' }, { at: 1000, skin: ['lightning', 'candy'] }, { at: 1025, chest: 'mega' },
   { at: 1050, skin: ['poison', 'lava'] }, { at: 1075, chest: 'box' }, { at: 1100, skin: ['chain', 'neon'] }, { at: 1125, chest: 'big' },
@@ -229,7 +231,7 @@ export const PATH = [
   { at: 2400, skin: ['bomb', 'galaxy'] }, { at: 2500, chest: 'mega' }, { at: 2550, coins: 230 }, { at: 2600, skin: ['turtle', 'mint'] },
   { at: 2650, chest: 'big' }, { at: 2700, coins: 240 }, { at: 2750, skin: ['hedgehog', 'neon'] }, { at: 2800, chest: 'big' },
   { at: 2850, coins: 250 }, { at: 2900, skin: ['ice', 'candy'] }, { at: 3000, chest: 'mega' },
-];
+].concat(ORDER.filter(id => id !== 'basic' && id !== 'leech' && id !== 'cell').map(id => ({ at: UNLOCK[id], ball: id }))).sort((a, b) => a.at - b.at);
 // after the last reward the road goes on forever: a big chest every 100 trophies, 150 coins in between
 export function pathNodes(upTo) {
   const out = [...PATH];
@@ -309,7 +311,7 @@ export function rollChest(s, kind, rand) {
   const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), gems: c.gems, frags: [], ball: null, skin: null, emote: null };
   const emotes = EMOTE_LIST.filter(e => c.tiers.includes(e.tier) && !s.own.emote.includes(e.id));
   if (emotes.length && rand() < c.emote) { out.emote = pickR(emotes).id; s.own.emote.push(out.emote); }
-  const balls = ORDER.filter(id => !s.owned.includes(id));
+  const balls = ORDER.filter(id => !s.owned.includes(id) && UNLOCK[id] <= s.maxTrophies + 150);
   if (balls.length && rand() < c.ball) { out.ball = pickR(balls); s.owned.push(out.ball); }
   if (c.skin) { const pool = skinPool(s); if (pool.length) { out.skin = pickR(pool).split(':'); s.skins.push(out.skin.join(':')); delete s.frags[out.skin.join(':')]; } }
   for (let i = 0; i < c.stacks; i++) { // half the time the stack goes to the skin you're closest to finishing
@@ -550,8 +552,8 @@ export function claimAchievement(s, id) {
 }
 
 // ---------- shop ----------
-export function buyBall(s, id) {
-  if (!BALLS[id] || s.owned.includes(id) || s.coins < BALLS[id].price) return false;
+export function buyBall(s, id) { // only balls of an arena you've reached
+  if (!BALLS[id] || s.owned.includes(id) || s.coins < BALLS[id].price || UNLOCK[id] > s.maxTrophies) return false;
   s.coins -= BALLS[id].price;
   s.owned.push(id);
   return true;

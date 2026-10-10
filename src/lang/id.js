@@ -52,6 +52,7 @@ export default {
   acctTaken: 'Email ini sudah dipakai. Ketuk "Masuk".', acctWrong: 'Email atau kata sandi salah.', acctWeak: 'Kata sandi terlalu pendek: minimal 6 karakter.',
   acctBadEmail: 'Cek lagi alamat emailnya.', acctSlow: 'Terlalu banyak percobaan. Tunggu satu menit.', acctNeedOk: 'Centang kotak persetujuan.',
   tabLeaders: 'Juara', duel: 'Duel', watchShort: 'Tonton', yourSquad: 'Skuadmu · ganti',
+  arenaUnlocks: 'Membuka:', ballOnRoad: 'Ambil di Jalur Kejayaan', ballAtArena: 'Terbuka di Arena {n}: {name}',
   slotLocked: 'Terkunci', slotTapStart: 'Ketuk!', slotReadyTop: 'Siap',
   tabClan: 'Klan', clanCreate: 'Buat klan', clanReroll: 'Nama lain', clanBadge: 'Lambang', clanJoin: 'Gabung', clanLeave: 'Keluar dari klan',
   clanLeaveConfirm: 'Yakin keluar dari klan?', clanMembers: 'Anggota: {n}/{max}', clanLeader: 'ketua', clanTop: 'Klan terbaik', clanFull: 'Klan sudah penuh',
