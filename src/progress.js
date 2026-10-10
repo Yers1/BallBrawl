@@ -10,7 +10,7 @@ import { rng } from './sim.js';
 // ---------- trophies ----------
 // Every arena opens its own balls (Clash Royale style): Night 4, Canyon 3, Frost 3, Jungle 2, Lava 2, Space 1.
 // The Glory Road gives each ball at its mark. leech/cell keep their old marks (players already claimed them).
-export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 910, poison: 1210, chain: 1520, forge: 1910, chess: 220 };
+export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 960, poison: 1210, chain: 1560, forge: 1910, chess: 220 };
 // Balls in the order they unlock (ORDER itself never changes: challenge links store balls by their place in it)
 export const BY_UNLOCK = [...ORDER].sort((a, b) => UNLOCK[a] - UNLOCK[b]);
 export const LOSE_COINS = 5;
@@ -35,8 +35,9 @@ export function enemySquadFor(tr, rand) {
 
 // ---------- arenas (Clash-Royale style): unlocked by your best trophies, never taken back ----------
 export const ARENAS = [
-  { id: 'night', at: 0 }, { id: 'canyon', at: 120 }, { id: 'frost', at: 350 },
-  { id: 'jungle', at: 700 }, { id: 'lava', at: 1200 }, { id: 'space', at: 1900 },
+  { id: 'night', at: 0 }, { id: 'candy', at: 60 }, { id: 'canyon', at: 120 }, { id: 'pirate', at: 230 },
+  { id: 'frost', at: 350 }, { id: 'stadium', at: 500 }, { id: 'jungle', at: 700 }, { id: 'temple', at: 950 },
+  { id: 'lava', at: 1200 }, { id: 'chess', at: 1550 }, { id: 'space', at: 1900 }, { id: 'neon', at: 2300 },
 ];
 export const arenaFor = maxTrophies => ARENAS.reduce((a, x) => (maxTrophies >= x.at ? x : a), ARENAS[0]);
 export const arenaIndex = id => Math.max(0, ARENAS.findIndex(a => a.id === id));

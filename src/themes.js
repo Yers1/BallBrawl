@@ -27,7 +27,23 @@ export const THEMES = {
   // shop looks (bought with gems): your battles and your lobby stage use them instead of the trophy arena
   candy: {
     sky: 'linear-gradient(180deg, #FF8FC1 0%, #FFC6E0 55%, #BFF3FF 100%)',
-    floor: '#FFD1E6', faces: ['#FFF0F7', '#FF8FC1', '#F06AA8', '#C94C88'], pattern: 'dots', rings: ['#7FE7FF', '#FF4D8D'], back: '#F06AA8',
+    floor: '#FFC6DD', faces: ['#FFFFFF', '#FFE3EF', '#FFD1E6', '#F7B8D3'], pattern: 'candy', rings: ['#7FE7FF', '#FF4D8D'], back: '#F06AA8',
+  },
+  pirate: {
+    sky: 'linear-gradient(180deg, #0B4F8A 0%, #1E9BE0 55%, #7FD3FF 100%)',
+    floor: '#C9752E', faces: ['#8A4B1E', '#6E3A16', '#5E3112', '#4A260E'], pattern: 'planks', rings: ['#FFD23F', '#4CC9F0'], back: '#1E9BE0',
+  },
+  stadium: {
+    sky: 'radial-gradient(40% 25% at 15% 8%, rgba(255,255,220,0.35), transparent), radial-gradient(40% 25% at 85% 8%, rgba(255,255,220,0.35), transparent), linear-gradient(180deg, #0E1530 0%, #1D3A6E 55%, #2E5FA0 100%)',
+    floor: '#3FAE49', faces: ['#FFCC33', '#2B3550', '#232B44', '#1A2036'], pattern: 'pitch', rings: ['#FFFFFF', '#FFCC33'], back: '#1D2A4A',
+  },
+  temple: {
+    sky: 'linear-gradient(180deg, #2A1A0E 0%, #8A5A2A 55%, #F2B45A 100%)',
+    floor: '#D8B47A', faces: ['#E8C98E', '#B48A52', '#9E7744', '#7E5C32'], pattern: 'temple', rings: ['#3FE0D0', '#FFB23F'], back: '#A86A2E',
+  },
+  chess: {
+    sky: 'radial-gradient(60% 40% at 50% 20%, rgba(255,214,122,0.18), transparent), linear-gradient(180deg, #06140E 0%, #0E2A1C 55%, #164A30 100%)',
+    floor: '#EDE3CF', faces: ['#6B4226', '#4A2C18', '#3E2414', '#2E1A0E'], pattern: 'chess', rings: ['#FFD27A', '#FF5C5C'], back: '#0E2A1C',
   },
   neon: {
     sky: 'radial-gradient(60% 40% at 50% 30%, rgba(255,43,214,0.25), transparent), linear-gradient(180deg, #05030F 0%, #120E30 60%, #1C1048 100%)',

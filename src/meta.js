@@ -101,17 +101,52 @@ const BACKDROP = {
   candy: `${[[90, 60, '#FF4D8D'], [150, 46, '#7FE7FF'], [210, 64, '#FFD23F'], [266, 48, '#A6FF4D']].map(([x, y, c]) => `<path d="M${x} ${y + 14} V104" stroke="#FFFFFF" stroke-width="3"/><circle cx="${x}" cy="${y}" r="14" fill="${c}" stroke="#C94C88" stroke-width="2"/><path d="M${x - 9} ${y} a9 9 0 0 1 18 0" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>`).join('')}`,
   neon: `<path d="M80 40 H140 M80 40 V70 M160 30 L190 70 L220 30 M240 40 H280 V70 H240Z" fill="none" stroke="#00F0FF" stroke-width="3" stroke-linecap="round"/>
     <path d="M70 88 H290" stroke="#FF2BD6" stroke-width="3"/>`,
+  pirate: `<circle cx="250" cy="36" r="13" fill="#FFE38A"/><path d="M62 82 q15 -8 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 V104 H62Z" fill="#0E6FB8"/>
+    <path d="M62 82 q15 -8 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0" fill="none" stroke="#BFE9FF" stroke-width="2.5"/>
+    <path d="M140 76 H200 L192 86 H148Z" fill="#6E3A16" stroke="#2E1A0E" stroke-width="2"/><path d="M170 76 V36 M170 38 L194 56 L170 66Z" fill="#FFFFFF" stroke="#2E1A0E" stroke-width="2"/>
+    <path d="M100 40 q5 -5 10 0 q5 -5 10 0" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>`,
+  stadium: `${Array.from({ length: 40 }, (_, i) => `<circle cx="${68 + (i % 20) * 12}" cy="${66 + Math.floor(i / 20) * 14}" r="4.5" fill="${['#FF5C5C', '#4CC9F0', '#FFCC33', '#FFFFFF'][i % 4]}"/>`).join('')}
+    <path d="M62 90 H296 V104 H62Z" fill="#FFCC33"/><path d="M80 14 V44 M278 14 V44" stroke="#C9D2E0" stroke-width="3"/>
+    <rect x="70" y="28" width="20" height="10" rx="2" fill="#FFF7C4"/><rect x="268" y="28" width="20" height="10" rx="2" fill="#FFF7C4"/>`,
+  temple: `<path d="M110 104 V84 H130 V66 H150 V50 H208 V66 H228 V84 H248 V104Z" fill="#C9A066" stroke="#6E4A1E" stroke-width="2"/>
+    <rect x="170" y="70" width="18" height="34" fill="#3A2A14"/><path d="M179 56 l6 6 -6 6 -6 -6z" fill="#3FE0D0" stroke="#0A0E1F" stroke-width="1.5"/>
+    <path d="M62 30 q30 10 40 40 M296 30 q-30 10 -40 40" stroke="#2E8B3A" stroke-width="7" fill="none" stroke-linecap="round"/>`,
+  chess: `<path d="M98 104 V96 H122 V104Z M102 96 L106 70 H114 L118 96Z M104 70 H116 V62 H112 V58 H108 V62 H104Z" fill="#E8DCC4" stroke="#0A0E1F" stroke-width="2"/>
+    <path d="M232 104 V96 H262 V104Z M236 96 Q232 70 248 58 Q262 60 262 74 L254 72 Q256 84 258 96Z" fill="#3B2A1E" stroke="#0A0E1F" stroke-width="2"/>
+    <circle cx="179" cy="44" r="20" fill="#FFD27A" opacity=".25"/>`,
   ocean: `<path d="M62 70 q20 -10 40 0 t40 0 t40 0 t40 0 t40 0 t40 0" fill="none" stroke="#7FD3FF" stroke-width="3"/>
     <path d="M120 86 q10 -8 22 0 q-10 8 -22 0z M142 86 l7 -5 v10z" fill="#FFCC33"/><path d="M220 60 q10 -8 22 0 q-10 8 -22 0z M242 60 l7 -5 v10z" fill="#FF7A5C"/>
     <path d="M80 104 q-4 -18 4 -26 M88 104 q4 -14 -2 -22" stroke="#FF7A5C" stroke-width="4" fill="none" stroke-linecap="round"/>`,
 };
 // map coordinates (0–400) onto the stage floor's trapezoid
 const persp = (x, y) => { const v = y / 400, l = 62 - 48 * v, r = 296 + 48 * v; return [l + (x / 400) * (r - l), 104 + v * 322, (r - l) / 400]; };
+// the arena's floor pattern, laid onto the stage in perspective
+function stageFloor(id) {
+  const pt = (x, y) => persp(x, y).slice(0, 2).map(v => v.toFixed(1)).join(' ');
+  const quad = (x0, y0, x1, y1) => `M${pt(x0, y0)}L${pt(x1, y0)}L${pt(x1, y1)}L${pt(x0, y1)}Z`;
+  const line = (x0, y0, x1, y1) => `M${pt(x0, y0)}L${pt(x1, y1)}`;
+  if (id === 'candy' || id === 'chess') {
+    const n = id === 'chess' ? 8 : 10, q = 400 / n;
+    let d = '';
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if ((i + j) & 1) d += quad(i * q, j * q, (i + 1) * q, (j + 1) * q);
+    return `<path d="${d}" fill="${id === 'chess' ? '#3B2A1E' : '#5EE6C3'}"/>`;
+  }
+  if (id === 'stadium') {
+    const circle = Array.from({ length: 33 }, (_, k) => pt(200 + Math.cos(k / 16 * Math.PI) * 54, 200 + Math.sin(k / 16 * Math.PI) * 54)).join('L');
+    return `<path d="${line(200, 0, 200, 400)}M${circle}${quad(0, 110, 64, 290)}${quad(336, 110, 400, 290)}" fill="none" stroke="#FFFFFF" stroke-opacity=".85" stroke-width="2.5"/>`;
+  }
+  if (id === 'pirate') return `<path d="${Array.from({ length: 12 }, (_, k) => line(0, k * 33, 400, k * 33)).join('')}" stroke="#46200A" stroke-opacity=".4" stroke-width="2"/>`;
+  if (id === 'temple') return `<path d="${[80, 160, 240, 320].map(k => line(k, 0, k, 400) + line(0, k, 400, k)).join('')}" stroke="#6E4614" stroke-opacity=".3" stroke-width="2"/>`;
+  if (id === 'neon') return `<path d="${[50, 100, 150, 200, 250, 300, 350].map(k => line(k, 0, k, 400) + line(0, k, 400, k)).join('')}" stroke="#00F0FF" stroke-opacity=".45" stroke-width="1.5"/>`;
+  return '';
+}
 function stageMap(id) {
   return (MAPS[id] ?? []).map(o => {
     const [x, y, k] = persp(o.x, o.y), rx = o.r * k, ry = rx * 0.5, sh = `<ellipse cx="${x + 3}" cy="${y + ry * 0.4}" rx="${rx}" ry="${ry}" fill="#000" opacity=".35"/>`;
-    if (o.k === 'rock') return `${sh}<path d="M${x - rx} ${y} Q${x - rx} ${y - ry * 2.6} ${x} ${y - ry * 3} Q${x + rx} ${y - ry * 2.6} ${x + rx} ${y} Q${x} ${y + ry} ${x - rx} ${y}Z" fill="${id === 'canyon' ? '#C98A4B' : '#7A7F92'}" stroke="#0A0E1F" stroke-width="2"/><path d="M${x - rx * 0.5} ${y - ry * 2} q${rx * 0.3} -${ry * 0.6} ${rx * 0.6} -${ry * 0.4}" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="2" fill="none"/>`;
+    if (o.k === 'rock') return `${sh}<path d="M${x - rx} ${y} Q${x - rx} ${y - ry * 2.6} ${x} ${y - ry * 3} Q${x + rx} ${y - ry * 2.6} ${x + rx} ${y} Q${x} ${y + ry} ${x - rx} ${y}Z" fill="${{ canyon: '#C98A4B', candy: '#FF8FC1', pirate: '#A8642A', temple: '#8E7A5A' }[id] ?? '#7A7F92'}" stroke="#0A0E1F" stroke-width="2"/><path d="M${x - rx * 0.5} ${y - ry * 2} q${rx * 0.3} -${ry * 0.6} ${rx * 0.6} -${ry * 0.4}" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="2" fill="none"/>`;
     if (o.k === 'ice') return `${sh}<path d="M${x - rx * 0.7} ${y} L${x - rx * 0.5} ${y - ry * 3} L${x} ${y - ry * 4.2} L${x + rx * 0.5} ${y - ry * 3} L${x + rx * 0.7} ${y}Z" fill="#BFF3FF" stroke="#2E6E9E" stroke-width="2"/><path d="M${x} ${y - ry * 4} V${y}" stroke="#FFFFFF" stroke-width="1.5"/>`;
+    if (o.k === 'bumper' && id === 'stadium') return `${sh}<circle cx="${x}" cy="${y - ry * 1.4}" r="${rx}" fill="#FFFFFF" stroke="#0A0E1F" stroke-width="2"/><circle cx="${x}" cy="${y - ry * 1.4}" r="${rx * 0.35}" fill="#1A1F2E"/>`;
+    if (o.k === 'bumper' && id === 'neon') return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#0A0820" stroke="${o.x < 200 ? '#00F0FF' : '#FF2BD6'}" stroke-width="3"/>`;
     if (o.k === 'bumper') return `${sh}<rect x="${x - rx * 0.3}" y="${y - ry * 2}" width="${rx * 0.6}" height="${ry * 2}" fill="#F5E6C8" stroke="#0A0E1F" stroke-width="1.5"/><ellipse cx="${x}" cy="${y - ry * 2.2}" rx="${rx}" ry="${ry * 1.5}" fill="#E0304A" stroke="#0A0E1F" stroke-width="2"/><circle cx="${x - rx * 0.4}" cy="${y - ry * 2.6}" r="${rx * 0.18}" fill="#FFFFFF"/><circle cx="${x + rx * 0.35}" cy="${y - ry * 2.3}" r="${rx * 0.14}" fill="#FFFFFF"/>`;
     if (o.k === 'pool') return `<ellipse cx="${x}" cy="${y}" rx="${rx * 1.15}" ry="${ry * 1.15}" fill="#FF7A2F" opacity=".45"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#FF7A2F" stroke="#5A1A0A" stroke-width="2"/><ellipse cx="${x}" cy="${y}" rx="${rx * 0.55}" ry="${ry * 0.55}" fill="#FFD23F"/>`;
     if (o.k === 'portal') return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="none" stroke="#C890FF" stroke-width="3"/><ellipse cx="${x}" cy="${y}" rx="${rx * 0.65}" ry="${ry * 0.65}" fill="#FFFFFF" fill-opacity=".5" stroke="#4CC9F0" stroke-width="2.5"/>`;
@@ -139,6 +174,7 @@ export function arenaSvg(id, k) {
 <path d="M14 14H62V104L14 426Z" fill="${left}"/><path d="M344 14H296V104L344 426Z" fill="${right}"/>
 <path d="M14 14H62V104L14 426ZM344 14H296V104L344 426Z" fill="#000" opacity="0.18"/>
 <path d="M62 104H296L344 426H14Z" fill="${th.floor}"/>
+<g clip-path="url(#fl${k})">${stageFloor(id)}</g>
 <g clip-path="url(#fl${k})" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="1.5" fill="none"><path d="M91.3 104L55.3 426M120.5 104L96.5 426M149.8 104L137.8 426M179 104V426M208.3 104L220.3 426M237.5 104L261.5 426M266.8 104L302.8 426"/><path d="M0 120H358M0 143H358M0 172H358M0 210H358M0 259H358M0 317H358M0 384H358"/></g>
 <path d="M62 14V104L14 426M296 14V104L344 426" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="2.5"/>
 <g clip-path="url(#fl${k})">${ring(76, 326, 58, 15, ally, 2.5)}${ring(282, 326, 58, 15, ally, 2.5)}${ring(179, 394, 100, 24, lead, 3)}</g>

@@ -85,8 +85,11 @@ test('arenas unlock by best trophies and never go back', async () => {
   const { ARENAS, arenaFor } = await import('../src/progress.js');
   const { THEMES } = await import('../src/themes.js');
   assert.equal(arenaFor(0).id, 'night');
-  assert.equal(arenaFor(119).id, 'night');
+  assert.equal(arenaFor(59).id, 'night');
+  assert.equal(arenaFor(60).id, 'candy');
   assert.equal(arenaFor(120).id, 'canyon');
+  const { MAPS } = await import('../src/sim.js');
+  for (const a of ARENAS) assert.ok(MAPS[a.id], `map for ${a.id}`);
   assert.equal(arenaFor(99999).id, ARENAS.at(-1).id);
   for (const a of ARENAS) assert.ok(THEMES[a.id], `theme for ${a.id}`);
   assert.equal(migrate({ arenaSeen: 'nope' }).arenaSeen, 'night', 'validated');
@@ -226,7 +229,7 @@ test('new achievements count chests, skins, level, ball rank', async () => {
 test('every arena opens its own balls, and the road gives each one at its mark', async () => {
   const { UNLOCK, ARENAS, arenaFor, PATH } = await import('../src/progress.js');
   const per = Object.fromEntries(ARENAS.map(a => [a.id, ORDER.filter(id => arenaFor(UNLOCK[id]).id === a.id).length]));
-  assert.deepEqual(per, { night: 4, canyon: 4, frost: 3, jungle: 2, lava: 2, space: 1 });
+  assert.deepEqual(per, { night: 3, candy: 1, canyon: 3, pirate: 1, frost: 2, stadium: 1, jungle: 1, temple: 1, lava: 1, chess: 1, space: 1, neon: 0 });
   for (const id of ORDER) if (id !== 'basic') assert.ok(PATH.some(n => n.ball === id && n.at === UNLOCK[id]), id);
   const ats = PATH.map(n => n.at);
   assert.equal(new Set(ats).size, ats.length, 'one reward per mark');

@@ -15,6 +15,12 @@ export const MAPS = {
   jungle: [{ k: 'bumper', x: 200, y: 200, r: 24 }, { k: 'bumper', x: 110, y: 110, r: 18 }, { k: 'bumper', x: 290, y: 290, r: 18 }],
   lava: [{ k: 'pool', x: 200, y: 200, r: 40 }, { k: 'pool', x: 105, y: 105, r: 26 }, { k: 'pool', x: 295, y: 295, r: 26 }],
   space: [{ k: 'portal', x: 105, y: 105, r: 20, to: 2 }, { k: 'rock', x: 200, y: 200, r: 22 }, { k: 'portal', x: 295, y: 295, r: 20, to: 0 }],
+  candy: [{ k: 'rock', x: 110, y: 110, r: 18 }, { k: 'rock', x: 290, y: 290, r: 18 }], // lollipops
+  pirate: [{ k: 'rock', x: 200, y: 120, r: 18 }, { k: 'rock', x: 200, y: 280, r: 18 }], // barrels
+  stadium: [{ k: 'bumper', x: 200, y: 200, r: 14 }], // the match ball in the centre spot
+  temple: [{ k: 'rock', x: 140, y: 140, r: 18 }, { k: 'rock', x: 260, y: 260, r: 18 }], // stone idols
+  chess: [], // just the board
+  neon: [{ k: 'bumper', x: 130, y: 200, r: 16 }, { k: 'bumper', x: 270, y: 200, r: 16 }], // glowing pads
 };
 export const POOL = { every: 0.5, dmg: 4 };
 const JITTER = 0.3; // rad of random spin on each wall bounce
