@@ -217,25 +217,28 @@ const DECO_SVG = {
 const STARS = (pts, c = '#FFFFFF') => pts.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`).join('');
 const SPARK = (x, y, s, c = '#FFFFFF') => `<path d="M${x} ${y - s}Q${x} ${y} ${x + s} ${y}Q${x} ${y} ${x} ${y + s}Q${x} ${y} ${x - s} ${y}Q${x} ${y} ${x} ${y - s}Z" fill="${c}"/>`;
 const BANNER = {
-  night: ['#1C3466', '#0F0F23', k => `${STARS([[30, 12, 1.2], [70, 22, 0.9], [110, 9, 1.3], [150, 18, 1], [175, 8, 0.8], [130, 30, 0.8], [60, 40, 0.9]])}
-    <circle cx="205" cy="20" r="12" fill="#FFF3C4"/><circle cx="211" cy="16" r="11" fill="#16285A"/>
-    <path d="M0 58 L0 44 Q30 34 60 42 T120 40 T180 44 T250 40 V58Z" fill="#0A1A33"/><path d="M0 58 L0 50 Q40 44 80 50 T160 48 T250 50 V58Z" fill="#071226"/>`],
+  night: ['#22407A', '#0B1230', k => `${STARS([[24, 10, 1.2], [58, 20, 0.9], [92, 8, 1.3], [128, 16, 1], [150, 6, 0.8], [112, 28, 0.8], [44, 32, 0.9], [170, 26, 0.7]])}
+    <circle cx="206" cy="20" r="19" fill="#FFF3C4" opacity=".14"/><circle cx="206" cy="20" r="12" fill="#FFF3C4"/><circle cx="212" cy="16" r="11" fill="#1A2F62"/>
+    <path d="M0 58 V40 L22 26 L40 36 L64 18 L92 38 L118 24 L150 40 L178 28 L210 42 L236 30 L250 36 V58Z" fill="#162A55"/>
+    <path d="M64 18 L72 24 L60 26Z M118 24 L125 29 L113 30Z M178 28 L184 32 L173 33Z" fill="#DCE8FF" opacity=".55"/>
+    <path d="M0 58 V48 Q34 38 70 46 T140 44 T210 48 T250 44 V58Z" fill="#0A1630"/>`],
   red: ['#E5303F', '#9E1426', k => `<g opacity=".14" fill="#FFFFFF">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<path d="M${i * 34 - 20} 58 L${i * 34} 0 H${i * 34 + 14} L${i * 34 - 6} 58Z"/>`).join('')}</g>
     <path d="M0 49 H250" stroke="#FFCC33" stroke-width="3"/><path d="M0 53 H250" stroke="#7A0E1C" stroke-width="2"/>
     <path d="M196 14 l4 8 9 1.3-6.5 6.3 1.6 9-8.1-4.3-8.1 4.3 1.6-9-6.5-6.3 9-1.3z" fill="#FFCC33" stroke="#7A0E1C" stroke-width="1.5"/>`],
-  green: ['#4CC46A', '#1C6E34', k => `${STARS([[40, 16, 1.6], [90, 30, 1.4], [140, 12, 1.5], [120, 40, 1.2]], '#FFF6A8')}
-    ${[[170, 58, 26], [196, 58, 34], [222, 58, 24], [150, 58, 18]].map(([x, b, h]) => `<path d="M${x} ${b - h} L${x + 12} ${b} H${x - 12}Z M${x} ${b - h * 0.7} L${x + 14} ${b - h * 0.15} H${x - 14}Z" fill="#14552A"/>`).join('')}
-    <path d="M0 58 Q60 48 120 54 T250 52 V58Z" fill="#11471F"/>`],
-  purple: ['#9A5BEA', '#4A1F8A', k => `<g fill="none" stroke="#FFFFFF" stroke-opacity=".2" stroke-width="3">
-    <path d="M10 50 Q40 10 80 30 T150 20"/><path d="M60 58 Q100 30 140 46 T230 26"/></g>
-    ${SPARK(185, 18, 7)}${SPARK(210, 38, 5, '#FFE38A')}${SPARK(120, 14, 4)}${SPARK(40, 34, 3.5, '#FFE38A')}`],
-  orange: ['#FFB347', '#E0661A', k => `<circle cx="200" cy="26" r="14" fill="#FFE38A"/><circle cx="200" cy="26" r="19" fill="#FFE38A" opacity=".3"/>
-    <path d="M0 58 L0 46 Q50 34 110 44 T250 40 V58Z" fill="#E0782A"/><path d="M0 58 L0 52 Q70 44 150 52 T250 50 V58Z" fill="#B85414"/>
-    <path d="M150 44 v-14 M146 34 h8 M143 38 h4 M153 36 h4" stroke="#7A3A0E" stroke-width="2.5" stroke-linecap="round"/>`],
-  sunset: ['#FF5E8A', '#FFB347', k => `<circle cx="190" cy="46" r="20" fill="#FFE38A"/>
-    <path d="M0 46 H250 V58 H0Z" fill="#6E3FB0"/><path d="M150 50 h80 M165 54 h50" stroke="#FFE38A" stroke-width="2" opacity=".7"/>
-    <path d="M60 18 q4 -4 8 0 q4 -4 8 0 M95 26 q3 -3 6 0 q3 -3 6 0" fill="none" stroke="#5A1F40" stroke-width="1.8" stroke-linecap="round"/>`],
-  ocean: ['#2BA0E8', '#0A4A86', k => `<g fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5" stroke-linecap="round">
+  green: ['#4FD07A', '#156B35', k => `${STARS([[30, 14, 1.6], [70, 30, 1.3], [110, 10, 1.5], [96, 42, 1.1]], '#FFF6A8')}
+    ${[[150, 16, 0.5], [178, 30, -0.4], [204, 12, 0.9], [228, 34, -0.8], [130, 38, 0.2]].map(([x, y, a]) => `<g transform="translate(${x} ${y}) rotate(${a * 57})"><path d="M-12 0 Q0 -10 12 0 Q0 10 -12 0Z" fill="#2E9A52" stroke="#0E4A24" stroke-width="1.5"/><path d="M-10 0 H10" stroke="#8EE6A8" stroke-width="1.5"/></g>`).join('')}
+    <path d="M0 58 Q60 46 120 54 T250 50 V58Z" fill="#0E4A24"/>`],
+  purple: ['#A866F5', '#45188A', k => `<circle cx="70" cy="30" r="40" fill="#FFFFFF" opacity=".07"/><circle cx="190" cy="22" r="30" fill="#FFB8FF" opacity=".12"/>
+    <g fill="none" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="3"><path d="M10 50 Q40 10 80 30 T150 20"/><path d="M60 58 Q100 30 140 46 T230 26"/></g>
+    ${SPARK(185, 18, 8)}${SPARK(212, 38, 5.5, '#FFE38A')}${SPARK(120, 14, 4.5)}${SPARK(40, 34, 4, '#FFE38A')}${SPARK(160, 44, 3)}${SPARK(232, 14, 3.5)}`],
+  orange: ['#FFC04D', '#E0561A', k => `<circle cx="206" cy="24" r="22" fill="#FFE38A" opacity=".3"/><circle cx="206" cy="24" r="14" fill="#FFE38A"/>
+    ${[[130, 0.9], [158, 1.2], [184, 0.8]].map(([x, h]) => `<path d="M${x} 58 Q${x - 12} ${58 - 22 * h} ${x - 2} ${58 - 34 * h} Q${x + 2} ${58 - 22 * h} ${x + 9} ${58 - 28 * h} Q${x + 14} ${58 - 12 * h} ${x + 8} 58Z" fill="#FF7A1C" opacity=".85"/><path d="M${x + 2} 58 Q${x - 4} ${58 - 14 * h} ${x + 2} ${58 - 22 * h} Q${x + 7} ${58 - 12 * h} ${x + 6} 58Z" fill="#FFE07A"/>`).join('')}
+    <path d="M0 58 L0 48 Q50 38 110 46 T250 44 V58Z" fill="#B8450E" opacity=".75"/>`],
+  sunset: ['#FF5E8A', '#FFB347', k => `<circle cx="188" cy="44" r="30" fill="#FFE38A" opacity=".25"/><circle cx="188" cy="44" r="19" fill="#FFE38A"/>
+    <path d="M0 58 V44 Q40 30 90 40 T180 42 T250 36 V58Z" fill="#B8407A"/><path d="M0 58 V50 Q50 40 110 48 T250 46 V58Z" fill="#6E3FB0"/>
+    <path d="M150 52 h70 M164 55 h44" stroke="#FFE38A" stroke-width="2" opacity=".6"/>
+    <path d="M56 16 q4 -4 8 0 q4 -4 8 0 M92 24 q3 -3 6 0 q3 -3 6 0 M120 12 q3 -3 6 0 q3 -3 6 0" fill="none" stroke="#5A1F40" stroke-width="1.8" stroke-linecap="round"/>`],
+  ocean: ['#2BA0E8', '#0A4A86', k => `${[[120, 14, 3], [132, 24, 2], [226, 12, 2.5], [60, 36, 1.8]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="1.4"/>`).join('')}<g fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5" stroke-linecap="round">
     ${[14, 30, 46].map((y, i) => `<path d="M${-10 + i * 12} ${y} q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0"/>`).join('')}</g>
     ${STARS([[190, 20, 3], [200, 30, 2], [182, 36, 1.6]], 'rgba(255,255,255,0.6)')}
     <path d="M150 36 q10 -8 22 0 q-10 8 -22 0z M172 36 l7 -5 v10z" fill="#FFCC33" stroke="#0A3460" stroke-width="1.5"/>`],
@@ -274,7 +277,15 @@ const CLAN_COLORS = ['#3D86FF', '#FF4D5E', '#36D27A', '#A85CFF', '#FF9F1C', '#4C
 const CLAN_ICONS = ['star', 'sword', 'crown', 'bolt', 'flame', 'shield', 'trophy', 'target'];
 export const clanBadge = i => `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2l16 6v12c0 10-7 18-16 22C11 38 4 30 4 20V8z" fill="${CLAN_COLORS[i] ?? CLAN_COLORS[0]}" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>`
   + `<path d="M20 6l12 4.5v9c0 7-5 13-12 16" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5"/><g transform="translate(9 9) scale(0.55)">${DECO_SVG[CLAN_ICONS[i]] ?? ''}</g></svg>`;
-export const decoSvg = id => (DECO_SVG[id] ? `<svg viewBox="0 0 40 40" aria-hidden="true">${DECO_SVG[id]}</svg>` : '');
+const DECO_TILE = { target: ['#FF7A88', '#C81E3A'], sword: ['#7FC4FF', '#2E5BD8'], shield: ['#5FD8FF', '#1E6FB8'], star: ['#FFE38A', '#E09A1E'], potion: ['#D3A0FF', '#7A3FC8'],
+  bolt: ['#FFE07A', '#FF8A1C'], flame: ['#FFB060', '#E0301E'], trophy: ['#FFE38A', '#C98A00'], crown: ['#9A70FF', '#3B1A8A'] };
+export const decoSvg = id => {
+  if (!DECO_SVG[id]) return '';
+  const [a, b] = DECO_TILE[id] ?? ['#5A6478', '#2B3550'];
+  return `<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="dt-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>`
+    + `<rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="url(#dt-${id})" stroke="#0A0E1F" stroke-width="2.5"/><path d="M7 5.5 H33" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="2.5" stroke-linecap="round"/>`
+    + `<g transform="translate(6 6) scale(0.7)">${DECO_SVG[id]}</g></svg>`;
+};
 const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
 const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
 const mmss = ms => { const m = Math.ceil(ms / 60e3); return m >= 60 ? `${unit(Math.floor(m / 60), 'hour')} ${unit(m % 60, 'minute')}` : unit(m, 'minute'); };
