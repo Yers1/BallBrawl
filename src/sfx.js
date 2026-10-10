@@ -135,6 +135,7 @@ export const sfx = {
     tone(65, at + 0.2, { type: 'sawtooth', vol: 0.05, slide: 0.85, delay: 0.25 });
   },
   super: kind => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, { type: 'triangle', vol: 0.12, delay: i * 0.045 })); SUPER_FX[kind]?.(); },
+  skill: kind => SUPER_FX[kind]?.(), // just the ball's own sound, for a boss attack
   death: () => { const j = J(0.2); noise(0.45, { vol: 0.4, freq: 200 * j, sweep: 0.3 }); tone(90 * j, 0.4, { type: 'sine', vol: 0.3, slide: 0.4 }); tone(700 * j, 0.06, { type: 'triangle', vol: 0.08 }); },
   win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.14, delay: i * 0.09 })),
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.14, delay: i * 0.14 })),

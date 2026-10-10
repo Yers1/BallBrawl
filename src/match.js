@@ -1,6 +1,7 @@
 // Squad / round rules on top of the one-round simulation.
 import { createWorld } from './sim.js';
 import { BALLS } from './balls.js';
+import { BOSSES } from './boss.js';
 
 export const LEVELS = 30; // AI skill scale (1 = sloppy, 30 = sharp)
 
@@ -13,10 +14,11 @@ export function aiAngle(fx, fy, tx, ty, level, rand) {
 // Modes: classic = squads take turns, one ball each (trophies); duo = two balls a side at once; boss = your whole
 // squad against one giant ball. duo and boss are a single round.
 export const MODES = ['classic', 'duo', 'boss'];
-export const BOSS = { r: 46, hpMul: 2.5, dmgMul: 1.2, speedMul: 0.8 };
-export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null }) {
+export const BOSS = { r: 46, dmgMul: 1.2, speedMul: 0.8 };
+export const bossSpec = (id, mul = 1) => ({ id: BOSSES[id].ball, ...(BOSSES[id].skin && { skin: BOSSES[id].skin }), ...BOSS, hpMul: (BOSSES[id].hp / BALLS[BOSSES[id].ball].hp) * mul, boss: id }); // mul: a bigger party, a tougher boss
+export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null, boss = 'slime' }) {
   const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg, speedMul: fam.speed, armor: fam.armor, regen: fam.regen }) }); // fam: the familiar's bonus
-  return { boosts: [famA, famB], a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
+  return { boosts: [famA, famB], a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map, boss: BOSSES[boss] ? boss : 'slime' };
 }
 
 export function roundWorld(m) {
@@ -24,7 +26,7 @@ export function roundWorld(m) {
   const seed = m.seed * 7919 + m.round, map = m.map ?? 'night';
   const boosts = m.boosts;
   if (m.mode === 'duo') return createWorld({ seed, a: m.a.slice(0, 2), b: m.b.slice(0, 2), hpMulB: m.hpMulB, map, boosts });
-  if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [{ ...m.b[0], boss: true, ...BOSS, armor: 1 }], map, boosts: [boosts?.[0]] }); // its size is the challenge; trophies only sharpen its AI
+  if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [bossSpec(m.boss)], map, boosts: [boosts?.[0]] }); // its size and attack are the challenge; trophies only sharpen its AI
   return createWorld({ seed, a: m.a[0], b: m.b[0], hpMulB: m.hpMulB, map, boosts });
 }
 

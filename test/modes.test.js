@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, launch, step, MAPS, rng } from '../src/sim.js';
 import { createMatch, roundWorld, endRound } from '../src/match.js';
+import { BOSS_IDS } from '../src/boss.js';
 
 const run = (w, s = 60) => { for (let i = 0; i < s * 60 && w.result == null; i++) step(w, 1 / 60); return w; };
 
@@ -32,9 +33,32 @@ test('boss: your three balls against one giant', () => {
   const w = roundWorld(m);
   const boss = w.ents.filter(e => e.side === 1);
   assert.equal(boss.length, 1);
-  assert.ok(boss[0].boss && boss[0].r > 40 && boss[0].hp > 250);
+  assert.ok(boss[0].boss === 'slime' && boss[0].r > 40 && boss[0].hp > 250);
   assert.equal(w.ents.filter(e => e.side === 0).length, 3);
   assert.equal(w.map, 'canyon');
+});
+
+test('four bosses, each with its own attack, warned first, and they get angry under half HP', () => {
+  const seen = { slime: 'spit', frost: 'quake', dragon: 'breath', golem: 'rockets' };
+  for (const id of BOSS_IDS) {
+    const fight = () => {
+      const w = roundWorld(createMatch({ squadA: ['basic', 'ninja', 'ice'], squadB: ['basic'], mode: 'boss', seed: 7, boss: id }));
+      launch(w, 0.7, 3.9);
+      const got = new Set();
+      for (let i = 0; i < 40 * 60 && w.result == null; i++) {
+        step(w, 1 / 60);
+        for (const ev of w.events) got.add(ev.type);
+        for (const z of w.zones) got.add(z.kind);
+        w.events.length = 0;
+      }
+      return { w, got };
+    };
+    const a = fight(), b = fight();
+    assert.ok(a.got.has(seen[id]), id + ' uses its attack');
+    assert.equal(a.w.t, b.w.t, id + ' is deterministic');
+    const boss = a.w.ents.find(e => e.boss);
+    if (boss.hp < boss.maxHp * 0.5) assert.ok(boss.rage && a.got.has('rage'), id + ' gets angry');
+  }
 });
 
 test('classic fights replay exactly as before (no new randomness at launch)', () => {

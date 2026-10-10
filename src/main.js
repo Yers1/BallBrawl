@@ -1,8 +1,9 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
-import { createMatch, roundWorld, endRound, revive, aiAngle, BOSS } from './match.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
+import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec } from './match.js';
+import { BOSSES, BOSS_IDS } from './boss.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -317,6 +318,7 @@ async function startMatch() {
     skinsB: S.opponent?.skins ?? {},
     mode,
     map: arenaFor(save.maxTrophies).id, // your arena decides the map
+    boss: nextBoss(),
   });
   S.aiLevel = aiLevel(save.trophies);
   commanders(S.fams, foeCard().nick);
@@ -325,6 +327,12 @@ async function startMatch() {
   await home.vs(foeCard(), S.fams[0]); // both banners first, like Clash Royale
   beginMatch();
 }
+// A different boss every fight, starting from the day's boss.
+function nextBoss() {
+  S.bossTurn = (S.bossTurn ?? Math.floor(Date.now() / 864e5)) + 1;
+  setBossNames(Object.fromEntries(BOSS_IDS.map(id => [id, t('boss_' + id)])));
+  return BOSS_IDS[S.bossTurn % BOSS_IDS.length];
+}
 // The commanders: yours on the left, theirs on the right, big, cheering and flinching with the fight.
 function commanders(fams, foeNick) {
   for (const [side, cls] of [[0, 'you'], [1, 'them']]) {
@@ -332,6 +340,7 @@ function commanders(fams, foeNick) {
     box.querySelector('.cmd-art').innerHTML = heroSvg(f.id);
     box.querySelector('.cmd-name').textContent = `${side ? foeNick : nickText(save.nick, lang)} · ${t('famLv', { n: f.lv })}`;
     box.className = 'cmd ' + cls;
+    box.hidden = side === 1 && S.match?.mode === 'boss'; // the boss leads itself
   }
 }
 function cmdReact(side, kind) {
@@ -344,6 +353,7 @@ function cmdReact(side, kind) {
 // How the opponent looks on the VS screen: a real player's banner, clan and level; the computer shows its lead ball.
 function foeCard() {
   const o = S.opponent, lead = S.match.b[0];
+  if (S.match.mode === 'boss') return { nick: t('boss_' + S.match.boss), banner: 'lava', deco: 'none', avatar: BOSSES[S.match.boss].ball, skin: BOSSES[S.match.boss].skin ?? null, level: null, trophies: save.trophies, clan: null, fam: S.fams[1] };
   if (!o) return { nick: t('enemy'), banner: 'night', deco: 'none', avatar: lead.id, skin: lead.skin, level: null, trophies: save.trophies, clan: null, fam: S.fams[1] };
   const ok = (v, list) => (typeof v === 'string' && Object.hasOwn(list, v) ? v : null);
   const clan = o.clan && validClan(o.clan.name) ? { name: o.clan.name, badge: Math.min(7, Math.max(0, Number(o.clan.badge) || 0)) } : null;
@@ -769,6 +779,11 @@ function feel(w, now) {
     if (ev.type === 'super') {
       sfx.super(ev.kind);
       cmdReact(ev.side, 'cast');
+    } else if (ev.type === 'rage') {
+      banner(t('bossRage'), false, 'foe');
+      sfx.super('bomb');
+    } else if (ev.type === 'quake' || ev.type === 'rockets' || ev.type === 'spit') {
+      sfx.skill(ev.type === 'quake' ? 'bomb' : ev.type === 'rockets' ? 'hedgehog' : 'cell');
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
       banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
       if (mine && ev.side === 0) S.ms.supers++;
@@ -900,11 +915,11 @@ $('#pt-leave').onclick = () => { sfx.click(); partyLeave(); };
 $('#pt-start').onclick = () => {
   if (!P?.host) return;
   const mode = P.mode, seats = P.members.slice(0, PMAX[mode]), foes = enemySquadFor(save.trophies, Math.random);
-  const human = m => ({ uid: m.uid, ball: m.ball, skin: m.skin });
+  const human = m => ({ uid: m.uid, ball: m.ball, skin: m.skin }), boss = nextBoss();
   const seatList = mode === 'boss'
-    ? [...seats.map(m => ({ ...human(m), side: 0 })), { uid: null, ball: foes[0], skin: null, side: 1, boss: true }]
+    ? [...seats.map(m => ({ ...human(m), side: 0 })), { uid: null, ball: BOSSES[boss].ball, skin: BOSSES[boss].skin ?? null, side: 1, boss: true }]
     : Array.from({ length: 4 }, (_, i) => (seats[i] ? { ...human(seats[i]), side: i % 2 } : { uid: null, ball: foes[i % 3], skin: null, side: i % 2 }));
-  const msg = { t: 'start', uid: P.me.uid, seed: Math.floor(Math.random() * 1e9), mode, map: arenaFor(save.maxTrophies).id, seats: seatList, bossMul: BOSS.hpMul * (0.45 + 0.2 * seats.length), level: aiLevel(save.trophies) };
+  const msg = { t: 'start', uid: P.me.uid, seed: Math.floor(Math.random() * 1e9), mode, map: arenaFor(save.maxTrophies).id, seats: seatList, boss, bossMul: 0.45 + 0.2 * seats.length, level: aiLevel(save.trophies) };
   P.chan.send(msg);
   partyBegin(msg);
 };
@@ -912,7 +927,7 @@ const cleanStart = m => {
   if (!m || !Array.isArray(m.seats) || m.seats.length > 5 || !MAPS[m.map] || !(m.mode === 'boss' || m.mode === 'duo')) return null;
   const seats = m.seats.map(s => ({ uid: typeof s?.uid === 'string' ? s.uid : null, ball: BALLS[s?.ball] ? s.ball : 'basic', skin: SKINS[s?.skin] ? s.skin : null, side: s?.side === 1 ? 1 : 0, boss: s?.boss === true }));
   if (!seats.some(s => s.side === 0) || !seats.some(s => s.side === 1)) return null;
-  return { t: 'start', seed: Math.floor(Number(m.seed)) || 1, mode: m.mode, map: m.map, seats, bossMul: Math.min(10, Math.max(1, Number(m.bossMul) || 5)), level: Math.min(30, Math.max(1, Math.floor(Number(m.level)) || 1)) };
+  return { t: 'start', seed: Math.floor(Number(m.seed)) || 1, mode: m.mode, map: m.map, seats, boss: BOSSES[m.boss] ? m.boss : 'slime', bossMul: Math.min(3, Math.max(0.3, Number(m.bossMul) || 1)), level: Math.min(30, Math.max(1, Math.floor(Number(m.level)) || 1)) };
 };
 // A command as every phone applies it: dash targets clamped to the arena, so a tap on the wall means the same everywhere.
 const partyCmd = c => ({ type: c.type, ent: c.ent, side: c.side, ...(c.type === 'dash' && { x: Math.min(W, Math.max(0, Number(c.x) || 0)), y: Math.min(H, Math.max(0, Number(c.y) || 0)) }) });
@@ -967,7 +982,7 @@ function partyBegin(m) {
   $('#scr-party').hidden = true;
   $('#scr-pchoice').hidden = true;
   const s0 = m.seats.filter(s => s.side === 0), s1 = m.seats.filter(s => s.side === 1);
-  const spec = s => ({ id: s.ball, skin: s.skin, ...(s.boss && { ...BOSS, boss: true, hpMul: m.bossMul }) });
+  const spec = s => (s.boss ? bossSpec(m.boss, m.bossMul) : { id: s.ball, skin: s.skin });
   const w = createWorld({ seed: m.seed, a: s0.map(spec), b: s1.map(spec), map: m.map, players: [s0.length, s1.length] });
   const e0 = w.ents.filter(e => e.side === 0), e1 = w.ents.filter(e => e.side === 1);
   s0.forEach((s, i) => { s.ent = e0[i].id; });
@@ -978,7 +993,8 @@ function partyBegin(m) {
   if (P.host) F.bots = m.seats.filter(s => !s.uid).map((s, i) => createAI(s.side, m.level, m.seed + i + 1, { ent: s.ent, act: (_w, side, cmd) => { F.out.push({ ...cmd, side, ent: s.ent }); return true; } }));
   S.party = P;
   S.world = w;
-  S.match = { a: s0.map(s => ({ id: s.ball, skin: s.skin })), b: s1.map(s => ({ id: s.ball, skin: s.skin })), mode: m.mode, revived: true, round: 1 };
+  S.match = { a: s0.map(s => ({ id: s.ball, skin: s.skin })), b: s1.map(s => ({ id: s.ball, skin: s.skin })), mode: m.mode, boss: m.boss, revived: true, round: 1 };
+  setBossNames(Object.fromEntries(BOSS_IDS.map(id => [id, t('boss_' + id)])));
   S.challenge = null; S.ranked = false; S.matchId = null; S.matchStart = Date.now(); S.demo = false; S.dashed = false; S.ms = { dashes: 0, supers: 0, kills: 0 };
   setAutoEmote([]);
   setAuras({});

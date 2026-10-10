@@ -1,5 +1,6 @@
 // Deterministic battle simulation for one round. No DOM — runs under node --test.
 import { BALLS, ICE, POISON } from './balls.js';
+import { bossTick } from './boss.js';
 
 export const W = 400, H = 400, R = 30, SPEED = 300, DMG = 10, HIT_CD = 0.3, SUDDEN = 30;
 export const SPAWN = [[90, 310], [310, 90]];
@@ -58,7 +59,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
       if (sp.armor) e.armor = sp.armor; // a Robot familiar: takes a little less damage
       if (sp.regen) e.regen = sp.regen; // a Ghost familiar: heals HP/s
       e.split = !!sp.split;
-      e.boss = !!sp.boss;
+      e.boss = sp.boss || null; // which boss (boss.js), if it is one
       e.skin = sp.skin || null; // cosmetic only — the sim never reads it
     });
   });
@@ -159,6 +160,7 @@ export function step(w, dt) {
   for (const e of w.ents) e.slow = e.chillUntil > w.t ? e.chillSlow : 1;
   for (const e of w.ents) if (e.regen && !e.dead) e.hp = Math.min(e.maxHp, e.hp + e.regen * dt);
   for (const e of w.ents) if (!e.dead) BALLS[e.kind].onTick?.(w, e, dt);
+  for (const e of w.ents) if (e.boss && !e.dead) bossTick(w, e);
   for (const e of w.ents) { // poison keeps ticking even after the spike's owner is gone
     if (e.dead || e.poisonUntil <= w.t || (e.cd.poisonTick ?? 0) > w.t) continue;
     e.cd.poisonTick = w.t + POISON.every;

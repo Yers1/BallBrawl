@@ -362,6 +362,18 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 12, '#ffe08a', 180);
       ring(ev.x, ev.y, ev.r * 0.4, 2.6, 0.4, '255,154,60', 6);
       fx.shake = Math.max(fx.shake, 6);
+    } else if (ev.type === 'quake') {
+      ring(ev.x, ev.y, 30, ev.r / 30 - 1, 0.45, '191,239,255', 7);
+      burst(ev.x, ev.y, 30, '#CFF4FF', 320);
+      fx.shake = Math.max(fx.shake, 9);
+    } else if (ev.type === 'rage') {
+      ring(ev.x, ev.y, 50, 3, 0.6, '255,77,94', 8);
+      burst(ev.x, ev.y, 30, '#FF4D5E', 260);
+      fx.shake = Math.max(fx.shake, 8);
+    } else if (ev.type === 'spit') {
+      burst(ev.x, ev.y, 24, BALLS.cell.color, 240);
+    } else if (ev.type === 'rockets') {
+      burst(ev.x, ev.y, 10, '#FFB547', 160);
     } else if (ev.type === 'freeze') {
       burst(ev.x, ev.y, 22, '#bfefff', 220);
       ring(ev.x, ev.y, 30, 2.5, 0.5, '191,239,255', 5);
@@ -952,6 +964,106 @@ function bombZone(ctx, z, t, now) {
   ctx.beginPath(); ctx.arc(z.x, z.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = Math.sin(now * (10 + 30 * k)) > 0 ? '#ff4d4d' : '#5a1a1a';
   ctx.beginPath(); ctx.arc(z.x + 3, z.y - 3, 3.2, 0, Math.PI * 2); ctx.fill();
+}
+
+// ---------- the bosses (boss.js): their heads, attacks and HP bar ----------
+const BOSS_LOOK = { slime: '#5FD03A', frost: '#8FE3FF', dragon: '#FF7A2F', golem: '#C0C8D8' };
+let bossNames = {};
+export const setBossNames = names => { bossNames = names || {}; };
+
+function bossTop(ctx, e, now) {
+  ctx.save();
+  if (e.rage) { // angry: a pulsing red glow
+    ctx.strokeStyle = `rgba(255,77,94,${0.55 + 0.35 * Math.sin(now * 12)})`;
+    ctx.shadowColor = '#FF4D5E'; ctx.shadowBlur = 16; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  ctx.translate(e.x, e.y - e.r + 2);
+  ctx.rotate(Math.sin(now * 2) * 0.1);
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const poly = (pts, fill) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.stroke(); };
+  if (e.boss === 'frost') { // a crown of ice shards
+    poly([[-20, 0], [-24, -16], [-13, -8], [-7, -26], [0, -10], [7, -26], [13, -8], [24, -16], [20, 0]], '#BFEFFF');
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(-7, -14, 2.2, 0, Math.PI * 2); ctx.arc(7, -14, 2.2, 0, Math.PI * 2); ctx.fill();
+  } else if (e.boss === 'dragon') { // two curved horns
+    for (const s of [-1, 1]) poly([[s * 8, 2], [s * 26, -22], [s * 18, 4]], '#FFE08A');
+    ctx.fillStyle = 'rgba(255,122,47,0.9)'; ctx.beginPath(); ctx.arc(0, -2, 4, 0, Math.PI * 2); ctx.fill(); // an ember on the brow
+  } else if (e.boss === 'golem') { // a bolt-on antenna with a blinking light
+    ctx.fillStyle = '#7C8597'; ctx.fillRect(-3, -20, 6, 20); ctx.strokeRect(-3, -20, 6, 20);
+    ctx.fillStyle = Math.sin(now * 6) > 0 ? '#FF4D5E' : '#6B1C24';
+    ctx.beginPath(); ctx.arc(0, -24, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  } else { // King Slime: a gold crown
+    poly([[-17, 0], [-20, -18], [-9, -9], [0, -22], [9, -9], [20, -18], [17, 0]], '#FFCC33');
+    ctx.fillStyle = '#FF4D6D';
+    for (const x of [-10, 0, 10]) { ctx.beginPath(); ctx.arc(x, -4, 2.6, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+function bossBar(ctx, w, now) {
+  const b = w.ents.find(e => e.boss);
+  if (!b) return;
+  const x = 80, y = 10, wd = W - 160, k = Math.max(0, b.hp / b.maxHp);
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,15,28,0.85)'; ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(x, y, wd, 16, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = b.rage ? (Math.sin(now * 12) > 0 ? '#FF4D5E' : '#FF7A85') : BOSS_LOOK[b.boss] ?? '#FF4D5E';
+  if (k > 0) { ctx.beginPath(); ctx.roundRect(x + 3, y + 3, (wd - 6) * k, 10, 5); ctx.fill(); }
+  ctx.font = '400 11px "Russo One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.fillStyle = '#FFFFFF';
+  const name = bossNames[b.boss] ?? '';
+  ctx.strokeText(name, W / 2, y + 8.5); ctx.fillText(name, W / 2, y + 8.5);
+  ctx.restore();
+}
+
+function quakeZone(ctx, z, t, now) { // the giant is about to stomp: an icy ring fills up
+  if (z.done) return;
+  const k = Math.min(1, (t - z.born) / (z.go - z.born));
+  ctx.save();
+  ctx.fillStyle = `rgba(143,227,255,${0.08 + 0.18 * k})`;
+  ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.fill();
+  ctx.setLineDash([10, 8]); ctx.lineDashOffset = -now * 40;
+  ctx.strokeStyle = `rgba(207,244,255,${0.5 + 0.5 * Math.abs(Math.sin(now * (6 + 14 * k)))})`; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(z.x, z.y, z.r * k, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+function breathZone(ctx, z, t, now) { // a red warning stripe, then a roaring stream of fire
+  ctx.save();
+  ctx.translate(z.x, z.y); ctx.rotate(z.a);
+  if (t < z.go) {
+    const blink = 0.35 + 0.35 * Math.abs(Math.sin(now * 14));
+    ctx.fillStyle = `rgba(255,77,94,${blink * 0.45})`;
+    ctx.fillRect(0, -z.width / 2, z.len, z.width);
+    ctx.setLineDash([12, 8]); ctx.strokeStyle = `rgba(255,77,94,${blink + 0.3})`; ctx.lineWidth = 2.5;
+    ctx.strokeRect(0, -z.width / 2, z.len, z.width);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, z.len, 0);
+    g.addColorStop(0, '#FFF3B0'); g.addColorStop(0.3, '#FFB547'); g.addColorStop(1, 'rgba(229,72,45,0)');
+    ctx.fillStyle = g; ctx.shadowColor = '#FF7A2F'; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.moveTo(0, -z.width * 0.3);
+    for (let x = 0; x <= z.len; x += 20) ctx.lineTo(x, -z.width / 2 - Math.sin(x * 0.08 + now * 30) * 5);
+    for (let x = z.len; x >= 0; x -= 20) ctx.lineTo(x, z.width / 2 + Math.sin(x * 0.08 + now * 27) * 5);
+    ctx.closePath(); ctx.fill();
+    if (Math.random() < 0.8) fx.parts.push({ x: z.x + Math.cos(z.a) * rnd(20, z.len * 0.7), y: z.y + Math.sin(z.a) * rnd(20, z.len * 0.7), vx: rnd(-40, 40), vy: rnd(-80, -20), life: 0.4, age: 0, color: '#FFB547', size: rnd(3, 6), round: true });
+  }
+  ctx.restore();
+}
+
+function rocket(ctx, s, now) {
+  ctx.save();
+  ctx.translate(s.x, s.y); ctx.rotate(Math.atan2(s.vy, s.vx));
+  ctx.fillStyle = Math.sin(now * 40) > 0 ? '#FFE08A' : '#FF7A2F';
+  ctx.beginPath(); ctx.moveTo(-8, -4); ctx.lineTo(-18 - Math.random() * 6, 0); ctx.lineTo(-8, 4); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.fillStyle = '#E8ECF4';
+  ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(4, -5); ctx.lineTo(-8, -5); ctx.lineTo(-8, 5); ctx.lineTo(4, 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#FF4D5E'; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(4, -5); ctx.lineTo(4, 5); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
 function zapZone(ctx, z, t) {
@@ -1705,6 +1817,8 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     else if (z.kind === 'track') track(ctx, z, w.t);
     else if (z.kind === 'bomb') bombZone(ctx, z, w.t, now);
     else if (z.kind === 'zap') zapZone(ctx, z, w.t);
+    else if (z.kind === 'quake') quakeZone(ctx, z, w.t, now);
+    else if (z.kind === 'breath') breathZone(ctx, z, w.t, now);
   }
   faces(w);
   for (const e of w.ents) if (!e.dead && e.chess) chessLines(ctx, e, w.t);
@@ -1733,7 +1847,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     ctx.restore();
   }
   for (const e of w.ents) if (!e.dead && e.yank && !e.yank.by.dead) chain(ctx, e.yank.by.x, e.yank.by.y, e.x, e.y);
-  for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : sh.kind === 'hook' ? hookShot(ctx, sh) : shuriken(ctx, sh, w.t);
+  for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : sh.kind === 'hook' ? hookShot(ctx, sh) : sh.kind === 'rocket' ? rocket(ctx, sh, now) : shuriken(ctx, sh, w.t);
   const lead = side => w.ents.find(e => e.side === side);
   if (aim != null) aimArrow(ctx, lead(0), aim, now);
   if (foeAim != null && lead(1)) aimArrow(ctx, lead(1), foeAim, now); // the opponent's shot is no secret, like the original
@@ -1790,19 +1904,8 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     ctx.restore();
   }
   drawEmotes(ctx, w, dt);
-  for (const e of w.ents) if (e.boss && !e.dead) { // the boss wears a crown, tilting a little as it rolls
-    ctx.save();
-    ctx.translate(e.x, e.y - e.r - 4);
-    ctx.rotate(Math.sin(now * 2) * 0.12);
-    ctx.beginPath();
-    ctx.moveTo(-17, 0); ctx.lineTo(-20, -18); ctx.lineTo(-9, -9); ctx.lineTo(0, -22); ctx.lineTo(9, -9); ctx.lineTo(20, -18); ctx.lineTo(17, 0);
-    ctx.closePath();
-    ctx.fillStyle = '#FFCC33'; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineJoin = 'round';
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#FF4D6D';
-    for (const x of [-10, 0, 10]) { ctx.beginPath(); ctx.arc(x, -4, 2.6, 0, Math.PI * 2); ctx.fill(); }
-    ctx.restore();
-  }
+  for (const e of w.ents) if (e.boss && !e.dead) bossTop(ctx, e, now);
+  bossBar(ctx, w, now);
   const mine = me != null && w.ents.find(e => e.id === me && !e.dead);
   if (mine) { // in a party: a bobbing marker over the ball you steer
     const y = mine.y - mine.r - 12 - Math.abs(Math.sin(now * 4)) * 4;
