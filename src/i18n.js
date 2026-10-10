@@ -60,12 +60,9 @@ export const dict = {
     arenaN: 'Арена {n}', arenaNew: 'Новая арена: {name}!', arenaNewSub: 'Теперь твои бои проходят здесь. И меню тоже сменилось!', arenaNext: 'Следующая арена: {name} · ещё {n}', arenaLast: 'Ты на последней арене!', modeRanked: 'Рейтинговый бой', modeTraining: 'Тренировка · без сети', allTime: 'Все', thisWeek: 'Неделя', yourRank: 'Ты на {n}-м месте', loading: 'Загрузка…',
     needNet: 'Нужен интернет — таблица лидеров и перенос профиля работают только онлайн.', emptyBoard: 'Пока никого — стань первым!',
     training: 'Тренировка: нет сети, кубки не меняются', vsPlayer: 'Отряд игрока {nick} · {n} кубков', vsBots: 'Соперник подобран по твоим кубкам',
-    codeTitle: 'Код переноса', copy: 'Копировать', redeem: 'Перенести',
-    codeHint: 'Никому не показывай этот код — это ключ от твоего профиля. Введи его на новом телефоне, чтобы перенести прогресс.',
-    codeWrong: 'Такого кода нет', codeTooMany: 'Слишком много попыток — попробуй через час', codeDone: 'Профиль перенесён!',
-    moved: 'Твой профиль перенесли на другой телефон — здесь начинается новый',
+    
+    
     deleteProfile: 'Удалить профиль', deleteConfirm: 'Удалить профиль насовсем? Кубки и весь прогресс пропадут.',
-    saveCodeTitle: 'Сохрани свой код!', saveCodeSub: 'Сфоткай экран или перепиши код. С ним прогресс не потеряется, даже если сменишь телефон.',
     quests: { win3: 'Выиграй 3 боя', dash15: 'Сделай 15 рывков', super3: 'Используй 3 супера', kills10: 'Выбей 10 вражеских шаров', flawless1: 'Выиграй бой, не потеряв ни одного шара', challenge1: 'Вызови друга или прими вызов', matches5: 'Сыграй 5 боёв' },
     achievements: { firstWin: 'Первая победа', wins10: '10 побед', wins50: '50 побед', tr100: '100 кубков', tr500: '500 кубков', tr1000: '1000 кубков', collector: 'Собери все шары', supers25: '25 суперов', challenger: '5 вызовов', flawless5: '5 побед без потерь' },
     skins: { gold: 'Золото', neon: 'Неон', candy: 'Леденец', galaxy: 'Галактика', lava: 'Лава', mint: 'Мята', rainbow: 'Радуга' },
@@ -164,12 +161,9 @@ export const dict = {
     arenaN: 'Arena {n}', arenaNew: 'New arena: {name}!', arenaNewSub: 'Your battles happen here now, and the menu changed too!', arenaNext: 'Next arena: {name} · {n} to go', arenaLast: 'You reached the final arena!', modeRanked: 'Ranked battle', modeTraining: 'Training · offline', allTime: 'All time', thisWeek: 'This week', yourRank: 'You are #{n}', loading: 'Loading…',
     needNet: 'Needs internet — leaderboards and profile transfer only work online.', emptyBoard: 'Nobody yet — be the first!',
     training: 'Training: offline, trophies don\'t change', vsPlayer: '{nick}\'s squad · {n} trophies', vsBots: 'Opponent matched to your trophies',
-    codeTitle: 'Transfer code', copy: 'Copy', redeem: 'Transfer',
-    codeHint: 'Never show this code to anyone — it is the key to your profile. Enter it on a new phone to move your progress.',
-    codeWrong: 'No such code', codeTooMany: 'Too many tries — try again in an hour', codeDone: 'Profile moved!',
-    moved: 'Your profile was moved to another phone — a new one starts here',
+    
+    
     deleteProfile: 'Delete profile', deleteConfirm: 'Delete your profile forever? Trophies and all progress will be gone.',
-    saveCodeTitle: 'Save your code!', saveCodeSub: 'Take a screenshot or write it down. With it you never lose progress, even on a new phone.',
     quests: { win3: 'Win 3 matches', dash15: 'Dash 15 times', super3: 'Use 3 supers', kills10: 'Knock out 10 enemy balls', flawless1: 'Win without losing a ball', challenge1: 'Challenge a friend or take a challenge', matches5: 'Play 5 matches' },
     achievements: { firstWin: 'First win', wins10: '10 wins', wins50: '50 wins', tr100: '100 trophies', tr500: '500 trophies', tr1000: '1000 trophies', collector: 'Collect every ball', supers25: '25 supers', challenger: '5 challenges', flawless5: '5 flawless wins' },
     skins: { gold: 'Gold', neon: 'Neon', candy: 'Candy', galaxy: 'Galaxy', lava: 'Lava', mint: 'Mint', rainbow: 'Rainbow' },

@@ -51,7 +51,7 @@ export function freshSave() {
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
     // cloud bookkeeping
-    profileId: null, savedAt: 0, codeShown: false,
+    profileId: null, savedAt: 0,
     pendingFinish: null, // a ranked result the server hasn't confirmed yet: { match, result, flawless }
   };
 }
@@ -92,7 +92,6 @@ export function migrate(raw) {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   if (uuid.test(r.profileId)) s.profileId = r.profileId;
   s.savedAt = int(r.savedAt, 0, 1e13) ?? 0;
-  s.codeShown = r.codeShown === true;
   const pf = r.pendingFinish;
   if (pf && uuid.test(pf.match) && ['won', 'lost', 'draw'].includes(pf.result)) s.pendingFinish = { match: pf.match, result: pf.result, flawless: pf.flawless === true };
   return s;

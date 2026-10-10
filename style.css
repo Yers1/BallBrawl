@@ -539,7 +539,7 @@ body.record { background: #000; }
   border: 3px solid var(--stroke); background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 6px 0 var(--stroke);
 }
 .chest-btn:active { transform: translateY(3px); box-shadow: inset 0 2px 0 var(--hi), 0 3px 0 var(--stroke); }
-.chest-art svg { display: block; width: 60px; height: auto; }
+.chest-art svg { display: block; width: 56px; height: auto; }
 .chest-btn small { font-size: 11px; font-weight: 900; color: var(--muted); }
 .chest-btn.has .chest-art svg { animation: wiggle 2s ease-in-out infinite; }
 .chest-n {
@@ -578,29 +578,77 @@ body.record { background: #000; }
 @keyframes flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
 .op-title { position: relative; font-size: 30px; text-shadow: var(--stroke-text); color: var(--gold); }
 .op-stage { position: relative; width: min(100%, 360px); min-height: 300px; display: grid; place-items: center; }
-.op-chest { position: relative; width: 230px; }
+.opener { --glow: #FFE38A; }
+.opener.k-big { --glow: #A8F0FF; }
+.opener.k-mega { --glow: #FFB8FF; }
+.op-chest { position: relative; width: 230px; transition: transform 0.45s cubic-bezier(0.3, 1.3, 0.5, 1); }
 .op-chest .chest-svg { display: block; width: 100%; height: auto; overflow: visible; }
-.op-chest .lid, .op-chest .body { transform-box: fill-box; transform-origin: 50% 100%; }
+.op-chest .lid, .op-chest .body, .op-chest .seam { transform-box: fill-box; transform-origin: 50% 100%; }
+.chest-svg .inside, .chest-svg .seam { opacity: 0; }
+.op-chest .seam { opacity: calc(var(--k, 0) * 0.34); transform-origin: 50% 50%; animation: seam 0.35s ease-in-out infinite alternate; }
+@keyframes seam { to { transform: scaleY(1.7); } }
 .op-chest.drop { animation: opDrop 0.65s cubic-bezier(0.3, 1.4, 0.5, 1); }
 @keyframes opDrop { 0% { transform: translateY(-110vh); } 70% { transform: translateY(10px) scale(1.06, 0.9); } 100% { transform: none; } }
+.op-chest.idle { animation: opIdle 1.5s ease-in-out infinite; }
+@keyframes opIdle { 50% { transform: translateY(-7px) scale(1.02); } }
 .op-chest.hit { animation: opHit 0.32s ease-out; }
 @keyframes opHit {
-  0% { transform: none; } 30% { transform: scale(calc(1 + var(--k, 1) * 0.05), calc(1 - var(--k, 1) * 0.05)) rotate(calc(var(--k, 1) * -3deg)); }
-  65% { transform: scale(0.96, 1.05) rotate(calc(var(--k, 1) * 2.5deg)); } 100% { transform: none; }
+  0% { transform: none; } 30% { transform: scale(calc(1 + var(--k, 1) * 0.06), calc(1 - var(--k, 1) * 0.06)) rotate(calc(var(--k, 1) * -4deg)); }
+  65% { transform: scale(0.95, 1.06) rotate(calc(var(--k, 1) * 3deg)); } 100% { transform: none; }
 }
 .op-chest.hit::after, .op-chest.open::after {
-  content: ''; position: absolute; left: 50%; top: 40%; width: 10px; height: 10px; border-radius: 50%; pointer-events: none;
-  box-shadow: 0 0 60px 40px rgba(255, 236, 150, 0.55); transform: translate(-50%, -50%); animation: glow 0.4s ease-out forwards;
+  content: ''; position: absolute; left: 50%; top: 52%; width: 10px; height: 10px; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 60px 40px var(--glow); opacity: 0.6; transform: translate(-50%, -50%); animation: glow 0.4s ease-out forwards;
 }
-.op-chest.open::after { box-shadow: 0 0 120px 90px rgba(255, 236, 150, 0.85); animation: glow 0.9s ease-out forwards; }
-@keyframes glow { from { opacity: 1; } to { opacity: 0; } }
-.op-chest.open .lid { animation: lidOff 0.7s cubic-bezier(0.2, 0.8, 0.4, 1) forwards; }
-@keyframes lidOff { to { transform: translate(40px, -170px) rotate(40deg); opacity: 0; } }
-.op-chest.open .body { animation: bodyBump 0.4s ease-out; }
-@keyframes bodyBump { 40% { transform: scale(1.08, 0.92); } }
-.op-item { position: absolute; inset: auto; }
-.op-item.show { animation: opItem 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
-@keyframes opItem { 0% { transform: translateY(80px) scale(0.2); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.op-chest.open::after { box-shadow: 0 0 130px 100px var(--glow); animation: glow 1s ease-out forwards; }
+@keyframes glow { from { opacity: 0.9; } to { opacity: 0; } }
+.op-chest.open .inside { opacity: 1; }
+.op-chest.open .seam { opacity: 0; animation: none; }
+.op-chest.open .lid { animation: lidOff 0.95s cubic-bezier(0.25, 0.7, 0.4, 1) forwards; }
+@keyframes lidOff {
+  0% { transform: none; } 22% { transform: translateY(-48px) rotate(-10deg) scale(1.06); }
+  100% { transform: translate(130px, -330px) rotate(230deg) scale(0.6); opacity: 0; }
+}
+.op-chest.open .body { animation: bodyBump 0.45s ease-out; }
+@keyframes bodyBump { 35% { transform: scale(1.12, 0.86); } 70% { transform: scale(0.96, 1.05); } }
+.op-chest.low { transform: translateY(84px) scale(0.6); }
+.op-beam { /* the light column out of the open chest */
+  position: absolute; z-index: -1; left: 50%; bottom: 44%; width: 170px; height: 70vh; margin-left: -85px; pointer-events: none; opacity: 0;
+  background: linear-gradient(to top, var(--glow), transparent); clip-path: polygon(32% 100%, 68% 100%, 100% 0, 0 0); transform-origin: 50% 100%;
+}
+.op-chest.open .op-beam { animation: beam 1.6s ease-out forwards; }
+@keyframes beam { 0% { opacity: 0; transform: scaleY(0.1); } 15% { opacity: 0.85; transform: scaleY(1); } 100% { opacity: 0.25; } }
+.op-p { /* sparks and coins out of the chest */
+  position: fixed; z-index: 2; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 2px; pointer-events: none;
+  background: var(--glow); box-shadow: 0 0 10px var(--glow); animation: opP 1.15s cubic-bezier(0.2, 0.6, 0.4, 1) both;
+}
+.op-p.coin { width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 0; box-shadow: none; }
+@keyframes opP {
+  0% { transform: translate(0, 0) rotate(0) scale(0.3); opacity: 1; }
+  45% { transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) * 0.5)) scale(1); opacity: 1; }
+  100% { transform: translate(calc(var(--dx) * 1.3), calc(var(--dy) * 0.3 + 240px)) rotate(var(--r)) scale(0.7); opacity: 0; }
+}
+.op-glow { /* rays behind the reward card, in the rarity colour */
+  position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; margin: -280px 0 0 -280px; pointer-events: none; --rc: rgba(255, 204, 51, 0.35);
+  background: repeating-conic-gradient(var(--rc) 0 10deg, transparent 10deg 24deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0, transparent 62%); mask-image: radial-gradient(circle, #000 0, transparent 62%);
+}
+.op-glow.show { animation: spin 10s linear infinite, glowIn 0.45s ease-out; }
+.op-glow.r-skin { --rc: rgba(200, 144, 255, 0.5); }
+.op-glow.r-ball { --rc: rgba(255, 159, 28, 0.55); }
+@keyframes glowIn { from { opacity: 0; transform: scale(0.2); } }
+.op-item { position: absolute; inset: auto; overflow: hidden; }
+.op-item.show { animation: opItem 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@keyframes opItem {
+  0% { transform: translateY(120px) scale(0.15) rotate(-14deg); opacity: 0; }
+  60% { transform: translateY(-14px) scale(1.08) rotate(3deg); opacity: 1; } 100% { transform: none; opacity: 1; }
+}
+.op-item::after { /* a shine sweeps across the card */
+  content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.4), transparent); transform: skewX(-15deg);
+}
+.op-item.show::after { animation: shine 0.9s 0.45s ease-out both; }
+@keyframes shine { to { left: 130%; } }
 .op-card, .op-item {
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 20px 14px; min-width: 200px; max-width: 280px;
   border-radius: 22px; background: var(--panel); border: 4px solid var(--stroke); box-shadow: 0 8px 0 var(--stroke); text-align: center; color: var(--text);
@@ -664,7 +712,7 @@ body.record { background: #000; }
   .pl-txt b { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .banner.show, .hint, .card, .trio canvas, .rcard.ready, .super-btn.ready, .dcell.today, .gift-chip, .chest-btn.has .chest-art svg, .op-rays, .op-chest, .op-chest .lid, .op-item, .op-hint { animation-duration: 0.01s; animation-iteration-count: 1; }
+  .banner.show, .hint, .card, .trio canvas, .rcard.ready, .super-btn.ready, .dcell.today, .gift-chip, .chest-btn.has .chest-art svg, .op-rays, .op-chest, .op-chest .lid, .op-chest .seam, .op-beam, .op-p, .op-glow, .op-item, .op-item::after, .op-hint { animation-duration: 0.01s; animation-iteration-count: 1; }
 }
 
 /* arenas: the next one on the Glory Road page, and the new-arena popup */

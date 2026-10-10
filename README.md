@@ -68,7 +68,7 @@ Rule: keep every ball's average win rate roughly within **35–65%**. Right now 
 
 ## Server (Supabase)
 
-Project `ballbrawl` (ref `zowdpibgfnpqcvwgtryv`, Frankfurt). The game signs in **anonymously**, no email or passwords.
+Project `ballbrawl` (ref `zowdpibgfnpqcvwgtryv`, Frankfurt). The game signs in **anonymously**. An optional email account (no confirmation email is sent) is the only way to move to another device; transfer codes were removed.
 
 - **Schema and all server functions:** `supabase/migrations/`. The client has no direct table access (RLS with no policies), it can only call vetted functions.
 - **The server owns trophies.** Matches shorter than 15 seconds don't count, the daily gain is capped at +200, an abandoned match counts as a loss. A suspiciously high win rate hides the player from the leaderboard.

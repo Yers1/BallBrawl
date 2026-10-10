@@ -17,39 +17,61 @@ const STEP = 128, PAD = 64; // Glory Road: px between reward cards, and where 0 
 const KINDS = ['box', 'big', 'mega'];
 const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32; // chests: not predictable from the page
 
-// A chest drawn as inline SVG: planks, metal bands with rivets, corner caps and a lock. The lid is its own
-// <g class="lid"> so the opening scene can blow it off. Box: wood and steel; big: blue and gold; mega: purple, gold and a gem.
+// A chest drawn as inline SVG, flat with dark outlines like the rest of the game: planks, metal bands with rivets and
+// shine, corner caps, a lock, and a lit top on the lid. Each kind has its own look: box = wood and steel with a
+// keyhole; big = blue and gold with a star medallion; mega = purple and gold with a crown and a gem.
+// The lid, the body, the open mouth (.inside) and the light leaking out of the seam (.seam) are separate groups,
+// so the opening scene can shake it, let light through the seam on every tap, and blow the lid off.
 const CHEST_COLORS = {
-  box: { base: '#C98A4B', dark: '#8E5524', trim: '#D9DEE8', trimDark: '#8E95A8' },
-  big: { base: '#3D86FF', dark: '#1E4FB0', trim: '#FFCC33', trimDark: '#C78C00' },
-  mega: { base: '#A85CFF', dark: '#5E22A8', trim: '#FFCC33', trimDark: '#C78C00' },
+  box: { base: '#C98A4B', dark: '#8E5524', deep: '#3E220C', trim: '#D9DEE8', trimDark: '#8E95A8', glow: '#FFE38A' },
+  big: { base: '#3D86FF', dark: '#1E4FB0', deep: '#0C2050', trim: '#FFCC33', trimDark: '#C78C00', glow: '#A8F0FF' },
+  mega: { base: '#A85CFF', dark: '#5E22A8', deep: '#240A4A', trim: '#FFCC33', trimDark: '#C78C00', glow: '#FFB8FF' },
 };
+const star = (cx, cy, r) => `M${[...Array(10)].map((_, i) => {
+  const a = -Math.PI / 2 + (i * Math.PI) / 5, k = i % 2 ? r * 0.45 : r;
+  return `${(cx + Math.cos(a) * k).toFixed(1)} ${(cy + Math.sin(a) * k).toFixed(1)}`;
+}).join(' L')}Z`;
 export function chestSvg(kind) {
-  const c = CHEST_COLORS[kind] ?? CHEST_COLORS.box, o = 'stroke="#0F1F38" stroke-width="4" stroke-linejoin="round"';
+  const c = CHEST_COLORS[kind] ?? CHEST_COLORS.box, ink = 'stroke="#0F1F38" stroke-linejoin="round"', o = `${ink} stroke-width="4"`;
   const rivets = (xs, ys) => xs.flatMap(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="2.2" fill="${c.trimDark}"/>`)).join('');
-  const gem = kind === 'mega'
-    ? '<path d="M60 64 l6 6 -6 8 -6 -8z" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M58 67 l2 -2 2 2" fill="none" stroke="#FFB3BA" stroke-width="1.5"/>'
-    : '<circle cx="60" cy="68" r="3.4" fill="#0F1F38"/><path d="M58.6 69 h2.8 l1 7 h-4.8z" fill="#0F1F38"/>';
-  return `<svg viewBox="0 0 120 108" aria-hidden="true" class="chest-svg">
-<ellipse cx="60" cy="102" rx="50" ry="6" fill="rgba(8,16,32,0.35)"/>
+  const lock = {
+    box: '<circle cx="60" cy="74" r="3.6" fill="#0F1F38"/><path d="M58.3 75 h3.4 l1 8 h-5.4z" fill="#0F1F38"/>',
+    big: `<path d="${star(60, 76, 8.5)}" fill="${c.base}" ${ink} stroke-width="2.2"/>`,
+    mega: `<path d="M60 66 l8.5 8 -8.5 11 -8.5 -11z" fill="#FF4D5E" ${ink} stroke-width="2.4"/><path d="M55.5 73 l4.5 -3.6 4.5 3.6" fill="none" stroke="#FFC2C8" stroke-width="1.8" stroke-linecap="round"/>`,
+  }[kind] ?? '';
+  const crest = {
+    big: `<circle cx="60" cy="37" r="9.5" fill="${c.trim}" ${o} stroke-width="3"/><path d="${star(60, 37, 6)}" fill="${c.dark}"/>`,
+    mega: `<path d="M42 19 L44 3 L52 10 L60 -2 L68 10 L76 3 L78 19 Z" fill="${c.trim}" ${o} stroke-width="3"/><circle cx="60" cy="-2" r="3" fill="#FF4D5E" ${ink} stroke-width="1.6"/><circle cx="44" cy="3" r="2.2" fill="#7FE7FF"/><circle cx="76" cy="3" r="2.2" fill="#7FE7FF"/>`
+      + `<circle cx="60" cy="37" r="9.5" fill="${c.trim}" ${o} stroke-width="3"/><path d="M60 30 l5 7 -5 7 -5 -7z" fill="#7FE7FF" ${ink} stroke-width="1.6"/>`,
+  }[kind] ?? '';
+  const grain = kind === 'box' ? '<path d="M16 79 q8 -3 14 0 M44 95 q8 -3 14 0 M66 80 q6 -3 12 0 M100 95 q4 -2 7 0 M44 33 q8 -3 14 0 M66 46 q6 -3 12 0" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2" stroke-linecap="round"/>' : '';
+  return `<svg viewBox="0 -10 120 122" aria-hidden="true" class="chest-svg">
+<ellipse cx="60" cy="106" rx="52" ry="6" fill="rgba(8,16,32,0.35)"/>
+<g class="inside"><path d="M12 60 Q60 48 108 60 L106 68 H14 Z" fill="${c.deep}" ${ink} stroke-width="3"/><ellipse cx="60" cy="61" rx="38" ry="5" fill="${c.glow}"/></g>
 <g class="body">
-<rect x="10" y="50" width="100" height="48" rx="8" fill="${c.dark}" ${o}/>
-<path d="M14 64 H106 M14 80 H106" stroke="rgba(0,0,0,0.22)" stroke-width="3"/>
-<rect x="12" y="52" width="96" height="6" rx="3" fill="${c.base}"/>
-<rect x="24" y="50" width="13" height="48" fill="${c.trim}" ${o}/>
-<rect x="83" y="50" width="13" height="48" fill="${c.trim}" ${o}/>
-${rivets([30.5, 89.5], [58, 72, 88])}
-<path d="M10 84 V90 a8 8 0 0 0 8 8 H26 Z M110 84 V90 a8 8 0 0 1 -8 8 H94 Z" fill="${c.trim}" ${o}/>
-<rect x="49" y="56" width="22" height="26" rx="5" fill="${c.trim}" ${o}/>
-${gem}
+<rect x="10" y="58" width="100" height="46" rx="8" fill="${c.dark}" ${o}/>
+<path d="M14 72 H106 M14 88 H106" stroke="rgba(0,0,0,0.22)" stroke-width="3"/>
+<rect x="12" y="60" width="96" height="6" rx="3" fill="${c.base}"/>
+<path d="M16 99 H104" stroke="rgba(0,0,0,0.25)" stroke-width="4" stroke-linecap="round"/>
+<rect x="24" y="58" width="13" height="46" fill="${c.trim}" ${o}/><rect x="83" y="58" width="13" height="46" fill="${c.trim}" ${o}/>
+<path d="M27.5 62 V100 M86.5 62 V100" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+${rivets([30.5, 89.5], [67, 81, 95])}${grain}
+<path d="M10 92 V98 a8 8 0 0 0 8 8 H26 Z M110 92 V98 a8 8 0 0 1 -8 8 H94 Z" fill="${c.trim}" ${o}/>
+<rect x="48" y="62" width="24" height="28" rx="6" fill="${c.trim}" ${o}/>
+<rect x="51.5" y="65.5" width="17" height="4" rx="2" fill="rgba(255,255,255,0.5)"/>
+${lock}
 </g>
 <g class="lid">
-<path d="M8 54 V36 Q8 12 34 12 H86 Q112 12 112 36 V54 Z" fill="${c.base}" ${o}/>
-<path d="M18 22 Q30 17 46 17 H76" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="4" stroke-linecap="round"/>
-<path d="M24 54 V14 H37 V54 Z M83 54 V14 H96 V54 Z" fill="${c.trim}" ${o}/>
-${rivets([30.5, 89.5], [24, 38])}
-<rect x="8" y="48" width="104" height="8" rx="3" fill="${c.dark}" ${o}/>
+<path d="M8 62 V42 Q8 16 34 16 H86 Q112 16 112 42 V62 Z" fill="${c.base}" ${o}/>
+<path d="M14 42 Q15 22 34 22 H86 Q105 22 106 42 Z" fill="rgba(255,255,255,0.15)"/>
+<path d="M18 30 Q26 22 44 22 H64" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="4" stroke-linecap="round"/>
+<path d="M24 62 V16 H37 V62 Z M83 62 V16 H96 V62 Z" fill="${c.trim}" ${o}/>
+<path d="M27.5 20 V56 M86.5 20 V56" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+${rivets([30.5, 89.5], [27, 41])}
+<rect x="8" y="54" width="104" height="9" rx="3" fill="${c.dark}" ${o}/>
+${crest}
 </g>
+<g class="seam"><rect x="10" y="51" width="100" height="16" rx="8" fill="${c.glow}" opacity="0.4"/><rect x="14" y="56.5" width="92" height="5" rx="2.5" fill="#FFFFFF"/></g>
 </svg>`;
 }
 
@@ -84,7 +106,7 @@ export function arenaSvg(id, k) {
 }
 
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
-  const { net, leaderboard, redeemCode, deleteProfile } = online;
+  const { net, leaderboard, deleteProfile } = online;
   let tab = 'lobby';
   const coin = n => `<span class="amt"><i class="coin"></i>${n}</span>`;
 
@@ -393,7 +415,6 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }));
     $('#p-online').hidden = !net.online;
     $('#p-offline').hidden = net.online;
-    $('#p-code').textContent = net.code || '\u2014';
     const s = save.stats, rate = s.matches ? Math.round((s.wins / s.matches) * 100) : 0;
     $('#p-stats').replaceChildren(...[
       [s.matches, 'statMatches'], [s.wins, 'statWins'], [rate, 'statWinrate'],
@@ -401,21 +422,6 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     ].map(([v, k]) => el('div', 'stat', `<b>${v}</b><small>${t(k)}</small>`)));
   }
   $('#p-renick').onclick = () => { save.nick = randomNick(); persist(); sfx.click(); render(); };
-  $('#p-copy').onclick = () => navigator.clipboard?.writeText(net.code || '').then(() => toast(t('copied')), () => {});
-  $('#p-redeem').onclick = async () => {
-    const code = $('#p-code-in').value.trim().toUpperCase();
-    if (!/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(code)) return toast(t('codeWrong'));
-    try {
-      const r = await redeemCode(code);
-      if (!r?.id) return toast(t('codeWrong'));
-      save.profileId = r.id; // pulls that profile's cloud save on the reload
-      persist();
-      toast(t('codeDone'));
-      setTimeout(() => location.reload(), 900);
-    } catch (e) {
-      toast(/too many/.test(e?.message) ? t('codeTooMany') : t('needNet'));
-    }
-  };
   $('#p-delete').onclick = async () => {
     if (!confirm(t('deleteConfirm'))) return;
     try {
@@ -458,6 +464,16 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     ...(res.ball ? [{ kind: 'ball', res }] : []),
   ];
   const restart = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
+  function spray(n, coins = false) { // sparks or coins fly out of the chest's mouth and fall away
+    const box = $('#op-chest').getBoundingClientRect(), x = box.left + box.width / 2, y = box.top + box.height * 0.55;
+    for (let i = 0; i < n; i++) {
+      const p = el('i', coins ? 'coin op-p' : 'op-p'), a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, v = 110 + Math.random() * 230;
+      p.style.cssText = `left:${x}px;top:${y}px;--dx:${(Math.cos(a) * v).toFixed(0)}px;--dy:${(Math.sin(a) * v).toFixed(0)}px;`
+        + `--r:${((Math.random() - 0.5) * 720).toFixed(0)}deg;animation-delay:${(Math.random() * 0.15).toFixed(2)}s`;
+      $('#scr-open').append(p);
+      setTimeout(() => p.remove(), 1500);
+    }
+  }
   function crack(kind) {
     const res = openChest(save, kind, random);
     if (!res) return;
@@ -468,16 +484,18 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#scr-open').hidden = false;
     $('#scr-open').className = 'opener k-' + kind;
     $('#op-title').textContent = t('chest_' + kind);
-    $('#op-chest').innerHTML = chestSvg(kind);
+    $('#op-chest').innerHTML = chestSvg(kind) + '<i class="op-beam"></i>';
     $('#op-chest').className = 'op-chest drop';
+    $('#op-chest').style.setProperty('--k', 0);
     $('#op-chest').hidden = false;
+    $('#op-glow').hidden = true;
     $('#op-item').hidden = true;
     $('#op-sum').hidden = true;
     $('#op-btns').hidden = true;
     $('#op-hint').textContent = t('opTap');
     $('#op-hint').hidden = false;
     sfx.click();
-    setTimeout(() => { if (op) op.phase = 'tap'; }, 650);
+    setTimeout(() => { if (op?.phase === 'drop') { op.phase = 'tap'; $('#op-chest').className = 'op-chest idle'; } }, 650);
   }
   function opNext() {
     op.idx++;
@@ -485,9 +503,14 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (!it) { // all shown: the summary
       op.phase = 'sum';
       card.hidden = true;
+      $('#op-glow').hidden = true;
       $('#op-chest').hidden = true;
       $('#op-hint').hidden = true;
-      $('#op-sum').replaceChildren(...op.items.map(x => opCard(x, true)));
+      $('#op-sum').replaceChildren(...op.items.map((x, i) => {
+        const c = opCard(x, true);
+        c.style.animationDelay = i * 0.12 + 's';
+        return c;
+      }));
       $('#op-sum').hidden = false;
       const left = KINDS.find(k => save.chests[k] > 0);
       $('#op-again').hidden = !left;
@@ -501,6 +524,20 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     card.className = 'op-item r-' + it.kind;
     card.hidden = false;
     restart(card, 'show');
+    $('#op-chest').classList.add('low');
+    $('#op-glow').className = 'op-glow r-' + it.kind;
+    $('#op-glow').hidden = false;
+    restart($('#op-glow'), 'show');
+    if (it.kind === 'coins') { // count up
+      const b = card.querySelector('b'), n = it.res.coins, t0 = performance.now(), mine = op;
+      const step = now => {
+        const k = Math.min(1, (now - t0) / 650);
+        b.textContent = '+' + Math.round(n * k * (2 - k));
+        if (k < 1 && op === mine) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      spray(12, true);
+    } else spray(16);
     const rest = op.items.length - op.idx - 1;
     $('#op-hint').textContent = rest ? t('opMore', { n: rest }) : t('opTapEnd');
     sfx.coin();
@@ -530,11 +567,17 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       op.taps++;
       const chest = $('#op-chest');
       restart(chest, 'hit');
+      clearTimeout(op.hitT);
+      op.hitT = setTimeout(() => chest.classList.remove('hit'), 340);
       chest.style.setProperty('--k', op.taps);
       sfx.wall();
+      spray(3 + op.taps * 3);
       if (op.taps < 3) { $('#op-hint').textContent = t('opTapN', { n: 3 - op.taps }); return; }
       op.phase = 'opening';
-      chest.classList.add('open');
+      clearTimeout(op.hitT);
+      chest.className = 'op-chest open';
+      spray(22);
+      spray(14, true);
       restart($('#op-flash'), 'go');
       sfx.super();
       confetti(40);
@@ -706,16 +749,5 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     render();
   }
 
-  // Once, after the first online win: make sure the player keeps their transfer code.
-  function showCode() {
-    const hero = $('#rw-icon');
-    hero.className = 'ball-hero pop';
-    hero.replaceChildren(el('div', 'code-hero'));
-    hero.firstChild.textContent = net.code;
-    $('#rw-text').textContent = t('saveCodeTitle');
-    $('#rw-sub').textContent = t('saveCodeSub');
-    $('#scr-reward').hidden = false;
-  }
-
-  return { open, render, showCode, hide: () => { $('#scr-home').hidden = true; } };
+  return { open, render, hide: () => { $('#scr-home').hidden = true; } };
 }

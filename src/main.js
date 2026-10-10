@@ -187,11 +187,6 @@ function goHome(tab) {
   if (!S.demo) demo();
   show(null);
   home.open(tab);
-  if (net.online && net.code && !save.codeShown && save.stats.wins > 0) { // once: keep your transfer code
-    save.codeShown = true;
-    persist();
-    home.showCode();
-  }
 }
 
 // ---------- squad & shop ----------
@@ -748,13 +743,12 @@ if (RECORD != null) { // ?record=leech,train starts that fight at once; plain ?r
 requestAnimationFrame(frame);
 // Go online in the background; the game is already playable offline.
 setTimeout(async () => {
-  const { save: merged, moved } = await online.connect(save);
+  const { save: merged } = await online.connect(save);
   if (merged === save) return; // offline: connect hands back our own save untouched — nothing to swap in
   for (const k of Object.keys(save)) delete save[k]; // swap contents in place: home & the match hold this object
   Object.assign(save, merged);
   persist();
   coinsUI();
-  if (moved) toast(t('moved'));
   if (S.mode === 'home') home.render();
   if (S.mode === 'squad') renderSquad();
 }, 300);

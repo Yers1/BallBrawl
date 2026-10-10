@@ -90,21 +90,9 @@ await step('save sync keeps the newer blob', async () => {
   const r2 = await call(A, 'sync_save', { p_save: { coins: 1 }, p_save_at: '2001-01-01T00:00:00Z', p_squad: ['nope', 'x', 'y'], p_skins: {}, p_avatar: 'ice', p_nick: { a: 1, n: 2, d: 33 } });
   assert.equal(r2.save.coins, 50, 'older save ignored');
 });
-await step('transfer code moves the profile; the new device keeps one profile', async () => {
+await step('transfer codes are switched off (moving is by email account)', async () => {
   await call(C, 'ensure_profile', prof(0, { a: 5, n: 5, d: 77 }));
-  const r = await call(C, 'redeem_code', { p_code: a.code.toLowerCase() });
-  assert.equal(r.id, a.id);
-  const onC = await call(C, 'ensure_profile', prof(0));
-  assert.equal(onC.id, a.id);
-  assert.equal(onC.trophies, 404);
-  assert.notEqual(onC.code, a.code, 'code rotates after use');
-  const onA = await call(A, 'ensure_profile', prof(0, { a: 9, n: 9, d: 99 }));
-  assert.equal(onA.created, true, 'the old device starts over');
-  assert.equal((await call(C, 'redeem_code', { p_code: 'ZZZZZZZZ' })), null);
-});
-await step('guessing codes is rate limited (5 tries an hour)', async () => {
-  for (let i = 0; i < 5; i++) assert.ok((await rpc(B, 'redeem_code', { p_code: 'AAAAAAAA' })).ok);
-  assert.ok(!(await rpc(B, 'redeem_code', { p_code: 'AAAAAAAA' })).ok);
+  assert.ok(!(await rpc(C, 'redeem_code', { p_code: a.code })).ok);
 });
 await step('delete_profile removes everything', async () => {
   for (const t of [A, B, C]) await call(t, 'delete_profile');

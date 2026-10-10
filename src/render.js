@@ -41,21 +41,48 @@ function burst(x, y, n, color, speed, size = [2.5, 7]) {
 
 // A floating number or word. Big, tilted, long-lived like the original; at most 40 on screen.
 function float(x, y, text, color, size = 22, life = 1.5, rise = 30, tilt = rnd(-0.17, 0.17)) {
-  fx.floats.push({ x, y, text, color, size, life, rise, tilt, age: 0 });
+  const f = { x, y, text, color, size, life, rise, tilt, age: 0, popAt: 0, vx: 0, vy: 0 };
+  fx.floats.push(f);
   if (fx.floats.length > 40) fx.floats.shift();
+  return f;
+}
+
+// Damage and heal numbers. Each one pops out of the ball it happened to, on the side away from the hitter,
+// so two balls hitting each other throw their numbers apart instead of stacking them at the contact point.
+// The colour says who did it: cyan = your side's damage, red = the opponent's, green = healing.
+// Quick repeat hits on the same ball add up into one growing number that pops again.
+const dmgSize = v => Math.min(40, 21 + v * 0.55);
+function dmgFloat(w, id, amount, color, sign = '-') {
+  const e = w.ents.find(x => x.id === id);
+  if (!e) return;
+  const key = id + sign, old = fx.floats.find(f => f.key === key && f.age - f.popAt < 0.5);
+  if (old) {
+    old.value += amount;
+    old.text = sign + Math.round(old.value);
+    old.size = dmgSize(old.value);
+    old.popAt = old.age;
+    old.life = Math.max(old.life, old.age + 1.1);
+    return;
+  }
+  const away = (fx.face[id] ?? Math.PI / 2) + Math.PI; // the face points at the hitter; go the other way
+  let dx = Math.cos(away) * 0.55, dy = Math.sin(away) * 0.55 - 0.85; // ...and mostly up
+  const d = Math.hypot(dx, dy) || 1;
+  dx /= d; dy /= d;
+  let x = e.x + dx * (e.r + 4), y = e.y + dy * (e.r + 4);
+  for (const f of fx.floats) if (f.age < 0.6 && Math.abs(f.x - x) < 34 && Math.abs(f.y - y) < 22) y = f.y - 24; // never on top of another
+  const f = float(x, y, sign + Math.round(amount), color, dmgSize(amount), 1.25, 0, dx * 0.25);
+  Object.assign(f, { key, value: amount, vx: dx * 95, vy: dy * 95 - 20 });
 }
 
 const ring = (x, y, r, grow, life, rgb, width) => fx.rings.push({ x, y, r, grow, life, rgb, width, age: 0 });
 
 function absorb(w, now) {
   for (const ev of w.events) {
-    if (ev.type === 'hit') { // the number sits on the rim facing the attacker; ticks are smaller and don't flash
+    if (ev.type === 'hit') { // small ticks don't flash; big hits get a white star burst
       if (ev.amount >= 3) fx.flash[ev.id] = now + 0.1;
-      if (ev.amount >= 1) {
-        const a = fx.face[ev.id] ?? -Math.PI / 2;
-        float(ev.x + Math.cos(a) * 30 + rnd(-6, 6), ev.y + Math.sin(a) * 30 - 8, '-' + Math.round(ev.amount), '#FF3B3B', ev.amount >= 3 ? 26 : 20);
-      }
+      if (ev.amount >= 1) dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
       burst(ev.x, ev.y, 5, '#ffffff', 120, [2, 3]);
+      if (ev.amount >= 15) ring(ev.x, ev.y, 10, 3.2, 0.3, '255,255,255', 4);
     } else if (ev.type === 'text') {
       float(ev.x, ev.y, ev.text, '#FFCC33', 18, 2, 10, 0);
     } else if (ev.type === 'clash') {
@@ -975,7 +1002,7 @@ function faces(w) {
 }
 
 // Life flows from the victim to the leech: a dark beam, red drops along it, and running totals above both.
-function drain(ctx, e, t, dt) {
+function drain(ctx, w, e, t, dt) {
   const f = e.latch.foe;
   if (f.dead) return;
   ctx.save();
@@ -992,8 +1019,8 @@ function drain(ctx, e, t, dt) {
   if (fx.drain[e.id] >= 4) {
     const n = Math.round(fx.drain[e.id]);
     fx.drain[e.id] = 0;
-    float(f.x + rnd(-6, 6), f.y - f.r - 8, '-' + n, '#FF3B3B', 20);
-    float(e.x + rnd(-6, 6), e.y - e.r - 8, '+' + n, '#36D27A', 20);
+    dmgFloat(w, f.id, n, SIDE[e.side]);
+    dmgFloat(w, e.id, n, '#36D27A', '+');
   }
 }
 
@@ -1020,7 +1047,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
     else if (z.kind === 'zap') zapZone(ctx, z, w.t);
   }
   faces(w);
-  for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, e, w.t, dt);
+  for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
@@ -1080,11 +1107,16 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
   ctx.lineJoin = 'round';
   for (const f of fx.floats) {
     f.age += dt;
-    const k = f.age / f.life;
+    f.x += f.vx * dt; f.y += f.vy * dt;
+    const drag = Math.exp(-5 * dt);
+    f.vx *= drag; f.vy = f.vy * drag - 14 * dt; // pops out fast, then drifts up
+    const k = f.age / f.life, p = f.age - f.popAt;
+    const pop = p < 0.09 ? 0.35 + p * 11 : p < 0.2 ? 1.34 - (p - 0.09) * 3.1 : 1; // pop in, overshoot, settle
     ctx.save();
-    ctx.globalAlpha = Math.max(0, 1 - k * k);
+    ctx.globalAlpha = k < 0.7 ? 1 : Math.max(0, 1 - (k - 0.7) / 0.3);
     ctx.translate(f.x, f.y - k * f.rise);
     ctx.rotate(f.tilt);
+    ctx.scale(pop, pop);
     ctx.font = `italic 900 ${f.size}px ${FONT}`;
     ctx.lineWidth = f.size * 0.26;
     ctx.strokeStyle = INK;
