@@ -731,11 +731,20 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       if (my !== lbReq) return; // a newer request (tab switch) won
       const rows = Array.isArray(data?.top) ? data.top : [];
       note.textContent = rows.length ? (data.me ? t('yourRank', { n: data.me.rank }) : '') : t('emptyBoard');
-      list.replaceChildren(...rows.map(r => {
-        const row = el('div', `lrow ${r.me ? 'mine' : ''} ${r.rank <= 3 ? 'top' + r.rank : ''}`);
-        const name = el('div', 'nm');
-        name.textContent = validNick(r.nick) ? nickText(r.nick, lang) : '???'; // never trust text from the network
-        const ball = BALLS[r.avatar] ? r.avatar : 'basic', skin = SKINS[r.skin] ? r.skin : null;
+      const nick = r => (validNick(r.nick) ? nickText(r.nick, lang) : '???'); // never trust text from the network
+      const look = r => [BALLS[r.avatar] ? r.avatar : 'basic', SKINS[r.skin] ? r.skin : null];
+      // the top three on a podium: gold in the middle and highest, silver left, bronze right
+      const pod = el('div', 'podium');
+      pod.append(...[1, 0, 2].filter(i => rows[i]).map(i => {
+        const r = rows[i], [ball, skin] = look(r), p = el('div', `pod p${i + 1}${r.me ? ' mine' : ''}`);
+        if (!i) p.append(el('span', 'pod-crown', '<svg viewBox="0 0 32 24" aria-hidden="true"><path d="M3 20 1 5l8 6 7-10 7 10 8-6-2 15z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.2" stroke-linejoin="round"/><circle cx="16" cy="14" r="2.6" fill="#FF4D6D"/></svg>'));
+        p.append(icon(ball, i ? 58 : 76, skin), el('b', 'pod-nm'), el('span', 'pod-sc', `<i class="trophy"></i>${Number(r.score) || 0}`), el('span', 'pod-base', `<b>${Number(r.rank) || i + 1}</b>`));
+        p.querySelector('.pod-nm').textContent = nick(r);
+        return p;
+      }));
+      list.replaceChildren(...(rows.length ? [pod] : []), ...rows.slice(3).map(r => {
+        const row = el('div', `lrow ${r.me ? 'mine' : ''}`), name = el('div', 'nm'), [ball, skin] = look(r);
+        name.textContent = nick(r);
         row.append(el('div', 'rk', String(Number(r.rank) || '')), icon(ball, 32, skin), name,
           el('div', 'sc', `<span class="league-ic sm">${leagueSvg(leagueFor(Number(r.score) || 0))}</span><i class="trophy"></i>${Number(r.score) || 0}`));
         return row;
