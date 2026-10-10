@@ -13,6 +13,36 @@ import { rng } from './sim.js';
 export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 960, poison: 1210, chain: 1560, forge: 1910, chess: 220 };
 // Balls in the order they unlock (ORDER itself never changes: challenge links store balls by their place in it)
 export const BY_UNLOCK = [...ORDER].sort((a, b) => UNLOCK[a] - UNLOCK[b]);
+
+// ---------- the familiar: a companion that gives all your balls a small bonus ----------
+// It gains XP in fights; a level-up also costs coins, more each time. Your arena caps its level, and the opponents
+// you meet there bring a familiar of the arena's usual level — so a maxed familiar never meets a level-1 one.
+export const FAM = { maxLv: 10, hpPer: 0.02, dmgPer: 0.01 };
+export const FAM_COST = [0, 0, 300, 700, 1500, 3000, 5000, 8000, 12000, 18000, 25000]; // coins to reach level i
+export const FAMILIARS = { king: {}, dragon: { coins: 1200 }, cat: { coins: 1200 }, owl: { gems: 45 }, robot: { coins: 2500 }, ghost: { gems: 80 } };
+export const famNeed = lv => 60 * lv; // XP to fill before the next level can be bought
+export const famCap = maxTrophies => Math.min(FAM.maxLv, 2 + Math.floor(arenaIndex(arenaFor(maxTrophies).id) * 0.75));
+export const famPar = maxTrophies => Math.max(1, famCap(maxTrophies) - 1); // what the computer's familiar has here
+export const famBuff = lv => ({ hp: 1 + FAM.hpPer * lv, dmg: 1 + FAM.dmgPer * lv }); // level 1: +2% HP, +1% damage
+export const famXp = (s, n) => { s.fam.xp = Math.min(famNeed(s.fam.lv), s.fam.xp + n); };
+export function famUpgrade(s) {
+  const lv = s.fam.lv, cost = FAM_COST[lv + 1];
+  if (lv >= famCap(s.maxTrophies) || s.fam.xp < famNeed(lv) || s.coins < cost) return false;
+  pay(s, 'coins', cost);
+  s.fam.lv++;
+  s.fam.xp = 0;
+  return true;
+}
+export function famBuy(s, id) {
+  const it = FAMILIARS[id];
+  if (!it || s.fam.own.includes(id)) return false;
+  const [cur, n] = it.gems ? ['gems', it.gems] : ['coins', it.coins ?? 0];
+  if (s[cur] < n) return false;
+  pay(s, cur, n);
+  s.fam.own.push(id);
+  s.fam.skin = id;
+  return true;
+}
 export const LOSE_COINS = 5;
 export const aiLevel = tr => Math.min(LEVELS, Math.max(1, 1 + Math.floor(tr / 40)));
 // past the AI cap (1160) enemies keep gaining HP, so the top of the table can't be farmed by volume
@@ -137,6 +167,7 @@ export function freshSave() {
     mailRead: [], mailClaimed: [], foeEmotes: true, // inbox ids read / gifts taken; show the opponent's emotes
     mode: 'classic', // classic | duo | boss
     xp: 0, // experience: the player level
+    fam: { lv: 1, xp: 0, skin: 'king', own: ['king'] }, // the familiar: its level, XP toward the next one, look, looks owned
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0, chests: 0, duoWins: 0, bossWins: 0, emotes: 0 },
     // cloud bookkeeping
@@ -200,6 +231,10 @@ export function migrate(raw) {
   s.foeEmotes = r.foeEmotes !== false;
   if (['classic', 'duo', 'boss'].includes(r.mode)) s.mode = r.mode;
   s.xp = int(r.xp) ?? 0;
+  if (r.fam && typeof r.fam === 'object') {
+    const own = ['king', ...list(r.fam.own, id => FAMILIARS[id] && id !== 'king')];
+    s.fam = { lv: int(r.fam.lv, 1, FAM.maxLv) ?? 1, xp: int(r.fam.xp) ?? 0, own, skin: own.includes(r.fam.skin) ? r.fam.skin : 'king' };
+  }
   if (r.adGems && typeof r.adGems.day === 'string') s.adGems = { day: r.adGems.day, n: int(r.adGems.n, 0, 99) ?? 0 };
   if (r.quests && typeof r.quests.day === 'string' && Array.isArray(r.quests.list)) {
     s.quests = { day: r.quests.day, list: r.quests.list.filter(q => QUESTS.some(d => d.id === q?.id)).map(q => ({ id: q.id, progress: int(q.progress) ?? 0, claimed: q.claimed === true })) };
@@ -608,6 +643,8 @@ export function mergeSave(local, cloudRaw, server) {
   s.deals = union(s.deals, cloud.deals).slice(-12);
   s.mailRead = union(s.mailRead, cloud.mailRead).slice(-60);
   s.xp = Math.max(s.xp, cloud.xp);
+  if (cloud.fam.lv > s.fam.lv || (cloud.fam.lv === s.fam.lv && cloud.fam.xp > s.fam.xp)) Object.assign(s.fam, { lv: cloud.fam.lv, xp: cloud.fam.xp });
+  s.fam.own = [...new Set([...s.fam.own, ...cloud.fam.own])];
   s.mailClaimed = union(s.mailClaimed, cloud.mailClaimed).slice(-60);
   for (const k of Object.keys(CHESTS)) {
     s.chestsGot[k] = Math.max(s.chestsGot[k], cloud.chestsGot[k]);

@@ -2,7 +2,7 @@
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, BOSS } from './match.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setFamiliars } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -12,7 +12,7 @@ import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, SHOP, levelOf, gainXp, XP_WIN, XP_PLAY, SKINS,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -130,6 +130,7 @@ function demo() {
   S.demo = true;
   S.demoEnd = 0;
   setAuras({});
+  setFamiliars({});
   resetFx();
 }
 
@@ -170,6 +171,7 @@ function goChallenge() {
 
 function startChallenge() {
   const c = S.challenge;
+  setFamiliars({}); // challenges are mirror matches: no familiar bonus either
   S.match = createMatch({ squadA: [...c.squad], squadB: [...c.squad], hpMulB: 1, seed: c.seed, skinsA: save.skinOf }); // mirror squads: only skill decides
   S.aiLevel = c.level;
   beginMatch();
@@ -296,7 +298,13 @@ async function startMatch() {
   $('#s-fight').disabled = $('#s-back').disabled = false;
   S.ranked = !!S.matchId;
   S.matchStart = Date.now();
+  // familiars: yours (capped by your arena) and the opponent's — a real player's, or the arena's usual level
+  const cap = famCap(save.maxTrophies), of = S.opponent?.fam;
+  const lvB = Number.isInteger(of?.lv) ? Math.min(cap, Math.max(1, of.lv)) : famPar(save.maxTrophies);
+  S.fams = { 0: { id: save.fam.skin, lv: Math.min(save.fam.lv, cap) }, 1: { id: FAMILIARS[of?.skin] ? of.skin : Object.keys(FAMILIARS)[S.nextSeed % 6], lv: lvB } };
+  setFamiliars(S.fams);
   S.match = createMatch({
+    famA: famBuff(S.fams[0].lv), famB: famBuff(S.fams[1].lv),
     squadA: [...save.squad],
     squadB: enemySquad(), // a real player's squad is still piloted by the AI, at your trophies' difficulty
     hpMulB: enemyHpMulFor(save.trophies),
@@ -308,19 +316,19 @@ async function startMatch() {
   });
   S.aiLevel = aiLevel(save.trophies);
   show(null);
-  await home.vs(foeCard()); // both banners first, like Clash Royale
+  await home.vs(foeCard(), S.fams[0]); // both banners first, like Clash Royale
   beginMatch();
 }
 // How the opponent looks on the VS screen: a real player's banner, clan and level; the computer shows its lead ball.
 function foeCard() {
   const o = S.opponent, lead = S.match.b[0];
-  if (!o) return { nick: t('enemy'), banner: 'night', deco: 'none', avatar: lead.id, skin: lead.skin, level: null, trophies: save.trophies, clan: null };
+  if (!o) return { nick: t('enemy'), banner: 'night', deco: 'none', avatar: lead.id, skin: lead.skin, level: null, trophies: save.trophies, clan: null, fam: S.fams[1] };
   const ok = (v, list) => (typeof v === 'string' && Object.hasOwn(list, v) ? v : null);
   const clan = o.clan && validClan(o.clan.name) ? { name: o.clan.name, badge: Math.min(7, Math.max(0, Number(o.clan.badge) || 0)) } : null;
   const avatar = ok(o.avatar, BALLS) ?? lead.id;
   return {
     nick: nickText(o.nick, lang), banner: ok(o.banner, SHOP.banner) ?? 'night', deco: ok(o.deco, SHOP.deco) ?? 'none',
-    avatar, skin: o.skins?.[avatar] ?? null, level: Number.isFinite(o.xp) ? levelOf(o.xp).lv : null, trophies: Number(o.trophies) || 0, clan,
+    avatar, skin: o.skins?.[avatar] ?? null, level: Number.isFinite(o.xp) ? levelOf(o.xp).lv : null, trophies: Number(o.trophies) || 0, clan, fam: S.fams[1],
   };
 }
 
@@ -520,6 +528,7 @@ function finishMatch(r) {
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   S.xpGot = won ? XP_WIN : XP_PLAY;
   S.lvlUps = gainXp(save, S.xpGot); // the player level
+  famXp(save, S.xpGot); // the familiar learns too
   save.matches++;
   track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, duoWins: won && S.match.mode === 'duo' ? 1 : 0, bossWins: won && S.match.mode === 'boss' ? 1 : 0, ...S.ms });
   S.undoMs = S.ms;
@@ -695,6 +704,7 @@ function startWatch() {
   S.mode = 'watch';
   setAutoEmote([0, 1]);
   setAuras({});
+  setFamiliars({});
   const w = S.world, [a, b] = w.ents;
   S.watchAims = [aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand)];
   S.launchAt = performance.now() / 1000 + (RECORD != null ? 2.5 : 1.4);
@@ -942,6 +952,7 @@ function partyBegin(m) {
   S.challenge = null; S.ranked = false; S.matchId = null; S.matchStart = Date.now(); S.demo = false; S.dashed = false; S.ms = { dashes: 0, supers: 0, kills: 0 };
   setAutoEmote([]);
   setAuras({});
+  setFamiliars({});
   resetFx();
   S.mode = 'fight';
   show(null);

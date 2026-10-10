@@ -7,12 +7,12 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, FRAG_NEED, pay, skinPool, chestBalls,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
 } from './progress.js';
 import { THEMES } from './themes.js';
-import { setArena, drawEmote } from './render.js';
+import { setArena, drawEmote, drawFamiliar } from './render.js';
 import { MAPS } from './sim.js';
 import { offerReward } from './ads.js';
 import { sfx, confetti } from './sfx.js';
@@ -1204,6 +1204,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // ---------- lobby ----------
   function lobby() {
+    drawFamiliar($('#l-fam'), save.fam.skin, 34);
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
     $('#l-trio').replaceChildren(icon(l, 136, sk(l)), icon(lead, 232, sk(lead), save.wear.aura), icon(r, 136, sk(r)));
     const a = arenaFor(save.maxTrophies).id;
@@ -1242,7 +1243,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const questReady = dailyState(save, dayKey()).canClaim
       || save.quests.list.some(q => !q.claimed && q.progress >= questDef(q.id).goal)
       || ACHIEVEMENTS.some(a => !save.achieved.includes(a.id) && achievementValue(save, a) >= a.goal);
-    const dots = { path: claimable(save).length > 0, quests: questReady, profile: net.online && !net.email };
+    const f = save.fam, famReady = f.lv < famCap(save.maxTrophies) && f.xp >= famNeed(f.lv) && save.coins >= FAM_COST[f.lv + 1];
+    const dots = { path: claimable(save).length > 0, quests: questReady, profile: net.online && !net.email, fam: famReady };
     for (const b of document.querySelectorAll('[data-tab]')) b.querySelector('.badge').hidden = !dots[b.dataset.tab];
   }
   for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sfx.click(); open(b.dataset.tab); };
@@ -1256,6 +1258,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     document.documentElement.style.setProperty('--sky', THEMES[a].sky);
     setArena(a);
     $('#l-arena-art').innerHTML = arenaSvg(a, 'l');
+    $('#bg-art').innerHTML = arenaSvg(a, 'bg'); // wide screens: the arena, big and blurred, fills the sides
   }
 
   function render() {
@@ -1271,12 +1274,13 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (tab === 'shop') shop();
     if (tab === 'mail') mail();
     if (tab === 'clan') clan();
+    if (tab === 'fam') famScreen();
     badges();
   }
 
   function open(next = tab) {
     tab = next;
-    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'shop', 'mail', 'clan']) $('#tab-' + name).hidden = name !== tab;
+    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'shop', 'mail', 'clan', 'fam']) $('#tab-' + name).hidden = name !== tab;
     $('#lobby').hidden = tab !== 'lobby';
     $('#sub').hidden = tab === 'lobby';
     if (tab !== 'lobby') $('#sub-title').textContent = t('tab' + tab[0].toUpperCase() + tab.slice(1));
@@ -1350,6 +1354,59 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#l-mail').onclick = () => { sfx.click(); open('mail'); loadMail(); };
   setTimeout(loadMail, 1500); // after connecting
 
+  // ---------- the familiar: its level and bonus, the upgrade (XP from fights + coins, capped by the arena), its looks ----------
+  const HEART_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8.2 3.4 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.6 0 6 3.7 4.5 7.3C19.5 16.4 12 21 12 21z" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2"/></svg>';
+  const SWORD_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l10-10 2-5 3-1-1 3-5 2L4 18z" fill="#E6EDF7" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 15l5 5M3 21l3-3" stroke="#FFCC33" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  let famConfirm = '';
+  function famScreen() {
+    const f = save.fam, cap = famCap(save.maxTrophies), need = famNeed(f.lv), b = famBuff(f.lv), cost = FAM_COST[f.lv + 1];
+    const pct = n => `+${Math.round((n - 1) * 100)}%`;
+    const hero = el('div', 'fam-hero');
+    hero.innerHTML = `<b class="fam-lv">${t('famLv', { n: f.lv })}</b><canvas class="fam-art"></canvas><h3 class="fam-name"></h3>`
+      + `<div class="fam-stats"><span><i>${HEART_IC}</i><span><small>${t('famHp')}</small><b>${pct(b.hp)} HP</b></span></span>`
+      + `<span><i>${SWORD_IC}</i><span><small>${t('famDmg')}</small><b>${pct(b.dmg)}</b></span></span></div>`
+      + `<div class="fam-xp"><small>${t('famXp')}</small><b>${f.xp} / ${need}</b></div>`
+      + `<span class="xp-bar fam-bar"><i style="width:${Math.min(100, Math.round((f.xp / need) * 100))}%"></i></span>`
+      + `<button class="btn primary big wide-btn fam-up"></button><p class="muted center fam-note"></p>`;
+    drawFamiliar(hero.querySelector('.fam-art'), f.skin, 150);
+    hero.querySelector('.fam-name').textContent = t('fam_' + f.skin);
+    const up = hero.querySelector('.fam-up');
+    if (f.lv >= cap) { up.textContent = t('famTop'); up.disabled = true; }
+    else {
+      up.innerHTML = `${t('famUp')} · ${money(['coins', cost])}`;
+      up.disabled = f.xp < need;
+      up.onclick = () => {
+        if (!famUpgrade(save)) return toast(t('needCoins'));
+        sfx.coin(); confetti(40); persist(); coinsUI(); render();
+      };
+    }
+    hero.querySelector('.fam-note').textContent = (f.lv < cap && f.xp < need ? t('famNeedXp') + ' · ' : '') + t('famCap', { n: cap });
+    const grid = el('div', 'sh-grid');
+    for (const id of Object.keys(FAMILIARS)) {
+      const own = f.own.includes(id), on = f.skin === id, it = FAMILIARS[id], price = it.gems ? ['gems', it.gems] : ['coins', it.coins ?? 0];
+      const card = el('button', 'sh-tile fam-card' + (own ? ' own' : '') + (on ? ' on' : '') + (famConfirm === id ? ' confirm' : ''));
+      const cv = el('canvas');
+      drawFamiliar(cv, id, 64);
+      card.append(cv, el('b', ''), el('span', 'sh-price'));
+      card.children[1].textContent = t('fam_' + id);
+      card.lastChild.innerHTML = on ? t('famPicked') : own ? t('shWear') : famConfirm === id ? `${t('shBuy')} ${money(price)}` : money(price);
+      card.onclick = () => {
+        sfx.click();
+        if (own) { f.skin = id; persist(); render(); return; }
+        if (famConfirm !== id) { famConfirm = id; famScreen(); return; } // a second tap buys
+        famConfirm = '';
+        if (!famBuy(save, id)) { toast(t(price[0] === 'gems' ? 'needGems' : 'needCoins')); famScreen(); return; }
+        sfx.coin(); confetti(30); persist(); coinsUI(); render();
+      };
+      grid.append(card);
+    }
+    const sec = el('section', 'sh-sec');
+    sec.append(el('h3', ''), grid);
+    sec.firstChild.textContent = t('famCollection');
+    sec.firstChild.append(el('span', 'sh-note', `${f.own.length} / ${Object.keys(FAMILIARS).length}`));
+    $('#fam-body').replaceChildren(hero, el('p', 'muted center fam-hint', t('famHint')), sec);
+  }
+
   // ---------- the VS screen before a fight (Clash Royale style): both players' banners, names, clans, levels ----------
   let myClan; // undefined: not asked yet; null: no clan
   const loadMyClan = () => {
@@ -1363,6 +1420,12 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       + `<span class="vs-deco">${decoSvg(p.deco)}</span>`;
     card.querySelector('.vs-av').append(icon(p.avatar, 58, p.skin), ...(p.level ? [el('b', 'lvl-badge', String(p.level))] : []));
     card.querySelector('.vs-nick').textContent = p.nick;
+    if (p.fam) { // the familiar and its level: they're always close, the arena sees to it
+      const fc = el('span', 'vs-fam'), cv = el('canvas');
+      drawFamiliar(cv, p.fam.id, 30);
+      fc.append(cv, el('b', '', t('famLv', { n: p.fam.lv })));
+      card.querySelector('.vs-meta').append(fc);
+    }
     if (p.clan) {
       const c = card.querySelector('.vs-clan');
       c.innerHTML = `<span class="clan-badge">${clanBadge(p.clan.badge)}</span><small></small>`;
@@ -1370,9 +1433,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }
     return card;
   }
-  function vs(foe) { // shows both players, then gets out of the way (about 2.4 s, or a tap)
+  function vs(foe, fam) { // shows both players, then gets out of the way (about 2.4 s, or a tap)
     loadMyClan();
-    const me = { nick: nickText(save.nick, lang), banner: save.wear.banner, deco: save.wear.deco, avatar: save.avatar, skin: save.skinOf[save.avatar], level: levelOf(save.xp).lv, trophies: save.trophies, clan: myClan ?? null };
+    const me = { nick: nickText(save.nick, lang), banner: save.wear.banner, deco: save.wear.deco, avatar: save.avatar, skin: save.skinOf[save.avatar], level: levelOf(save.xp).lv, trophies: save.trophies, clan: myClan ?? null, fam };
     const scr = $('#scr-vs');
     scr.replaceChildren(vsCard(foe, 'foe'), el('div', 'vs-shield', '<b>VS</b>'), vsCard(me, 'me'));
     scr.hidden = false;

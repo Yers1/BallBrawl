@@ -10,7 +10,7 @@ const SIDE_RGB = ['76,201,240', '255,77,94'];
 const FONT = 'Nunito, system-ui, sans-serif';
 const INK = '#0A0F1C'; // outline for numbers and small shapes
 export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
-const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {} };
+const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {}, famPos: {} };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
@@ -79,6 +79,75 @@ const ring = (x, y, r, grow, life, rgb, width) => fx.rings.push({ x, y, r, grow,
 // ---------- auras (shop cosmetics), drawn behind your balls ----------
 let auraOf = {};
 export const setAuras = map => { auraOf = map || {}; };
+
+// ---------- familiars: little round companions (the look only; the bonus is in the match) ----------
+let famOf = {}; // side -> { id, lv }
+export const setFamiliars = map => { famOf = map || {}; fx.famPos = {}; };
+const FAM_COL = { king: '#FFC93C', dragon: '#5FD35B', cat: '#FF9F45', owl: '#A8764E', robot: '#C9D2E0', ghost: '#F4F7FF' };
+export function famBody(ctx, id, x, y, r, t = 0) {
+  const P = Math.PI, col = FAM_COL[id] ?? FAM_COL.king, lw = Math.max(1.2, r * 0.12);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.lineJoin = ctx.lineCap = 'round';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = lw;
+  const poly = (pts, fill) => { ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px * r, py * r) : ctx.moveTo(px * r, py * r))); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.stroke(); };
+  // behind the body
+  if (id === 'king') { ctx.fillStyle = '#D9263F'; ctx.beginPath(); ctx.moveTo(-r * 0.85, r * 0.1); ctx.quadraticCurveTo(-r * 1.15, r * 0.9, -r * 0.55, r * 1.05); ctx.lineTo(r * 0.55, r * 1.05); ctx.quadraticCurveTo(r * 1.15, r * 0.9, r * 0.85, r * 0.1); ctx.fill(); ctx.stroke(); }
+  if (id === 'dragon') { const f = Math.sin(t * 8) * 0.12; for (const s of [-1, 1]) poly([[s * 0.7, -0.1], [s * (1.45 + f), -0.75], [s * 1.25, 0.05], [s * (1.5 + f), 0.25], [s * 0.85, 0.4]], '#9BEA8A'); }
+  if (id === 'owl' || id === 'cat') for (const s of [-1, 1]) poly([[s * 0.3, -0.85], [s * 0.78, -1.25], [s * 0.85, -0.45]], col);
+  if (id === 'robot') { ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, -r * 1.45); ctx.stroke(); ctx.fillStyle = '#FF4D5E'; ctx.beginPath(); ctx.arc(0, -r * 1.5, r * 0.16, 0, P * 2); ctx.fill(); ctx.stroke(); }
+  // the body
+  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r);
+  g.addColorStop(0, shade(col, 0.45)); g.addColorStop(0.6, col); g.addColorStop(1, shade(col, -0.35));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  if (id === 'ghost') { // a blob with a wavy hem
+    ctx.arc(0, -r * 0.05, r, P, 0);
+    ctx.lineTo(r, r * 0.75);
+    for (let k = 0; k < 4; k++) { const x0 = r - (k + 0.5) * (r / 2); ctx.quadraticCurveTo(x0, r * (k % 2 ? 0.75 : 1.15), r - (k + 1) * (r / 2), r * 0.85); }
+    ctx.closePath();
+  } else ctx.arc(0, 0, r, 0, P * 2);
+  ctx.fill(); ctx.stroke();
+  // markings
+  if (id === 'dragon') { ctx.fillStyle = '#E8FFC9'; ctx.beginPath(); ctx.ellipse(0, r * 0.45, r * 0.5, r * 0.38, 0, 0, P * 2); ctx.fill(); for (const s of [-1, 1]) poly([[s * 0.35, -0.85], [s * 0.5, -1.3], [s * 0.6, -0.75]], '#FFF2C4'); }
+  if (id === 'cat') { ctx.strokeStyle = '#C96A1E'; ctx.lineWidth = lw * 0.9; for (const dx of [-0.25, 0, 0.25]) { ctx.beginPath(); ctx.moveTo(dx * r, -r * 0.92); ctx.lineTo(dx * r * 0.8, -r * 0.62); ctx.stroke(); } ctx.strokeStyle = INK; }
+  if (id === 'owl') { ctx.fillStyle = '#E9CFA6'; ctx.beginPath(); ctx.ellipse(0, r * 0.45, r * 0.55, r * 0.42, 0, 0, P * 2); ctx.fill(); for (const s of [-1, 1]) { ctx.fillStyle = '#FFD23F'; ctx.beginPath(); ctx.arc(s * r * 0.36, -r * 0.12, r * 0.34, 0, P * 2); ctx.fill(); ctx.stroke(); } }
+  if (id === 'robot') { ctx.fillStyle = '#2B3550'; ctx.beginPath(); ctx.roundRect(-r * 0.7, -r * 0.42, r * 1.4, r * 0.55, r * 0.25); ctx.fill(); ctx.stroke(); }
+  // the face
+  const blink = Math.sin(t * 1.3) > 0.985 ? 0.15 : 1;
+  for (const s of [-1, 1]) {
+    const ex = s * r * 0.36, ey = id === 'owl' ? -r * 0.12 : -r * 0.14;
+    if (id === 'robot') { ctx.fillStyle = '#4CF0FF'; ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.13, r * 0.13 * blink, 0, 0, P * 2); ctx.fill(); continue; }
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.13, r * 0.17 * blink, 0, 0, P * 2); ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ex + r * 0.04, ey - r * 0.06, r * 0.05, 0, P * 2); ctx.fill();
+  }
+  if (id === 'owl') poly([[-0.12, 0.08], [0.12, 0.08], [0, 0.32]], '#FF9F1C');
+  else if (id !== 'robot') { ctx.lineWidth = lw * 0.8; ctx.beginPath(); ctx.arc(0, r * 0.12, r * 0.16, 0.15 * P, 0.85 * P); ctx.stroke(); }
+  if (id !== 'robot') { ctx.fillStyle = 'rgba(255,90,120,0.45)'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * r * 0.6, r * 0.12, r * 0.14, r * 0.09, 0, 0, P * 2); ctx.fill(); } }
+  if (id === 'cat') { ctx.strokeStyle = 'rgba(10,14,31,0.6)'; ctx.lineWidth = lw * 0.6; for (const s of [-1, 1]) for (const dy of [0.12, 0.26]) { ctx.beginPath(); ctx.moveTo(s * r * 0.5, r * dy); ctx.lineTo(s * r * 1.05, r * (dy - 0.06)); ctx.stroke(); } ctx.strokeStyle = INK; }
+  // in front: the king's crown
+  if (id === 'king') { ctx.lineWidth = lw; poly([[-0.55, -0.72], [-0.6, -1.3], [-0.28, -1.0], [0, -1.42], [0.28, -1.0], [0.6, -1.3], [0.55, -0.72]], '#FFD23F'); ctx.fillStyle = '#FF4D5E'; for (const dx of [-0.3, 0, 0.3]) { ctx.beginPath(); ctx.arc(dx * r, -r * 0.88, r * 0.08, 0, P * 2); ctx.fill(); } }
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(-r * 0.4, -r * 0.5, r * 0.22, r * 0.12, -0.6, 0, P * 2); ctx.fill();
+  ctx.restore();
+}
+export function drawFamiliar(canvas, id, css = 48) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.height = Math.round(css * dpr);
+  canvas.style.width = canvas.style.height = css + 'px';
+  const c = canvas.getContext('2d');
+  c.scale(dpr, dpr);
+  famBody(c, id, css / 2, css * 0.56, css * 0.3);
+}
+function familiars(ctx, w, t, dt) { // each side's familiar hovers by its lead ball, a little behind
+  for (const [side, f] of Object.entries(famOf)) {
+    const lead = w.ents.find(e => e.side === +side && !e.dead);
+    if (!lead || !f) continue;
+    const tx = lead.x + (+side ? 30 : -30), ty = lead.y - lead.r - 10, p = (fx.famPos[side] ??= { x: tx, y: ty }), k = Math.min(1, dt * 4);
+    p.x += (tx - p.x) * k; p.y += (ty - p.y) * k;
+    famBody(ctx, f.id, p.x, p.y + Math.sin(t * 3 + +side) * 3, 10, t);
+  }
+}
 const AURA_RGB = { fire: '255,138,43', frost: '127,231,255', storm: '255,214,10', hearts: '255,92,138', void: '150,70,230', stars: '255,204,51' };
 function sparkle(ctx, x, y, s, color) {
   ctx.fillStyle = color;
@@ -1646,6 +1715,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
+  familiars(ctx, w, w.t, dt || 0);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t);

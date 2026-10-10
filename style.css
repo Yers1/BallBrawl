@@ -1162,3 +1162,41 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 @keyframes vsPop { from { transform: scale(0) rotate(-25deg); } 70% { transform: scale(1.15); } to { transform: none; } }
 @keyframes vsOut { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .vs-card, .vs-shield { animation: none; } }
+
+/* ---------- the familiar ---------- */
+.fam-hero { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 14px 14px; border-radius: 22px;
+  background: radial-gradient(circle at 50% 30%, #2E3E70, var(--panel) 70%); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke); }
+.fam-lv { position: absolute; top: 12px; left: 12px; padding: 4px 12px; border-radius: 999px; background: var(--stroke); border: 2.5px solid var(--gold); color: var(--gold); font: 400 14px var(--display); }
+.fam-art { display: block; margin-top: 6px; animation: famBob 2.4s ease-in-out infinite; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35)); }
+.fam-name { margin: 0; font: 400 24px var(--display); text-transform: uppercase; color: var(--gold); text-shadow: var(--stroke-text); }
+.fam-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.fam-stats > span { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: var(--stroke); }
+.fam-stats i { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: var(--panel-2); }
+.fam-stats i svg { width: 22px; height: 22px; }
+.fam-stats small { display: block; font: 400 10px var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.fam-stats b { color: var(--go); font: 400 16px var(--display); }
+.fam-xp { display: flex; justify-content: space-between; width: 100%; font-weight: 900; }
+.fam-xp small { font: 400 12px var(--display); color: var(--muted); text-transform: uppercase; }
+.fam-xp b { color: var(--gold); }
+.fam-bar { max-width: none; height: 12px; border-radius: 6px; }
+.fam-bar i { border-radius: 6px; background: linear-gradient(90deg, #36D27A, #8EF0B4); }
+.fam-note { margin: 0; font-size: 12px; }
+.fam-hint { margin: 12px 4px; }
+.fam-card canvas { display: block; }
+.side-btn.c-fam .ic canvas { display: block; }
+.vs-fam { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; }
+.vs-fam b { font: 400 12px var(--display); color: var(--gold); }
+@keyframes famBob { 50% { transform: translateY(-8px); } }
+
+/* ---------- wide screens (laptops): the current arena, big and blurred, fills the empty sides; the side buttons hug the stage ---------- */
+#bg-art { display: none; }
+@media (min-width: 760px) {
+  #bg-art { position: fixed; inset: -60px; z-index: -1; display: grid; place-items: center; pointer-events: none; overflow: hidden; filter: blur(16px) saturate(1.15) brightness(0.8); }
+  #bg-art svg { width: max(115vw, 115vh * 0.8136); height: auto; flex: none; }
+  #bg-art::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(5, 8, 20, 0.55) 100%); }
+  .side.l { left: max(0px, calc(50% - min(50cqw, (100cqh - 20px) * 0.4068) - 70px)); }
+  .side.r { right: max(0px, calc(50% - min(50cqw, (100cqh - 20px) * 0.4068) - 70px)); }
+}
+
+/* hints over the arena sky stay readable on light arenas (candy, temple) */
+.tab > p.muted, .fam-hint { padding: 8px 12px; border-radius: 12px; background: rgba(10, 14, 31, 0.55); color: #DCE6FA; }

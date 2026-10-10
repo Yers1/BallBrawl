@@ -260,3 +260,28 @@ test('the Glory Road never gives a skin for a ball still locked at that mark', a
   const { PATH, UNLOCK } = await import('../src/progress.js');
   for (const n of PATH) if (n.skin) assert.ok(UNLOCK[n.skin[0]] <= n.at, `${n.at}: ${n.skin}`);
 });
+
+test('familiar: XP from fights, a coin price to level up, capped by the arena; looks are bought once', async () => {
+  const { famCap, famPar, famNeed, famXp, famUpgrade, famBuy, famBuff, FAM_COST } = await import('../src/progress.js');
+  const s = freshSave();
+  assert.deepEqual([s.fam.lv, s.fam.skin], [1, 'king']);
+  assert.equal(famCap(0), 2, 'first arena: up to level 2');
+  assert.equal(famPar(0), 1, 'the computer brings level 1 there');
+  assert.ok(famCap(5000) <= 10 && famCap(5000) > famCap(0));
+  s.coins = 10000;
+  assert.ok(!famUpgrade(s), 'needs XP first');
+  famXp(s, 1000);
+  assert.equal(s.fam.xp, famNeed(1), 'XP stops at the bar');
+  assert.ok(famUpgrade(s));
+  assert.equal(s.coins, 10000 - FAM_COST[2]);
+  famXp(s, 1000);
+  assert.ok(!famUpgrade(s), 'level 2 is the most in the first arena');
+  assert.ok(famBuff(2).hp > famBuff(1).hp && famBuff(1).hp > 1 && famBuff(1).dmg > 1);
+  s.gems = 100;
+  assert.ok(famBuy(s, 'owl') && s.fam.skin === 'owl' && s.gems === 55);
+  assert.ok(!famBuy(s, 'owl'), 'once');
+  const m = mergeSave(freshSave(), s, { trophies: 0, max_trophies: 0 });
+  assert.equal(m.fam.lv, 2);
+  assert.ok(m.fam.own.includes('owl'));
+  assert.equal(migrate({ fam: { lv: 99, skin: 'nope', own: ['nope'] } }).fam.lv, 10, 'validated');
+});

@@ -14,9 +14,9 @@ export function aiAngle(fx, fy, tx, ty, level, rand) {
 // squad against one giant ball. duo and boss are a single round.
 export const MODES = ['classic', 'duo', 'boss'];
 export const BOSS = { r: 46, hpMul: 2.5, dmgMul: 1.2, speedMul: 0.8 };
-export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night' }) {
-  const spec = skins => id => (skins[id] ? { id, skin: skins[id] } : { id });
-  return { a: squadA.map(spec(skinsA)), b: squadB.map(spec(skinsB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
+export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null }) {
+  const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg }) }); // fam: the familiar's bonus
+  return { a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
 }
 
 export function roundWorld(m) {
