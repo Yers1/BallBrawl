@@ -361,62 +361,97 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     return el('i', 'coin big-coin');
   };
 
-  // One road from the bottom up (Clash Royale style): every arena is a section with its picture and the balls it
-  // opens, the rewards sit on the road between arenas, a rail fills up to your trophies, "You are here" marks it.
+  // One road from the bottom up, after the Stitch design: a rail up the middle that glows where you've been, trophy marks
+  // on it, reward cards to the left and right, every arena a striped gate across the road, "you are here" with the way
+  // to the next reward, and a bar to claim everything at once.
+  const LOCK_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1v11H6V10zm2 0h6V7a3 3 0 0 0-6 0z"/></svg>';
+  const rewardSub = n => (n.ball ? t('rarity_' + RARITY[n.ball]) : n.skin ? ballName(n.skin[0]) : '');
   function road() {
     const box = $('#road'), until = Math.max(save.maxTrophies + 500, ARENAS.at(-1).at + 200);
-    const ready = new Set(claimable(save).map(n => n.at));
+    const ready = claimable(save), readySet = new Set(ready.map(n => n.at));
     const items = [
       ...pathNodes(until).filter(n => n.at <= until).map(n => ({ at: n.at, n })),
       ...ARENAS.map((a, i) => ({ at: a.at, arena: a, i, header: true })),
     ].sort((x, y) => y.at - x.at || (x.header ? 1 : 0) - (y.header ? 1 : 0)); // highest first; an arena sits under its rewards
     const cur = arenaIndex(arenaFor(save.maxTrophies).id);
     const rows = [];
-    let marked = false;
+    let marked = false, side = 0;
     const marker = () => {
-      const m = el('div', 'vr-me');
-      m.append(icon(save.avatar, 34, save.skinOf[save.avatar]), el('b', ''), el('span', '', `<i class="trophy"></i>${save.trophies}`));
-      m.querySelector('b').textContent = t('arenaHere');
+      const { next } = nextReward(), m = el('div', 'r2-me');
+      const ring = el('span', 'r2-av');
+      ring.append(icon(save.avatar, 64, save.skinOf[save.avatar]));
+      m.append(el('b', 'r2-here', `${t('arenaHere')} · <i class="trophy"></i>${save.trophies}`), ring);
+      if (next) {
+        const prev = [...pathNodes(save.trophies)].filter(x => x.at <= save.trophies).at(-1)?.at ?? 0, span = Math.max(1, next.at - prev);
+        m.append(el('div', 'r2-next', `<span>${t('roadToNext', { n: next.at - save.trophies })} <i class="trophy"></i></span><b>${save.trophies - prev} / ${span}</b>`
+          + `<span class="r2-bar-in"><i style="width:${Math.round(((save.trophies - prev) / span) * 100)}%"></i></span>`));
+      }
       return m;
     };
     for (const it of items) {
       if (!marked && it.at <= save.trophies && !it.header) { rows.push(marker()); marked = true; }
-      if (it.header) {
-        const a = it.arena, h = el('div', 'vr-arena' + (it.i > cur ? ' locked' : '') + (it.i === cur ? ' cur' : ''));
-        h.innerHTML = `<div class="vr-ribbon"><b></b><span><i class="trophy"></i>${a.at}+</span></div>`
-          + `<div class="vr-art">${arenaSvg(a.id, 'r' + it.i)}<span class="vr-plate"></span></div><small class="vr-opens"></small><div class="vr-unlocks"></div>`;
-        h.querySelector('b').textContent = t('arena_' + a.id);
-        h.querySelector('.vr-plate').textContent = t('arenaN', { n: it.i + 1 });
-        h.querySelector('.vr-opens').textContent = t('arenaUnlocks');
-        h.querySelector('.vr-unlocks').append(...BY_UNLOCK.filter(id => arenaFor(UNLOCK[id]).id === a.id).map(id => {
-          const c = el('span', 'vr-ball' + (save.owned.includes(id) ? '' : ' no'));
-          c.append(icon(id, 46, save.skinOf[id]), el('small', ''));
-          c.lastChild.textContent = ballName(id);
+      if (it.header) { // an arena: a striped gate across the road in the arena's colours
+        const a = it.arena, th = THEMES[a.id], open = it.i <= cur, h = el('div', 'r2-arena' + (open ? '' : ' locked') + (it.i === cur ? ' cur' : ''));
+        h.style.setProperty('--a1', th.faces[0]);
+        h.style.setProperty('--a2', th.rings[1]);
+        h.style.setProperty('--ab', th.back);
+        h.innerHTML = `<div class="r2-gate"><div><b></b><small></small></div><span class="r2-lock">${open ? '' : LOCK_IC}</span></div>`
+          + `<div class="r2-balls"><small></small><span></span></div>`;
+        h.querySelector('b').textContent = `${t('arenaN', { n: it.i + 1 })} · ${t('arena_' + a.id)}`;
+        h.querySelector('.r2-gate small').innerHTML = (open ? t('roadOpen', { n: a.at }) : t('roadNeed', { n: a.at })) + ' <i class="trophy"></i>';
+        h.querySelector('.r2-balls small').textContent = t('arenaUnlocks');
+        const balls = BY_UNLOCK.filter(id => arenaFor(UNLOCK[id]).id === a.id);
+        h.querySelector('.r2-balls span').append(...balls.map(id => {
+          const c = el('span', 'r2-chip r-' + RARITY[id]);
+          c.append(icon(id, 18, save.skinOf[id]), document.createTextNode(ballName(id)));
           return c;
         }));
+        if (!balls.length) h.querySelector('.r2-balls').hidden = true;
         rows.push(h);
-        if (!marked && it.at <= save.trophies) { rows.push(marker()); marked = true; } // at the very start of an arena
+        if (!marked && it.at <= save.trophies) { rows.push(marker()); marked = true; }
         continue;
       }
-      const n = it.n, state = save.claimed.includes(n.at) ? 'done' : ready.has(n.at) ? 'ready' : 'locked';
-      const row = el('div', `vr-row ${state} ${n.ball ? 'is-ball r-' + RARITY[n.ball] : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}`);
-      row.append(el('span', 'vr-at', `<i class="trophy"></i>${n.at}`), n.gems ? el('i', 'gem big-gem') : rewardIcon(n, 50), el('b', 'vr-name'));
-      row.querySelector('.vr-name').textContent = n.gems ? `+${n.gems}` : rewardName(n);
+      const n = it.n, state = save.claimed.includes(n.at) ? 'done' : readySet.has(n.at) ? 'ready' : 'locked';
+      const row = el('div', `r2-row ${side ? 'right' : 'left'} ${state}`);
+      side = 1 - side;
+      const card = el('div', `r2-card ${n.ball ? 'is-ball r-' + RARITY[n.ball] : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}`);
+      const tag = state === 'done' ? `✓ ${t('roadGot')}` : state === 'ready' ? (n.ball ? t('roadNewBall') : t('roadAvail')) : '';
+      card.innerHTML = (tag ? `<i class="r2-tag">${tag}</i>` : `<i class="r2-need">${LOCK_IC}${n.at} <i class="trophy"></i></i>`)
+        + '<span class="r2-ic"></span><b></b><small></small>';
+      card.querySelector('.r2-ic').append(n.gems ? el('i', 'gem big-gem') : rewardIcon(n, 46));
+      card.querySelector('b').textContent = n.gems ? t('gotGems', { n: n.gems }) : n.coins && !n.ball && !n.skin && !n.chest ? t('gotCoins', { n: n.coins }) : rewardName(n);
+      card.querySelector('small').textContent = rewardSub(n);
       if (state === 'ready') {
-        const b = el('button', 'btn sm primary', t('claim'));
-        b.onclick = () => reward(claim(save, n));
-        row.append(b);
-      } else row.append(el('span', 'vr-state', state === 'done' ? '\u2713' : '<svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1v11H6V10zm2 0h6V7a3 3 0 0 0-6 0z"/></svg>'));
+        const btn = el('button', 'btn primary r2-claim', `${t('claim')} ✦`);
+        btn.onclick = () => reward(claim(save, n));
+        card.append(btn);
+      }
+      row.append(card, el('span', 'r2-node', state === 'done' ? '✓' : String(n.at)));
       rows.push(row);
     }
     if (!marked) rows.push(marker());
-    const fill = el('i', 'vr-fill');
-    box.className = 'vroad';
-    box.replaceChildren(fill, ...rows);
-    setTimeout(() => { // the rail fills from the bottom up to you, and the page opens on you
-      const me = box.querySelector('.vr-me'), body = $('#tab-body');
+    rows.push(el('div', 'r2-start', `⚑ ${t('roadStart')}`));
+    const fill = el('i', 'r2-fill');
+    box.className = 'vroad2';
+    box.replaceChildren(el('i', 'r2-rail'), fill, ...rows);
+    // a bar that claims every waiting reward at once
+    const bar = $('#path-claim');
+    bar.hidden = ready.length < 1;
+    if (ready.length) {
+      bar.innerHTML = `<span><b>${t('roadWaiting', { n: ready.length })}</b></span>`;
+      const all = el('button', 'btn primary', `${t('claimAll')} ⚡`);
+      all.onclick = () => {
+        const got = ready.map(n => claim(save, n));
+        const coins = got.reduce((s2, r) => s2 + (r?.coins || 0), 0), gems = got.reduce((s2, r) => s2 + (r?.gems || 0), 0);
+        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || got.find(r => r?.chest) || (coins ? { coins } : { gems }));
+        if (got.length > 1) $('#rw-sub').textContent = t('andMore', { n: got.length - 1 });
+      };
+      bar.append(all);
+    }
+    setTimeout(() => { // the rail glows from the bottom up to you, and the page opens on you
+      const me = box.querySelector('.r2-me'), body = $('#tab-body');
       if (!me) return;
-      fill.style.height = `${box.scrollHeight - me.offsetTop - me.offsetHeight / 2}px`;
+      fill.style.height = `${box.scrollHeight - me.offsetTop - 40}px`;
       if (tab === 'path') body.scrollTop += me.getBoundingClientRect().top - body.getBoundingClientRect().top - body.clientHeight / 2;
     }, 0);
   }
@@ -450,30 +485,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // the card above the road: your trophies, the next reward and how far it is
   function pathHero() {
-    const { next, p } = nextReward(), ready = claimable(save);
-    const hero = $('#path-hero');
-    const nextBox = el('div', 'ph-next');
-    if (next) {
-      nextBox.append(rewardIcon(next, 46));
-      const txt = el('div', 'ph-next-txt');
-      txt.append(el('small', '', t('nextReward')), el('b', ''), el('div', 'ph-bar', `<i style="--p:${p}%"></i>`), el('small', '', t('toNext', { n: next.at - save.trophies })));
-      txt.children[1].textContent = rewardName(next);
-      nextBox.append(txt);
-    }
-    hero.replaceChildren(el('div', 'ph-trophies', `<i class="trophy"></i><b>${save.trophies}</b>`), nextBox);
-    const nx = ARENAS[arenaIndex(arenaFor(save.maxTrophies).id) + 1], ar = el('div', 'ph-arena');
+    const hero = $('#path-hero'), nx = ARENAS[arenaIndex(arenaFor(save.maxTrophies).id) + 1], ar = el('div', 'ph-arena');
     ar.textContent = nx ? t('arenaNext', { name: t('arena_' + nx.id), n: nx.at - save.maxTrophies }) : t('arenaLast');
-    hero.append(ar);
-    if (ready.length > 1) {
-      const all2 = el('button', 'btn primary sm claim-all', `${t('claimAll')} (${ready.length})`);
-      all2.onclick = () => {
-        const got = ready.map(n => claim(save, n));
-        const coins = got.reduce((s, r) => s + (r?.coins || 0), 0), gems = got.reduce((s, r) => s + (r?.gems || 0), 0);
-        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || got.find(r => r?.chest) || (coins ? { coins } : { gems }));
-        if (got.length > 1) $('#rw-sub').textContent = t('andMore', { n: got.length - 1 });
-      };
-      hero.append(all2);
-    }
+    hero.replaceChildren(el('div', 'ph-trophies', `<i class="trophy"></i><b>${save.trophies}</b>`), ar);
     $('#path-tips').innerHTML = `<span><i class="trophy"></i>+8 ${t('tipWin')}</span><span><i class="trophy"></i>+9 ${t('tipFlawless')}</span><span>${t('tipKeep')}</span>`;
   }
 
@@ -585,42 +599,62 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#l-arena-btn').onclick = () => { sfx.click(); open('path'); };
 
   // ---------- quests ----------
+  // Quests as an adventurers' guild (Stitch design): a guild master, a notice board of parchment quests with ranks and
+  // stamps, a shelf of daily gifts and a hall of fame for achievements.
+  const RANK_OF = coins => (coins >= 60 ? 'A' : coins >= 40 ? 'B' : 'C');
   function quests() {
     const today = dayKey();
     refreshQuests(save, today);
-    const st = dailyState(save, today);
-    $('#q-daily').replaceChildren(...Array.from({ length: 7 }, (_, i) => {
-      const done = st.canClaim ? i < st.day : i <= st.day;
-      const now = st.canClaim && i === st.day;
-      const c = el('div', `dcell ${done ? 'done' : now ? 'today' : ''}`);
+    const st = dailyState(save, today), list = save.quests.list;
+    const canTake = list.some(q => !q.claimed && q.progress >= questDef(q.id).goal), allDone = list.length && list.every(q => q.claimed);
+    $('#q-say').textContent = t(canTake ? 'guildClaim' : allDone ? 'guildDone' : 'guildHi');
+    drawFamiliar($('#q-master'), 'owl', 78);
+    $('#q-timer').innerHTML = untilMidnight();
+    $('#q-list').replaceChildren(...list.map((q, i) => {
+      const d = questDef(q.id), done = q.progress >= d.goal, rank = RANK_OF(d.coins);
+      const n = el('div', `notice${done ? ' done' : ''}${q.claimed ? ' claimed' : ''}`);
+      n.style.setProperty('--tilt', `${[-1.2, 0.9, -0.6][i % 3]}deg`);
+      n.innerHTML = `<i class="pin"></i><div class="n-top"><span class="rank r${rank}">${t('qRank', { r: rank })}</span>`
+        + (done ? `<span class="stamp">${t('qDoneStamp')}</span>` : `<span class="n-state">${t('qActive')}</span>`) + '</div>'
+        + `<b class="n-title"></b><div class="n-prog"><small>${t('qProgress')}</small><b>${Math.min(q.progress, d.goal)} / ${d.goal}</b></div>`
+        + `<span class="n-bar"><i style="width:${Math.min(100, (q.progress / d.goal) * 100)}%"></i></span>`
+        + `<div class="n-rw"><small>${t('qReward')}:</small><b><i class="coin"></i>${d.coins}</b></div>`;
+      n.querySelector('.n-title').textContent = questName(q.id);
+      if (done && !q.claimed) {
+        const btn = el('button', 'btn primary wide-btn', `✓ ${t('qClaimBig')}`);
+        btn.onclick = () => reward({ coins: claimQuest(save, q.id) });
+        n.append(btn);
+      }
+      return n;
+    }));
+    $('#q-daily').replaceChildren(...Array.from({ length: 7 }, (_, i) => { // a shelf of gifts: taken, today's, still to come
+      const done = st.canClaim ? i < st.day : i <= st.day, now = st.canClaim && i === st.day;
+      const c = el('div', `dcell ${done ? 'done' : now ? 'today' : 'later'}`);
       c.append(el('span', '', t('day', { n: i + 1 })));
-      if (i < 6) c.append(el('b', '', `<i class="coin" style="width:12px;height:12px"></i>${DAILY[i]}`));
-      else if (st.skin) c.append(icon(st.skin[0], 30, st.skin[1]));
-      else c.append(el('b', '', `<i class="coin" style="width:12px;height:12px"></i>200`));
-      if (now) c.onclick = () => reward(claimDaily(save, today));
+      const gift = i < 6 ? `<i class="coin"></i>${DAILY[i]}` : '<i class="coin"></i>200';
+      if (done) c.append(el('span', 'd-gift', chestSvg('box')), el('small', 'd-taken', `✓ ${t('qTaken')}`));
+      else if (now) { c.append(el('span', 'd-gift', chestSvg('mega')), el('button', 'btn sm go d-claim', t('claim'))); c.onclick = () => reward(claimDaily(save, today)); }
+      else if (i === 6 && st.skin) c.append(icon(st.skin[0], 30, st.skin[1]));
+      else c.append(el('i', 'd-lock', LOCK_IC), el('b', '', gift));
       return c;
     }));
     $('#q-daily-note').textContent = st.canClaim ? '' : t('comeTomorrow');
-
-    const row = (name, value, goal, coins, isClaimed, onClaim) => {
-      const r = el('div', 'qrow');
-      const main = el('div', 'q-main');
-      main.append(el('span', '', name), el('div', 'bar', `<i style="--p:${Math.min(100, (value / goal) * 100)}%"></i>`));
-      r.append(main);
-      if (isClaimed) r.append(el('span', 'ok', '✓'));
-      else if (value >= goal) {
-        const b = el('button', 'btn sm primary', `${t('claim')} <span class="price"><i class="coin"></i>${coins}</span>`);
-        b.onclick = onClaim;
-        r.append(b);
-      } else r.append(el('small', '', `${Math.min(value, goal)}/${goal} · <i class="coin" style="width:12px;height:12px;vertical-align:-2px"></i>${coins}`));
+    const got = ACHIEVEMENTS.filter(x => save.achieved.includes(x.id)).length;
+    $('#q-hall-n').textContent = `${got} / ${ACHIEVEMENTS.length}`;
+    $('#q-ach').replaceChildren(...ACHIEVEMENTS.map(x => { // the hall of fame: plaques that light up
+      const v = achievementValue(save, x), ok = save.achieved.includes(x.id), can = !ok && v >= x.goal;
+      const r = el('div', `plaque${ok ? ' got' : can ? ' ready' : v > 0 ? '' : ' locked'}`);
+      r.innerHTML = `<span class="p-ic">${ok || can ? '<i class="trophy"></i>' : v > 0 ? SHIELD_IC : LOCK_IC}</span><div class="p-txt"><b></b>`
+        + (ok ? `<small class="p-ok">✓ ${t('qDoneStamp')}</small>` : `<span class="n-bar"><i style="width:${Math.min(100, (v / x.goal) * 100)}%"></i></span>`) + '</div>'
+        + (ok ? '' : `<small class="p-n">${Math.min(v, x.goal)} / ${x.goal}</small>`);
+      r.querySelector('b').textContent = achievementName(x.id);
+      if (can) {
+        const btn = el('button', 'btn sm primary', `${t('claim')} <i class="coin"></i>${x.coins}`);
+        btn.onclick = () => reward({ coins: claimAchievement(save, x.id) });
+        r.append(btn);
+      }
       return r;
-    };
-    $('#q-list').replaceChildren(...save.quests.list.map(q => {
-      const d = questDef(q.id);
-      return row(questName(q.id), q.progress, d.goal, d.coins, q.claimed, () => reward({ coins: claimQuest(save, q.id) }));
     }));
-    $('#q-ach').replaceChildren(...ACHIEVEMENTS.map(a =>
-      row(achievementName(a.id), achievementValue(save, a), a.goal, a.coins, save.achieved.includes(a.id), () => reward({ coins: claimAchievement(save, a.id) }))));
   }
 
   // ---------- leaderboards ----------

@@ -123,6 +123,7 @@
           <div id="tab-path" class="tab">
             <div id="path-hero" class="path-hero"></div>
             <div id="road" class="hroad" aria-label="trophy road"></div>
+            <div id="path-claim" class="r2-bar" hidden></div>
             <div id="path-tips" class="path-tips"></div>
           </div>
           <div id="tab-balls" class="tab" hidden>
@@ -146,14 +147,18 @@
             <div id="sh-body" class="sh-body"></div>
           </div>
 
-          <div id="tab-quests" class="tab" hidden>
-            <h3 data-t="dailyTitle"></h3>
-            <div id="q-daily" class="daily"></div>
+          <div id="tab-quests" class="tab guild" hidden>
+            <div class="g-sign"><i></i><i></i><b data-t="guildSign"></b></div>
+            <div class="g-master"><canvas id="q-master"></canvas><i class="g-hat"></i><p id="q-say" class="g-say"></p></div>
+            <div class="g-board">
+              <div class="g-head"><b data-t="guildBoard"></b><span id="q-timer" class="sh-note"></span></div>
+              <div id="q-list" class="notices"></div>
+            </div>
+            <h3 class="g-h"><span data-t="dailyTitle"></span></h3>
+            <div id="q-daily" class="daily shelf"></div>
             <p id="q-daily-note" class="muted center"></p>
-            <h3 data-t="questsTitle"></h3>
-            <div id="q-list" class="qlist"></div>
-            <h3 data-t="achievementsTitle"></h3>
-            <div id="q-ach" class="qlist"></div>
+            <h3 class="g-h"><span data-t="hallTitle"></span><span id="q-hall-n" class="sh-note"></span></h3>
+            <div id="q-ach" class="hall"></div>
           </div>
           <div id="tab-leaders" class="tab" hidden>
             <div class="seg">
