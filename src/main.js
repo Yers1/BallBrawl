@@ -409,7 +409,6 @@ function fire() {
   S.mode = 'fight';
   bigText(t('fight'), '#FFD23F');
   sfx.fight();
-  setTimeout(() => say(t('fight').replace(/!/g, ''), lang), 380); // the announcer, right on the hit
   playMusic(S.match.mode === 'boss' || (S.match.wave ?? 1) % SURVIVAL.boss === 0 ? 'boss' : 'battle');
   show(null);
   hideCards();

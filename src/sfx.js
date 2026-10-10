@@ -14,7 +14,7 @@ export function confetti(n = 36) {
 }
 
 // Tiny WebAudio synth — no audio files. The context starts on the first user gesture (browser rule).
-let ac = null, master = null, muted = false, horn = null; // horn: a recorded diesel horn for the train
+let ac = null, master = null, muted = false, horn = null, fightVoice = null; // recorded: the train's diesel horn, the announcer's FIGHT!
 let musicBus = null, musicOn = true; // music has its own volume and switch
 
 export function initAudio(isMuted) {
@@ -31,6 +31,7 @@ export function initAudio(isMuted) {
     musicBus.gain.value = musicOn ? 0.32 : 0;
     musicBus.connect(master);
     fetch('sfx/train-horn.mp3').then(r => r.arrayBuffer()).then(b => ac.decodeAudioData(b)).then(buf => { horn = buf; }).catch(() => {});
+    fetch('sfx/fight.mp3').then(r => r.arrayBuffer()).then(b => ac.decodeAudioData(b)).then(buf => { fightVoice = buf; }).catch(() => {}); // voicebosch, Pixabay licence
   };
   for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, start, { once: true, capture: true });
 }
@@ -185,12 +186,17 @@ export const sfx = {
     tone(150, 0.12, { type: 'sine', vol: 0.22, slide: 0.7, delay: 0.005 });
   },
   chessStep: () => { noise(0.02, { vol: 0.2, freq: 2800 * J(0.15), q: 7 }); tone(440 * J(0.12), 0.05, { type: 'sine', vol: 0.12, slide: 0.85 }); }, // sliding to the next square
-  fight: () => { // FIGHT!: a rising whoosh, then a big hit, a cymbal and a brass stab
-    noise(0.5, { vol: 0.3, freq: 300, sweep: 10, q: 1.2 });
-    tone(70, 0.7, { type: 'sine', vol: 0.55, slide: 0.45, delay: 0.42 });
-    noise(0.35, { vol: 0.35, freq: 600, sweep: 0.3, q: 0.6, delay: 0.42 });
-    noise(1.2, { vol: 0.2, freq: 7000, q: 0.4, delay: 0.44, type: 'highpass' });
-    [220, 277, 330, 440].forEach(f => tone(f, 0.5, { type: 'sawtooth', vol: 0.05, delay: 0.44 }));
+  fight: () => { // FIGHT!: the announcer's deep voice (the same recording in every language) on a big hit and a cymbal
+    if (fightVoice && ac && !muted) {
+      const src = ac.createBufferSource(), g = ac.createGain();
+      src.buffer = fightVoice;
+      g.gain.value = 1.4;
+      src.connect(g).connect(master);
+      src.start();
+    }
+    tone(70, 0.7, { type: 'sine', vol: 0.45, slide: 0.45, delay: 0.12 });
+    noise(0.3, { vol: 0.25, freq: 600, sweep: 0.3, q: 0.6, delay: 0.12 });
+    noise(1.2, { vol: 0.14, freq: 7000, q: 0.4, delay: 0.14, type: 'highpass' });
   },
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
 };
