@@ -13,7 +13,9 @@ export function createAI(side, level, seed = 1, { ent = null, act: doAct = act }
       if (!w.launched || w.result != null) return;
       const me = ent != null ? w.ents.find(e => e.id === ent && !e.dead) : w.ents.find(e => e.side === side && !e.dead);
       if (!me) return; // this ball is out
-      const foe = w.ents.filter(e => e.side !== side && !e.dead).reduce((b, e) => (!b || Math.hypot(e.x - me.x, e.y - me.y) < Math.hypot(b.x - me.x, b.y - me.y) ? e : b), null);
+      const ball = w.ball, gy = side ? 400 : 0; // football: the goal it attacks
+      const foe = ball ? { x: ball.x - (200 - ball.x) * 0.05, y: ball.y - (gy - ball.y) * 0.06, vx: ball.vx, vy: ball.vy }
+        : w.ents.filter(e => e.side !== side && !e.dead).reduce((b, e) => (!b || Math.hypot(e.x - me.x, e.y - me.y) < Math.hypot(b.x - me.x, b.y - me.y) ? e : b), null);
       if (!foe) return;
       const s = w.sides[side];
 

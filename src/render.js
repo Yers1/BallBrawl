@@ -1,6 +1,6 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
-import { W, H, SUDDEN, canSuper } from './sim.js';
+import { W, H, SUDDEN, canSuper, FOOT } from './sim.js';
 import { BALLS, TRAIN, LEECH, POISON, ICE, trainCars } from './balls.js';
 import { SKINS, EMOTE_LIST } from './progress.js';
 import { THEMES } from './themes.js';
@@ -384,6 +384,14 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 12, '#ffe08a', 180);
       ring(ev.x, ev.y, ev.r * 0.4, 2.6, 0.4, '255,154,60', 6);
       fx.shake = Math.max(fx.shake, 6);
+    } else if (ev.type === 'kick') {
+      burst(ev.x, ev.y, ev.hard ? 14 : 6, '#FFFFFF', ev.hard ? 260 : 140, [2, 4]);
+      if (ev.hard) { ring(ev.x, ev.y, 8, 3, 0.3, '255,255,255', 4); fx.shake = Math.max(fx.shake, 4); }
+    } else if (ev.type === 'goal') { // the net bulges, confetti in the scorer's colour
+      burst(ev.x, ev.y, 50, ev.side ? '#FF4D5E' : '#4CC9F0', 380, [3, 7]);
+      burst(ev.x, ev.y, 30, '#FFD23F', 300, [3, 6]);
+      ring(ev.x, ev.y, 20, 6, 0.6, '255,255,255', 8);
+      fx.shake = 12;
     } else if (ev.type === 'quake') {
       ring(ev.x, ev.y, 30, ev.r / 30 - 1, 0.45, '191,239,255', 7);
       burst(ev.x, ev.y, 30, '#CFF4FF', 320);
@@ -1044,6 +1052,56 @@ function bossBar(ctx, w, now) {
   const name = bossNames[b.boss] ?? '';
   ctx.strokeText(name, W / 2, y + 8.5); ctx.fillText(name, W / 2, y + 8.5);
   ctx.restore();
+}
+
+// ---------- football (test mode) ----------
+function goals(ctx, w, now) { // pitch markings, and a net behind each mouth: yours at the bottom (blue), theirs at the top (red)
+  const g = FOOT.goal, x0 = W / 2 - g / 2;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, 46, 0, Math.PI * 2); ctx.stroke();
+  for (const [y, dir, side] of [[0, 1, 1], [H, -1, 0]]) {
+    const glow = ctx.createLinearGradient(0, y, 0, y + dir * 60);
+    glow.addColorStop(0, side ? 'rgba(255,77,94,0.45)' : 'rgba(76,201,240,0.45)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.fillRect(x0 - 20, dir > 0 ? y : y - 60, g + 40, 60);
+    ctx.strokeRect(x0 - 20, dir > 0 ? y : y - 52, g + 40, 52); // the box
+  }
+  ctx.restore();
+  for (const [y, side] of [[-M, 1], [H, 0]]) {
+    ctx.save();
+    ctx.fillStyle = side ? 'rgba(120,20,30,0.85)' : 'rgba(10,50,80,0.85)'; // the dark of the net
+    ctx.fillRect(x0, y, g, M);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = x0; x <= x0 + g; x += 10) { ctx.moveTo(x, y); ctx.lineTo(x, y + M); }
+    for (let yy = y; yy <= y + M; yy += 6) { ctx.moveTo(x0, yy); ctx.lineTo(x0 + g, yy); }
+    ctx.stroke();
+    ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    for (const px of [x0 - 4, x0 + g]) { ctx.beginPath(); ctx.roundRect(px, y - 2, 4, M + 4, 2); ctx.fill(); ctx.stroke(); }
+    const ly = side ? 2 : H - 2; // the goal line, glowing in the team colour
+    ctx.strokeStyle = side ? '#FF4D5E' : '#4CC9F0'; ctx.lineWidth = 4; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 10 + 4 * Math.sin(now * 4);
+    ctx.beginPath(); ctx.moveTo(x0, ly); ctx.lineTo(x0 + g, ly); ctx.stroke();
+    ctx.restore();
+  }
+}
+function football(ctx, b) { // a white ball with black patches, turning as it rolls
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,16,32,0.4)';
+  ctx.beginPath(); ctx.ellipse(b.x + 3, b.y + 5, b.r, b.r * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.translate(b.x, b.y);
+  ctx.beginPath(); ctx.arc(0, 0, b.r, 0, Math.PI * 2); ctx.fillStyle = '#FFFFFF'; ctx.fill();
+  ctx.clip();
+  ctx.rotate(b.spin);
+  ctx.fillStyle = '#1A1F2E';
+  const patch = (x, y, s) => { ctx.beginPath(); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 - Math.PI / 2; ctx.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s); } ctx.fill(); };
+  patch(0, 0, b.r * 0.38);
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 - Math.PI / 2; patch(Math.cos(a) * b.r * 0.95, Math.sin(a) * b.r * 0.95, b.r * 0.3); }
+  ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath(); ctx.ellipse(b.x - b.r * 0.35, b.y - b.r * 0.4, b.r * 0.3, b.r * 0.18, -0.6, 0, Math.PI * 2); ctx.fill();
 }
 
 function quakeZone(ctx, z, t, now) { // the giant is about to stomp: an icy ring fills up
@@ -1880,6 +1938,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     else if (z.kind === 'breath') breathZone(ctx, z, w.t, now);
   }
   faces(w);
+  if (w.ball) goals(ctx, w, now);
   for (const e of w.ents) if (!e.dead && e.chess) chessLines(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
@@ -1897,7 +1956,8 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     for (const k of [-0.6, 0, 0.6]) { const ox = e.x - ux * e.r * 1.1 - uy * k * e.r, oy = e.y - uy * e.r * 1.1 + ux * k * e.r, l = e.r * (1.2 + Math.random() * 0.8); ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox - ux * l, oy - uy * l); ctx.stroke(); }
     ctx.restore();
   }
-  for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
+  if (w.ball) football(ctx, w.ball);
+  for (const e of w.ents) if (!e.dead && !w.ball) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t, z.side);
   for (const e of w.ents) {

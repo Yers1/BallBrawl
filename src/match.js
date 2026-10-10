@@ -13,7 +13,7 @@ export function aiAngle(fx, fy, tx, ty, level, rand) {
 // skinsA / skinsB: { ballId: skinStyle } — cosmetic, carried along so the renderer can draw them
 // Modes: classic = squads take turns, one ball each (trophies); duo = two balls a side at once; boss = your whole
 // squad against one giant ball. duo and boss are a single round.
-export const MODES = ['classic', 'duo', 'boss', 'survival'];
+export const MODES = ['classic', 'duo', 'boss', 'survival', 'football'];
 // Survival: your three balls against wave after wave, every 5th a boss. The fallen stay down, the rest keep their HP
 // (and heal a little); after each wave you pick one of three upgrades. It ends when your last ball is out.
 export const SURVIVAL = { boss: 5, heal: 0.3, hp0: 0.4, hpPer: 0.045, dmg0: 0.7, dmgPer: 0.03, boss0: 0.4, bossPer: 0.08 };
@@ -51,6 +51,7 @@ export function roundWorld(m) {
   const seed = m.seed * 7919 + m.round, map = m.map ?? 'night';
   const boosts = m.boosts;
   if (m.mode === 'duo') return createWorld({ seed, a: m.a.slice(0, 2), b: m.b.slice(0, 2), hpMulB: m.hpMulB, map, boosts });
+  if (m.mode === 'football') return createWorld({ seed, a: m.a.slice(0, 2), b: m.b.slice(0, 2), map, boosts, football: true });
   if (m.mode === 'survival') {
     const u = m.ups, b0 = boosts?.[0] ?? {};
     const a = m.a.filter(x => !x.dead).map(x => ({ ...x, hpMul: (x.hpMul ?? 1) * (1 + u.hp), dmgMul: (x.dmgMul ?? 1) * (1 + u.dmg), speedMul: (x.speedMul ?? 1) * (1 + u.speed), armor: (x.armor ?? 1) * (1 - u.armor) }));
@@ -75,7 +76,7 @@ export function endRound(m, w) {
     m.wave++;
     return null;
   }
-  if (m.mode === 'duo' || m.mode === 'boss') return (m.result = w.result); // one round decides it
+  if (m.mode === 'duo' || m.mode === 'boss' || m.mode === 'football') return (m.result = w.result); // one round decides it
   if (w.result === 'draw') {
     m.lost = m.a.shift();
     m.b.shift();

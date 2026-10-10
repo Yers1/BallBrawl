@@ -28,6 +28,10 @@ export const CUT = { dmg: 7, every: 0.6 }; // spikes and saws in the corners: so
 const JITTER = 0.3; // rad of random spin on each wall bounce
 const TURN = 0.275; // rad/s a ball curves toward its nearest enemy (halved again: players felt balls glued together)
 export const DASH = { charges: 2, regen: 2.5, time: 0.35, mul: 2.2, dmg: 1.3 };
+// Football (a test mode): 2 vs 2, a light ball, goals in the middle of the bottom wall (yours) and the top (theirs).
+// Nobody takes damage; a dash is a hard kick. First to 3, or the most after 90 s (a tie plays on to a golden goal).
+export const FOOT = { goal: 130, r: 13, friction: 0.5, kick: 1.45, max: 950, win: 3, time: 90, reset: 1.3, turn: 4 };
+const FOOT_SPAWN = [[150, 290], [250, 350]]; // the forward, nearer the ball, and the one who stays back
 export const METER = { full: 100, dealt: 0.9, taken: 0.6 };
 
 export function rng(seed) { // mulberry32
@@ -40,17 +44,18 @@ export function rng(seed) { // mulberry32
   };
 }
 
-export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players = null, boosts = null }) { // boosts: per side { dash, meter } from familiars
+export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players = null, boosts = null, football = false }) { // boosts: per side { dash, meter } from familiars
   const w = {
     t: 0, tick: 0, launched: false, rand: rng(seed), ents: [], shots: [], zones: [], events: [], hitCd: {}, result: null, nextId: 1,
-    map: MAPS[map] ? map : 'night', obstacles: (MAPS[map] ?? []).map(o => ({ ...o })),
+    map: MAPS[map] ? map : 'night', obstacles: football ? [] : (MAPS[map] ?? []).map(o => ({ ...o })),
+    ...(football && { ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, r: FOOT.r, spin: 0 }, goals: [0, 0], kickUntil: 0 }),
     sides: [0, 1].map(i => ({ dashes: DASH.charges * (players?.[i] ?? 1), regen: 0, meter: 0, n: players?.[i] ?? 1, dashMul: boosts?.[i]?.dash ?? 1, dashPow: boosts?.[i]?.dashPow ?? 1, meterMul: boosts?.[i]?.meter ?? 1 })), // n = people steering this side
     log: [], // every accepted command: { tick, side, type, x?, y? } — seed + log replays the fight
   };
   [a, b].forEach((spec, side) => { // a spec, or a team of specs (2v2, the boss fight)
     const team = Array.isArray(spec) ? spec : [spec];
     team.forEach((sp, i) => {
-      const [x, y] = spawnAt(side, team.length, i), base = BALLS[sp.id];
+      const [x, y] = football ? (side ? [W - FOOT_SPAWN[i][0], H - FOOT_SPAWN[i][1]] : FOOT_SPAWN[i]) : spawnAt(side, team.length, i), base = BALLS[sp.id];
       const e = spawnBall(w, side, sp.id, {
         x, y, r: sp.r ?? R, hpMul: (side ? hpMulB : 1) * (sp.hpMul ?? 1),
         dmg: sp.dmgMul ? (base.dmg ?? DMG) * sp.dmgMul : undefined, speed: sp.speedMul ? (base.speed ?? SPEED) * sp.speedMul : undefined,
@@ -60,6 +65,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
       if (sp.regen) e.regen = sp.regen; // a Ghost familiar: heals HP/s
       e.split = !!sp.split;
       e.boss = sp.boss || null; // which boss (boss.js), if it is one
+      e.home = [x, y];
       e.skin = sp.skin || null; // cosmetic only — the sim never reads it
     });
   });
@@ -101,7 +107,7 @@ export function canSuper(w, side) {
 
 // meter=false for damage nobody dealt (sudden death)
 export function hurt(w, e, amount, quiet = false, meter = true) {
-  if (e.dead || amount <= 0 || e.invulnUntil > w.t) return;
+  if (e.dead || amount <= 0 || e.invulnUntil > w.t || w.ball) return; // football: nobody gets hurt
   if (e.armor) amount *= e.armor;
   if (e.shieldUntil > w.t) amount *= e.shieldMul;
   if (e.chillUntil > w.t && e.chillSlow <= ICE.freezeSlow) amount *= ICE.brittle; // frozen solid = brittle
@@ -123,7 +129,7 @@ export function hurt(w, e, amount, quiet = false, meter = true) {
 // Player / AI commands, applied between steps. Returns whether it was accepted.
 export function act(w, side, cmd) { // cmd.ent: in a party, the one ball this player steers
   const team = w.ents.filter(e => e.side === side && !e.dead), s = w.sides[side];
-  if (!w.launched || w.result != null || !team.length) return false;
+  if (!w.launched || w.result != null || !team.length || w.kickUntil > w.t) return false; // no dashing while the ball is placed after a goal
   const one = cmd.ent != null ? team.find(e => e.id === cmd.ent) : null;
   if (cmd.ent != null && !one) return false;
   if (cmd.type === 'dash') {
@@ -172,11 +178,13 @@ export function step(w, dt) {
     e.y = Math.min(H - e.r, Math.max(e.r, e.latch.foe.y + e.latch.oy));
   }
   collide(w);
+  if (w.ball) footStep(w, dt);
   moveShots(w, dt);
   if (w.t > SUDDEN) {
     const rate = 2 + Math.floor(w.t - SUDDEN);
     for (const e of w.ents) hurt(w, e, rate * dt, true, false);
   }
+  if (w.ball) return;
   const alive = s => w.ents.some(e => e.side === s && !e.dead);
   const A = alive(0), B = alive(1);
   if (!A || !B) w.result = A ? 0 : B ? 1 : 'draw';
@@ -187,12 +195,12 @@ const boosted = (w, e) => (e.boost && e.boost.until > w.t ? e.boost : null);
 function move(w, e, dt) {
   const b = boosted(w, e);
   // gentle homing: curve toward the nearest enemy so fights don't stall (not while dashing)
-  const f = b ? null : w.ents.reduce((best, o) => (o.dead || o.side === e.side || (best && Math.hypot(o.x - e.x, o.y - e.y) >= Math.hypot(best.x - e.x, best.y - e.y)) ? best : o), null);
+  const f = b ? null : w.ball ? footTarget(w, e) : w.ents.reduce((best, o) => (o.dead || o.side === e.side || (best && Math.hypot(o.x - e.x, o.y - e.y) >= Math.hypot(best.x - e.x, best.y - e.y)) ? best : o), null);
   if (f && (e.vx || e.vy)) {
-    const cur = Math.atan2(e.vy, e.vx);
+    const cur = Math.atan2(e.vy, e.vx), turn = TURN * (w.ball ? FOOT.turn : 1);
     let diff = Math.atan2(f.y - e.y, f.x - e.x) - cur;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    const a = cur + Math.max(-TURN * dt, Math.min(TURN * dt, diff));
+    const a = cur + Math.max(-turn * dt, Math.min(turn * dt, diff));
     e.vx = Math.cos(a) * e.speed;
     e.vy = Math.sin(a) * e.speed;
   }
@@ -246,6 +254,54 @@ function obstacle(w, e, o) {
     w.events.push({ type: 'cut', x: o.x + nx * o.r, y: o.y + ny * o.r });
     hurt(w, e, CUT.dmg);
   } else w.events.push({ type: 'wall', x: o.x + nx * o.r, y: o.y + ny * o.r });
+}
+
+// Football: the forward curves toward the ball, the other one toward a spot between the ball and its own goal.
+function footTarget(w, e) {
+  const b = w.ball, team = w.ents.filter(o => o.side === e.side && !o.dead), gy = e.side ? 0 : H;
+  return team[0] === e ? b : { x: W / 2 + (b.x - W / 2) * 0.5, y: gy + (b.y - gy) * 0.35 };
+}
+function kickoff(w) {
+  Object.assign(w.ball, { x: W / 2, y: H / 2, vx: 0, vy: 0 });
+  for (const e of w.ents) { [e.x, e.y] = e.home; e.vx = e.vy = 0; e.boost = null; }
+  w.kickUntil = w.t + FOOT.reset;
+}
+function footStep(w, dt) {
+  const b = w.ball;
+  if (w.kickUntil > w.t) return;
+  if (w.kickUntil) { // the whistle: everyone runs at the ball
+    w.kickUntil = 0;
+    for (const e of w.ents) { const a = Math.atan2(b.y - e.y, b.x - e.x); e.vx = Math.cos(a) * e.speed; e.vy = Math.sin(a) * e.speed; }
+  }
+  const k = Math.max(0, 1 - FOOT.friction * dt);
+  b.vx *= k; b.vy *= k;
+  b.x += b.vx * dt; b.y += b.vy * dt;
+  b.spin += Math.hypot(b.vx, b.vy) * dt / b.r;
+  for (const e of w.tick % 2 ? w.ents : [...w.ents].reverse()) { // a ball that drives into it kicks it, a dashing one hard (the order flips each step: no side wins every tie)
+    if (e.dead) continue;
+    const dx = b.x - e.x, dy = b.y - e.y, d = Math.hypot(dx, dy) || 0.01, min = e.r + b.r;
+    if (d >= min) continue;
+    const nx = dx / d, ny = dy / d, boost = e.boost && e.boost.until > w.t ? e.boost.mul : 1;
+    b.x = e.x + nx * min; b.y = e.y + ny * min;
+    const push = Math.max(60, (e.vx * nx + e.vy * ny) * boost * FOOT.kick), vn = b.vx * nx + b.vy * ny;
+    if (vn < push) { b.vx += nx * (push - vn); b.vy += ny * (push - vn); }
+    const m = Math.hypot(b.vx, b.vy);
+    if (m > FOOT.max) { b.vx *= FOOT.max / m; b.vy *= FOOT.max / m; }
+    if ((e.cd.kick ?? 0) <= w.t && push > 200) { e.cd.kick = w.t + 0.2; w.events.push({ type: 'kick', x: b.x, y: b.y, side: e.side, hard: boost > 1 }); }
+  }
+  const mouth = Math.abs(b.x - W / 2) < FOOT.goal / 2 - b.r * 0.4; // in front of a goal the wall is open
+  if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * 0.85; }
+  if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx) * 0.85; }
+  if (!mouth && b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * 0.85; }
+  if (!mouth && b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy) * 0.85; }
+  if (b.y < -b.r || b.y > H + b.r) { // GOAL: the top goal is theirs, so a ball in it is yours
+    const side = b.y < 0 ? 0 : 1;
+    w.goals[side]++;
+    w.events.push({ type: 'goal', side, x: b.x, y: side ? H : 0 });
+    if (w.goals[side] >= FOOT.win || w.t >= FOOT.time) { w.result = side; return; }
+    kickoff(w);
+  }
+  if (w.t >= FOOT.time && w.goals[0] !== w.goals[1]) w.result = w.goals[0] > w.goals[1] ? 0 : 1;
 }
 
 const norm = e => {

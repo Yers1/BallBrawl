@@ -1,5 +1,5 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
-import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
+import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS, FOOT } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec, upgradeChoices, applyUpgrade, SURVIVAL } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
@@ -477,9 +477,9 @@ function hud() {
     foe.replaceChildren(...S.world.ents.filter(e => e.side === 1 && !e.mini).map(e => dot(e.kind, 'cur', e.skin)));
     return;
   }
-  if (mode === 'duo' || mode === 'boss') { // everyone is on the field at once — show just them
-    you.replaceChildren(...a.slice(0, mode === 'duo' ? 2 : 3).reverse().map(x => dot(x.id, 'cur', x.skin)));
-    foe.replaceChildren(...b.slice(0, mode === 'duo' ? 2 : 1).map(x => dot(x.id, 'cur', x.skin)));
+  if (mode === 'duo' || mode === 'boss' || mode === 'football') { // everyone is on the field at once — show just them
+    you.replaceChildren(...a.slice(0, mode === 'boss' ? 3 : 2).reverse().map(x => dot(x.id, 'cur', x.skin)));
+    foe.replaceChildren(...b.slice(0, mode === 'boss' ? 1 : 2).map(x => dot(x.id, 'cur', x.skin)));
     return;
   }
   you.replaceChildren(...dead(a.length), ...a.slice(1).reverse().map(x => dot(x.id, '', x.skin)), dot(a[0].id, 'cur', a[0].skin));
@@ -524,13 +524,14 @@ function mid() {
   else if (S.mode === 'aim') txt = t('aimTimer', { n: Math.max(0, Math.ceil(S.aimLeft)) });
   else if (S.match && ['aim', 'fight', 'ending'].includes(S.mode)) {
     const left = Math.ceil(SUDDEN - w.t);
-    txt = (S.match.mode === 'survival' ? t('wave', { n: S.match.wave }) : t('round', { n: S.match.round })) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
+    if (w.ball) { const l = Math.ceil(FOOT.time - w.t); txt = `${w.goals[0]} : ${w.goals[1]} · ${!w.launched ? '' : l > 0 ? l : t('goldenGoal')}`; } // football: the score and the clock
+    else txt = (S.match.mode === 'survival' ? t('wave', { n: S.match.wave }) : t('round', { n: S.match.round })) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
   }
   if (txt === midText) return;
   midText = txt;
   const m = $('#hud-mid');
   m.textContent = txt;
-  m.classList.toggle('sudden', w.launched && w.t > SUDDEN);
+  m.classList.toggle('sudden', w.launched && w.t > (w.ball ? FOOT.time : SUDDEN));
 }
 
 function onRoundOver(now) {
@@ -833,6 +834,14 @@ function feel(w, now) {
     if (ev.type === 'dash') { sfx.dash(); cmdReact(ev.side, 'point'); if (mine && ev.side === 0) S.ms.dashes++; }
     if (ev.type === 'train') sfx.train(ev.express);
     if (ev.type === 'chess') sfx.chess();
+    if (ev.type === 'kick') sfx.kick(ev.hard);
+    if (ev.type === 'goal') {
+      sfx.goal(ev.side === 0);
+      bigText(t('goal'), ev.side ? '#FF4D5E' : '#4CC9F0');
+      cmdReact(ev.side, 'cheer', true); cmdReact(1 - ev.side, 'sad');
+      setTimeout(() => { for (const s of [0, 1]) cmdReact(s, 'point'); }, 1200); // back to the game
+      if (ev.side === 0) confetti(30);
+    }
     if (ev.type === 'chessStep') sfx.chessStep();
     if (ev.type === 'death') {
       sfx.death();
@@ -881,7 +890,7 @@ function tick(ms) {
     if (S.mode === 'aim' && (S.aimLeft -= dt) <= 0) fire(); // time's up: the round fires itself
     if (!S.demo) feel(w, now);
     if (w.result != null && (!S.party?.fight || S.party.host || S.party.fight.final)) onRoundOver(now); // in a party only the host's word ends it
-    if (S.mode === 'fight' && w.t > SUDDEN && w.result == null) playMusic('danger'); // sudden death: the music hurries you
+    if (S.mode === 'fight' && w.t > (w.ball ? FOOT.time : SUDDEN) && w.result == null) playMusic('danger'); // sudden death (or the golden goal): the music hurries you
     const preWatch = S.mode === 'watch' && !w.launched;
     draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : preWatch ? S.watchAims[0] : null, foeAim: S.mode === 'aim' ? S.foeAim : preWatch ? S.watchAims[1] : null, now, dt, me: S.party?.fight?.me.ent ?? null });
     mid();

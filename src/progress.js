@@ -253,7 +253,7 @@ export function migrate(raw) {
   s.foeEmotes = r.foeEmotes !== false;
   s.shake = r.shake !== false;
   s.vibrate = r.vibrate !== false;
-  if (['classic', 'duo', 'boss', 'survival'].includes(r.mode)) s.mode = r.mode;
+  if (['classic', 'duo', 'boss', 'survival', 'football'].includes(r.mode)) s.mode = r.mode;
   s.best = { survival: int(r.best?.survival, 0, 9999) ?? 0 };
   s.xp = int(r.xp) ?? 0;
   if (r.fam && typeof r.fam === 'object') {

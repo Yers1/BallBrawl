@@ -116,3 +116,19 @@ test('survival: waves grow, the fallen stay down, every 5th is a boss, upgrades 
   w.result = 1;
   assert.equal(endRound(m, w), 1, 'the wave won: the run is over');
 });
+
+test('football: nobody gets hurt, goals count, the same seed replays the same match', () => {
+  const play = () => {
+    const w = roundWorld(createMatch({ squadA: ['basic', 'ninja', 'ice'], squadB: ['leech', 'cell', 'bomb'], mode: 'football', seed: 21 }));
+    assert.ok(w.ball && w.obstacles.length === 0);
+    launch(w, -Math.PI / 2, Math.PI / 2);
+    const hp = w.ents.map(e => e.hp);
+    run(w, 200);
+    assert.ok(w.ents.every((e, i) => e.hp >= hp[i] && !e.dead), 'no damage in football');
+    return w;
+  };
+  const a = play(), b = play();
+  assert.notEqual(a.result, null);
+  assert.ok(a.goals[a.result] > a.goals[1 - a.result] || a.goals[a.result] === 3, 'the winner scored more');
+  assert.equal(a.t, b.t);
+});

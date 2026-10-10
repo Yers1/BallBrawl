@@ -171,6 +171,12 @@ export const sfx = {
     tone(520 * J(0.08), 0.07, { type: 'sine', vol: 0.18, slide: 0.8 });
     tone(150, 0.12, { type: 'sine', vol: 0.22, slide: 0.7, delay: 0.005 });
   },
+  kick: (hard = false) => { tone(hard ? 140 : 190, hard ? 0.16 : 0.09, { type: 'sine', vol: hard ? 0.4 : 0.22, slide: 0.5 }); noise(0.05, { vol: hard ? 0.22 : 0.12, freq: 900, q: 1 }); },
+  goal: (ours = true) => { // the whistle, then the crowd roars (or groans)
+    tone(2100, 0.12, { type: 'sine', vol: 0.12 }); tone(2100, 0.35, { type: 'sine', vol: 0.12, delay: 0.16 });
+    noise(1.6, { vol: ours ? 0.28 : 0.14, freq: ours ? 1400 : 500, sweep: ours ? 1.4 : 0.6, q: 0.5, delay: 0.1 });
+    if (ours) [523, 659, 784].forEach((f, i) => tone(f, 0.25, { type: 'triangle', vol: 0.1, delay: 0.5 + i * 0.1 }));
+  },
   chessStep: () => { noise(0.02, { vol: 0.2, freq: 2800 * J(0.15), q: 7 }); tone(440 * J(0.12), 0.05, { type: 'sine', vol: 0.12, slide: 0.85 }); }, // sliding to the next square
   fight: () => { // FIGHT!: the announcer's deep voice (the same recording in every language) on a big hit and a cymbal
     if (fightVoice && ac && !muted) {
