@@ -295,7 +295,7 @@ export const BALLS = {
   },
 
   train: {
-    hp: 100, color: '#e09a2b', price: 250,
+    hp: 100, color: '#E02424', price: 250, // the Stitch boiler red
     onTick(w, me) {
       const z = trackOf(w, me), last = z.pts[z.pts.length - 1];
       if (!last || Math.hypot(me.x - last.x, me.y - last.y) >= TRAIN.gap) z.pts.push({ x: me.x, y: me.y, t: w.t });

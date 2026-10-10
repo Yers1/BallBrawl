@@ -860,13 +860,17 @@ function trainDraw(ctx, tr, t) {
       g.addColorStop(1, 'rgba(255,240,180,0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(L / 2 + 4, 0); ctx.lineTo(L / 2 + 34, -14); ctx.lineTo(L / 2 + 34, 14); ctx.closePath(); ctx.fill();
-    } else { // a car
-      ctx.fillStyle = tr.express ? (c.i % 2 ? '#7A4FE0' : '#5B3BB0') : c.i % 2 ? '#2E6BE0' : '#2E8A5A';
+    } else { // a car: purple with a gem, an orange tank, a green box car, a blue coach — or the express's purple cars
+      const kind = tr.express ? 4 : (c.i - 1) % 4, body = ['#8E5BE8', '#F28A1E', '#2FA65A', '#2E86E0', c.i % 2 ? '#7A4FE0' : '#5B3BB0'][kind];
+      ctx.fillStyle = body;
       ctx.beginPath(); ctx.roundRect(-L / 2 + 1, -Wd / 2, L - 2, Wd, 4); ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.fillRect(-L / 2 + 3, -Wd / 2 + 2, L - 6, 3);
-      ctx.fillStyle = '#FFE08A';
-      for (const wx of [-8, 0, 8]) ctx.fillRect(wx - 2.5, -4, 5, 8);
+      if (kind === 0) { ctx.fillStyle = '#2B1F5C'; ctx.fillRect(-8, 2, 16, 4); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(0, -3, 2.4, 0, Math.PI * 2); ctx.fill(); }
+      else if (kind === 1) { ctx.fillStyle = '#7A3A0E'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#FFD7A0'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 3.5, 0, 0, Math.PI * 2); ctx.fill(); }
+      else if (kind === 2) { ctx.fillStyle = '#FFE08A'; for (const wx of [-6, 6]) ctx.fillRect(wx - 2.5, -6, 5, 4); ctx.fillStyle = '#17572E'; ctx.fillRect(-9, 1, 18, 5); }
+      else if (kind === 3) { ctx.fillStyle = '#FFE08A'; for (const wx of [-9, -3, 3, 9]) { ctx.fillRect(wx - 2, -7, 4, 3); ctx.fillRect(wx - 2, 4, 4, 3); } ctx.fillStyle = '#1B4E9E'; ctx.fillRect(-11, -1.5, 22, 3); }
+      else { ctx.fillStyle = '#FFCC33'; ctx.fillRect(-L / 2 + 2, -1.5, L - 4, 3); ctx.fillStyle = '#FFE08A'; for (const wx of [-8, 0, 8]) ctx.fillRect(wx - 2.5, -7, 5, 4); }
     }
     ctx.restore();
   }
@@ -1106,64 +1110,54 @@ function deco(ctx, e, t) {
     ctx.beginPath(); ctx.arc(kx, ky, r * 0.12, 0, P * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.beginPath(); ctx.arc(x + C(face) * r * 0.45, y - r * 0.47, r * 0.06, 0, P * 2); ctx.fill();
-  } else if (e.kind === 'train') { // a steam engine head-on: smokebox door with rivets, headlight, chimney, buffer beam, cowcatcher
-    const lw = Math.max(1, r * 0.05);
+  } else if (e.kind === 'train') { // after the Stitch design: a red boiler, dashed gold rim, smokebox door with a gold ring and rivets, headlight, chimney, cowcatcher
+    const lw = Math.max(1, r * 0.06), u = r / 76; // Stitch drew it at r = 76 on a 200 box
     ctx.strokeStyle = INK;
     ctx.lineWidth = lw;
-    // chimney (behind the top edge) with a flared cap and a brass band
-    ctx.fillStyle = '#2B2F3A';
-    ctx.beginPath(); ctx.roundRect(x - r * 0.17, y - r * 1.18, r * 0.34, r * 0.4, r * 0.05); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.roundRect(x - r * 0.27, y - r * 1.3, r * 0.54, r * 0.15, r * 0.06); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#FFCC33';
-    ctx.fillRect(x - r * 0.17, y - r * 0.98, r * 0.34, r * 0.07);
-    ctx.save();
-    ctx.beginPath(); ctx.arc(x, y, r, 0, P * 2); ctx.clip();
-    // cowcatcher stripes along the bottom
-    ctx.fillStyle = '#C9302C';
-    ctx.fillRect(x - r, y + r * 0.6, r * 2, r * 0.45);
-    ctx.fillStyle = '#FFCC33';
-    for (let i = -3; i <= 3; i++) {
-      ctx.beginPath();
-      ctx.moveTo(x + i * r * 0.28, y + r * 0.78); ctx.lineTo(x + i * r * 0.28 + r * 0.12, y + r * 0.78);
-      ctx.lineTo(x + i * r * 0.36 + r * 0.14, y + r * 1.05); ctx.lineTo(x + i * r * 0.36, y + r * 1.05); ctx.fill();
-    }
-    // buffer beam with two buffers
-    ctx.fillStyle = '#B0201C';
-    ctx.fillRect(x - r, y + r * 0.5, r * 2, r * 0.2);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillRect(x - r, y + r * 0.5, r * 2, r * 0.04);
-    ctx.restore();
-    for (const sx of [-0.62, 0.62]) {
-      ctx.fillStyle = '#3A3F4C';
-      ctx.beginPath(); ctx.arc(x + sx * r, y + r * 0.6, r * 0.13, 0, P * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#9AA3B5';
-      ctx.beginPath(); ctx.arc(x + sx * r - r * 0.03, y + r * 0.57, r * 0.05, 0, P * 2); ctx.fill();
-    }
-    // smokebox door: dark disc, brass ring, rivets, handle
-    const dy = y - r * 0.02, dr = r * 0.5;
-    ctx.fillStyle = '#2B2F3A';
-    ctx.beginPath(); ctx.arc(x, dy, dr, 0, P * 2); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = '#FFCC33'; ctx.lineWidth = r * 0.07;
-    ctx.beginPath(); ctx.arc(x, dy, dr * 0.82, 0, P * 2); ctx.stroke();
-    ctx.fillStyle = '#FFE38A';
-    for (let i = 0; i < 8; i++) { const a = (i / 8) * P * 2; ctx.beginPath(); ctx.arc(x + C(a) * dr * 0.82, dy + S(a) * dr * 0.82, r * 0.035, 0, P * 2); ctx.fill(); }
-    ctx.strokeStyle = '#9AA3B5'; ctx.lineWidth = r * 0.06;
-    ctx.beginPath(); ctx.moveTo(x - dr * 0.4, dy); ctx.lineTo(x + dr * 0.4, dy); ctx.stroke();
-    ctx.fillStyle = '#9AA3B5';
-    ctx.beginPath(); ctx.arc(x, dy, r * 0.07, 0, P * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.beginPath(); ctx.ellipse(x - dr * 0.35, dy - dr * 0.4, dr * 0.3, dr * 0.14, -0.6, 0, P * 2); ctx.fill();
-    // headlight on top, glowing
-    const hy = y - r * 0.68, glow = 0.55 + 0.25 * S(t * 6);
-    const g = ctx.createRadialGradient(x, hy, 0, x, hy, r * 0.45);
-    g.addColorStop(0, `rgba(255,246,194,${glow})`); g.addColorStop(1, 'rgba(255,246,194,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, hy, r * 0.45, 0, P * 2); ctx.fill();
-    ctx.strokeStyle = INK; ctx.lineWidth = lw;
-    ctx.fillStyle = '#FFCC33';
-    ctx.beginPath(); ctx.arc(x, hy, r * 0.17, 0, P * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#FFF6C2';
-    ctx.beginPath(); ctx.arc(x, hy, r * 0.1, 0, P * 2); ctx.fill();
+    ctx.lineJoin = 'round';
+    // chimney with a flared brass cap and a puff of smoke
+    const ch = ctx.createLinearGradient(x - 18 * u, 0, x + 18 * u, 0);
+    ch.addColorStop(0, '#1F2937'); ch.addColorStop(0.45, '#4B5563'); ch.addColorStop(1, '#111827');
+    ctx.fillStyle = ch;
+    ctx.beginPath(); ctx.moveTo(x - 18 * u, y - 82 * u); ctx.lineTo(x + 18 * u, y - 82 * u); ctx.lineTo(x + 14 * u, y - 62 * u); ctx.lineTo(x - 14 * u, y - 62 * u); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#F59E0B'; ctx.beginPath(); ctx.ellipse(x, y - 82 * u, 20 * u, 7 * u, 0, 0, P * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#111827'; ctx.beginPath(); ctx.ellipse(x, y - 82 * u, 13 * u, 4 * u, 0, 0, P * 2); ctx.fill();
+    const puff = (t * 0.8) % 1;
+    ctx.fillStyle = `rgba(240,247,255,${0.9 - puff * 0.7})`; ctx.lineWidth = lw * 0.6;
+    ctx.beginPath(); ctx.arc(x + puff * 10 * u, y - (90 + puff * 22) * u, (6 + puff * 6) * u, 0, P * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = lw;
+    // the cowcatcher below, dark with yellow bars
+    ctx.fillStyle = '#2B3345';
+    ctx.beginPath(); ctx.moveTo(x - 40 * u, y + 58 * u); ctx.lineTo(x - 58 * u, y + 82 * u); ctx.lineTo(x, y + 90 * u); ctx.lineTo(x + 58 * u, y + 82 * u); ctx.lineTo(x + 40 * u, y + 58 * u); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#FFD000'; ctx.lineWidth = 4 * u; ctx.lineCap = 'round';
+    for (const [x1, y1, x2, y2] of [[-28, 64, -36, 82], [-14, 66, -18, 86], [0, 67, 0, 89], [14, 66, 18, 86], [28, 64, 36, 82]]) { ctx.beginPath(); ctx.moveTo(x + x1 * u, y + y1 * u); ctx.lineTo(x + x2 * u, y + y2 * u); ctx.stroke(); }
+    // dashed gold rim just inside the boiler's edge
+    const gold = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    gold.addColorStop(0, '#FFF176'); gold.addColorStop(0.4, '#FBC02D'); gold.addColorStop(1, '#B26A00');
+    ctx.strokeStyle = gold; ctx.lineWidth = 5 * u; ctx.setLineDash([8 * u, 12 * u]);
+    ctx.beginPath(); ctx.arc(x, y, 71 * u, 0, P * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    // the smokebox door: dark disc, gold ring, eight rivets
+    const fy = y + 2 * u, face = ctx.createRadialGradient(x - 10 * u, fy - 14 * u, 2 * u, x, fy, 50 * u);
+    face.addColorStop(0, '#374151'); face.addColorStop(0.7, '#1F2937'); face.addColorStop(1, '#0F172A');
+    ctx.fillStyle = face; ctx.strokeStyle = INK; ctx.lineWidth = 5 * u;
+    ctx.beginPath(); ctx.arc(x, fy, 50 * u, 0, P * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = gold; ctx.lineWidth = 4 * u;
+    ctx.beginPath(); ctx.arc(x, fy, 45 * u, 0, P * 2); ctx.stroke();
+    ctx.fillStyle = '#FFD54F'; ctx.strokeStyle = INK; ctx.lineWidth = 2 * u;
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * P * 2 - P / 2; ctx.beginPath(); ctx.arc(x + C(a) * 41 * u, fy + S(a) * 41 * u, 3.5 * u, 0, P * 2); ctx.fill(); ctx.stroke(); }
+    ctx.strokeStyle = '#9AA3B5'; ctx.lineWidth = 5 * u; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 20 * u, fy - 12 * u); ctx.lineTo(x + 20 * u, fy - 12 * u); ctx.stroke();
+    // the headlight, glowing
+    const hy = y + 16 * u, glow = 0.6 + 0.25 * S(t * 6);
+    const g = ctx.createRadialGradient(x, hy, 0, x, hy, 34 * u);
+    g.addColorStop(0, `rgba(255,234,0,${glow * 0.6})`); g.addColorStop(1, 'rgba(255,234,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, hy, 34 * u, 0, P * 2); ctx.fill();
+    const hl = ctx.createRadialGradient(x - 2 * u, hy - 2 * u, 1, x, hy, 15 * u);
+    hl.addColorStop(0, '#FFFFFF'); hl.addColorStop(0.4, '#FFF59D'); hl.addColorStop(0.8, '#F59E0B'); hl.addColorStop(1, '#D97706');
+    ctx.fillStyle = hl; ctx.strokeStyle = INK; ctx.lineWidth = 4 * u;
+    ctx.beginPath(); ctx.arc(x, hy, 15 * u, 0, P * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(x, hy, 8 * u, 0, P * 2); ctx.fill();
   } else if (e.kind === 'magnet') { // red and blue poles with a steel band; its field shows while the super pulls
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, r, 0, P * 2); ctx.clip();
