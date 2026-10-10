@@ -1521,7 +1521,10 @@ function chessLines(ctx, e, t) {
   ctx.strokeStyle = `rgba(255,45,70,${0.85 * k * pulse})`;
   ctx.lineWidth = 2.5;
   for (const p of m.lines ?? []) { ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-  for (const p of m.targets ?? []) { ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI * 2); ctx.stroke(); }
+  for (const [p1, p2] of m.ls ?? []) { // the knight's L shapes, a ring where each one lands
+    ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p2.x, p2.y, 14, 0, Math.PI * 2); ctx.stroke();
+  }
   ctx.restore();
 }
 function chessPiece(ctx, e, t) { // the piece stands on top of the ball

@@ -23,7 +23,7 @@ export const ICE = { chill: 2, slow: 0.5, freeze: 2.5, freezeSlow: 0.05, brittle
 export const POISON = { len: 28, hit: 7, tick: 1, every: 0.2, last: 2.5, max: 40, touchCd: 0.5, reach: 16 };
 export const CHAIN = { first: 1.4, every: 3, r: 70, life: 4, max: 3, dmg: 3, tick: 0.6, pull: 90, slow: 0.6, lead: 0.4 };
 // Chess: every few seconds it picks a random piece and moves like it across an 8×8 board, untouchable on the way.
-export const CHESS = { first: 2, every: 6.5, board: 5, aim: 0.55, speed: 1600, dmg: 3, queenDmg: 4 };
+export const CHESS = { first: 2, every: 6, board: 5, aim: 0.55, speed: 1600, dmg: 3, queenDmg: 4 };
 export const FORGE = { every: 2.5, dmgPerLv: 3.5, maxLv: 8, superLv: 3 };
 export const SUPER = {
   ramTime: 0.6, ramMul: 3, ramDmg: 2,
@@ -141,7 +141,7 @@ function splitOff(w, me, hp = CELL.hp) { // two mini cells fly out sideways
 const PIECES = ['rook', 'bishop', 'knight'];
 const DIRS = { rook: [[1, 0], [-1, 0], [0, 1], [0, -1]], bishop: [[1, 1], [1, -1], [-1, 1], [-1, -1]] };
 DIRS.queen = [...DIRS.rook, ...DIRS.bishop];
-const KNIGHT = [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2]];
+const KNIGHT = [[[0, -2], [1, 0]], [[2, 0], [0, 1]], [[0, 2], [-1, 0]], [[-2, 0], [0, -1]]]; // an L in each of 4 directions: 2 squares, then 1 aside
 const rayEnd = (x, y, dx, dy, r) => { // along (dx, dy) until a ball's radius short of the wall
   const m = Math.hypot(dx, dy), ux = dx / m, uy = dy / m;
   const k = Math.max(0, Math.min(ux > 0 ? (W - r - x) / ux : ux < 0 ? (r - x) / ux : Infinity, uy > 0 ? (W - r - y) / uy : uy < 0 ? (r - y) / uy : Infinity));
@@ -153,15 +153,19 @@ function chessMove(w, me, piece, dmg, fromHere = false) {
   me.vx = me.vy = 0;
   w.events.push({ type: 'chess', x: me.x, y: me.y, piece });
 }
-// From the middle it runs out along EVERY line of its piece and back (a knight hops to each of its squares and back):
-// small hits, but each line can catch a foe once.
+// From the middle it runs out along EVERY line of its piece and back — a knight walks its L (2 squares, then 1 aside)
+// in four directions: small hits, but each line can catch a foe once.
 function chessAim(w, me) {
   const m = me.chess, sq = W / CHESS.board, from = { x: me.x, y: me.y };
-  const ends = m.piece === 'knight'
-    ? KNIGHT.map(([dx, dy]) => ({ x: Math.min(W - me.r, Math.max(me.r, me.x + dx * sq)), y: Math.min(W - me.r, Math.max(me.r, me.y + dy * sq)) }))
-    : DIRS[m.piece].map(([dx, dy]) => rayEnd(me.x, me.y, dx, dy, me.r));
-  if (m.piece === 'knight') m.targets = ends; else m.lines = ends;
-  Object.assign(m, { stage: 'aim', at: w.t, from, strike: pathOf([from, ...ends.flatMap(e => [e, from])]), d: 0 });
+  const fit = (x, y) => ({ x: Math.min(W - me.r, Math.max(me.r, x)), y: Math.min(W - me.r, Math.max(me.r, y)) });
+  if (m.piece === 'knight') {
+    m.ls = KNIGHT.map(([[ax, ay], [bx, by]]) => { const p1 = fit(me.x + ax * sq, me.y + ay * sq); return [p1, fit(p1.x + bx * sq, p1.y + by * sq)]; });
+    Object.assign(m, { legs: 4, strike: pathOf([from, ...m.ls.flatMap(([p1, p2]) => [p1, p2, p1, from])]) });
+  } else {
+    m.lines = DIRS[m.piece].map(([dx, dy]) => rayEnd(me.x, me.y, dx, dy, me.r));
+    Object.assign(m, { legs: 2, strike: pathOf([from, ...m.lines.flatMap(e => [e, from])]) });
+  }
+  Object.assign(m, { stage: 'aim', at: w.t, from, d: 0 });
 }
 function chessTick(w, me, dt) {
   const m = me.chess;
@@ -174,8 +178,8 @@ function chessTick(w, me, dt) {
   me.x = p.x;
   me.y = p.y;
   if (m.stage === 'hit') {
-    let line = 0; // which line it is on: out and back along one line is one line
-    while (2 * line + 2 < path.cum.length && path.cum[2 * line + 2] <= m.d) line++;
+    let line = 0; // which line it is on: out and back along one line (or one L) is one line
+    while (m.legs * (line + 1) < path.cum.length && path.cum[m.legs * (line + 1)] <= m.d) line++;
     for (const f of foes(w, me)) if (m.hit[f.id] !== line && Math.hypot(f.x - me.x, f.y - me.y) < f.r + me.r) { m.hit[f.id] = line; hurt(w, f, m.dmg); }
   }
   if (m.d < path.len) return;
@@ -516,7 +520,7 @@ Object.assign(BALLS, {
   },
 
   chess: { // modelled on Chess Ball: the arena becomes a board, a random piece strikes along its lines
-    hp: 100, color: '#EDE6D6', price: 300,
+    hp: 105, color: '#EDE6D6', price: 300,
     onTick(w, me, dt) {
       if (me.chess) return chessTick(w, me, dt);
       me.cd.chess ??= CHESS.first;
