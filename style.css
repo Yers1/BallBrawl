@@ -492,7 +492,7 @@ body.record { background: #000; }
 .qrow .q-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; font-weight: 800; font-size: 14px; }
 .qrow .bar { height: 10px; padding: 0; border-radius: 6px; background: var(--stroke); overflow: hidden; }
 .qrow .bar i { display: block; height: 100%; width: var(--p); background: var(--gold); }
-.qrow small { color: var(--muted); font-weight: 800; }
+.qrow small { color: var(--muted); font-weight: 800; min-width: 92px; text-align: right; } /* same width on every row, so the bars line up */
 .qrow .ok { color: var(--go); font-weight: 900; }
 
 /* leaders */

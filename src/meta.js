@@ -960,7 +960,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#sl-art').innerHTML = chestSvg(sl.kind);
     $('#sl-title').textContent = t('chest_' + sl.kind);
     $('#sl-time').textContent = sl.at == null ? t('slotWait', { t: mmss(left) }) : t('slotLeft', { t: clock(left) });
-    $('#sl-info').textContent = sl.at == null ? t('slotBusy') : '';
+    $('#sl-info').textContent = (sl.at == null ? t('slotBusy') + ' ' : '') + odds(sl.kind); // what's inside, before any gems are spent
     $('#sl-gems').innerHTML = `${t('slotNow')} · <i class="gem"></i>${cost}`;
     $('#sl-gems').disabled = save.gems < cost;
     $('#sl-gems').onclick = () => openFromSlot(i, true);
