@@ -5,7 +5,7 @@ import { t, lang, LANGS, setLang, ballName, ballAbout, superName, superAbout, qu
 import { nickText, randomNick, validNick } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin, buyBall,
-  RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk,
+  RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
   ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, FRAG_NEED,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
@@ -13,6 +13,7 @@ import {
 } from './progress.js';
 import { THEMES } from './themes.js';
 import { setArena, drawEmote } from './render.js';
+import { MAPS } from './sim.js';
 import { offerReward } from './ads.js';
 import { sfx, confetti } from './sfx.js';
 
@@ -79,6 +80,44 @@ ${crest}
 </svg>`;
 }
 
+// What makes each arena's stage its own: scenery on the back wall and the map's obstacles on the floor.
+const BACKDROP = {
+  night: `<circle cx="250" cy="44" r="16" fill="#FFF3C4"/><circle cx="257" cy="38" r="15" fill="#0E1D3A"/>
+    ${[[90, 30], [120, 60], [160, 28], [200, 52], [140, 82], [230, 80], [80, 76]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#FFFFFF"/>`).join('')}`,
+  canyon: `<circle cx="240" cy="40" r="15" fill="#FFE38A"/><path d="M62 104 V70 H92 V56 H128 V74 H160 V104Z" fill="#B8743A" stroke="#6E3F18" stroke-width="2"/>
+    <path d="M180 104 V62 H214 V48 H240 V66 H296 V104Z" fill="#C98A4B" stroke="#6E3F18" stroke-width="2"/><path d="M92 62 H128 M214 54 H240" stroke="#E8B56E" stroke-width="3"/>`,
+  frost: `<path d="M62 104 L110 40 L140 70 L180 26 L230 78 L262 50 L296 90 V104Z" fill="#E6F6FF" stroke="#6FA9D0" stroke-width="2"/>
+    <path d="M110 40 L122 56 L104 56Z M180 26 L194 44 L168 44Z M262 50 L272 62 L254 62Z" fill="#FFFFFF"/>
+    ${[80, 120, 160, 200, 240, 280].map(x => `<path d="M${x - 5} 14 L${x + 5} 14 L${x} 30Z" fill="#DCF5FF"/>`).join('')}`,
+  jungle: `<path d="M62 104 Q100 60 140 104 M160 104 Q210 50 260 104" fill="#245A2E"/>
+    ${[78, 112, 150, 196, 236, 276].map((x, i) => `<path d="M${x} 14 q${i % 2 ? 6 : -6} 20 0 ${34 + (i * 7) % 20}" fill="none" stroke="#3E8E4A" stroke-width="4" stroke-linecap="round"/><ellipse cx="${x}" cy="${50 + (i * 7) % 20}" rx="6" ry="4" fill="#6BB85A"/>`).join('')}
+    <circle cx="96" cy="88" r="4" fill="#FF5C8A"/><circle cx="250" cy="92" r="4" fill="#FFD23F"/>`,
+  lava: `<path d="M120 104 L170 34 H200 L250 104Z" fill="#3A1614" stroke="#160A0A" stroke-width="2"/>
+    <path d="M178 34 Q184 60 176 80 Q172 96 180 104 H192 Q188 90 194 72 Q198 52 192 34Z" fill="#FF7A2F"/><path d="M185 36 Q188 60 183 90" stroke="#FFD23F" stroke-width="2.5" fill="none"/>
+    <circle cx="176" cy="24" r="7" fill="#5A4A48" opacity=".8"/><circle cx="190" cy="16" r="9" fill="#5A4A48" opacity=".6"/>`,
+  space: `${[[78, 24], [102, 70], [140, 40], [212, 30], [276, 66], [244, 92], [124, 92]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="#FFFFFF"/>`).join('')}
+    <circle cx="230" cy="54" r="20" fill="#FF8FB1"/><ellipse cx="230" cy="54" rx="36" ry="8" fill="none" stroke="#FFE38A" stroke-width="3" transform="rotate(-15 230 54)"/>
+    <circle cx="110" cy="46" r="9" fill="#4CC9F0"/>`,
+  candy: `${[[90, 60, '#FF4D8D'], [150, 46, '#7FE7FF'], [210, 64, '#FFD23F'], [266, 48, '#A6FF4D']].map(([x, y, c]) => `<path d="M${x} ${y + 14} V104" stroke="#FFFFFF" stroke-width="3"/><circle cx="${x}" cy="${y}" r="14" fill="${c}" stroke="#C94C88" stroke-width="2"/><path d="M${x - 9} ${y} a9 9 0 0 1 18 0" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>`).join('')}`,
+  neon: `<path d="M80 40 H140 M80 40 V70 M160 30 L190 70 L220 30 M240 40 H280 V70 H240Z" fill="none" stroke="#00F0FF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M70 88 H290" stroke="#FF2BD6" stroke-width="3"/>`,
+  ocean: `<path d="M62 70 q20 -10 40 0 t40 0 t40 0 t40 0 t40 0 t40 0" fill="none" stroke="#7FD3FF" stroke-width="3"/>
+    <path d="M120 86 q10 -8 22 0 q-10 8 -22 0z M142 86 l7 -5 v10z" fill="#FFCC33"/><path d="M220 60 q10 -8 22 0 q-10 8 -22 0z M242 60 l7 -5 v10z" fill="#FF7A5C"/>
+    <path d="M80 104 q-4 -18 4 -26 M88 104 q4 -14 -2 -22" stroke="#FF7A5C" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+};
+// map coordinates (0–400) onto the stage floor's trapezoid
+const persp = (x, y) => { const v = y / 400, l = 62 - 48 * v, r = 296 + 48 * v; return [l + (x / 400) * (r - l), 104 + v * 322, (r - l) / 400]; };
+function stageMap(id) {
+  return (MAPS[id] ?? []).map(o => {
+    const [x, y, k] = persp(o.x, o.y), rx = o.r * k, ry = rx * 0.5, sh = `<ellipse cx="${x + 3}" cy="${y + ry * 0.4}" rx="${rx}" ry="${ry}" fill="#000" opacity=".35"/>`;
+    if (o.k === 'rock') return `${sh}<path d="M${x - rx} ${y} Q${x - rx} ${y - ry * 2.6} ${x} ${y - ry * 3} Q${x + rx} ${y - ry * 2.6} ${x + rx} ${y} Q${x} ${y + ry} ${x - rx} ${y}Z" fill="${id === 'canyon' ? '#C98A4B' : '#7A7F92'}" stroke="#0A0E1F" stroke-width="2"/><path d="M${x - rx * 0.5} ${y - ry * 2} q${rx * 0.3} -${ry * 0.6} ${rx * 0.6} -${ry * 0.4}" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="2" fill="none"/>`;
+    if (o.k === 'ice') return `${sh}<path d="M${x - rx * 0.7} ${y} L${x - rx * 0.5} ${y - ry * 3} L${x} ${y - ry * 4.2} L${x + rx * 0.5} ${y - ry * 3} L${x + rx * 0.7} ${y}Z" fill="#BFF3FF" stroke="#2E6E9E" stroke-width="2"/><path d="M${x} ${y - ry * 4} V${y}" stroke="#FFFFFF" stroke-width="1.5"/>`;
+    if (o.k === 'bumper') return `${sh}<rect x="${x - rx * 0.3}" y="${y - ry * 2}" width="${rx * 0.6}" height="${ry * 2}" fill="#F5E6C8" stroke="#0A0E1F" stroke-width="1.5"/><ellipse cx="${x}" cy="${y - ry * 2.2}" rx="${rx}" ry="${ry * 1.5}" fill="#E0304A" stroke="#0A0E1F" stroke-width="2"/><circle cx="${x - rx * 0.4}" cy="${y - ry * 2.6}" r="${rx * 0.18}" fill="#FFFFFF"/><circle cx="${x + rx * 0.35}" cy="${y - ry * 2.3}" r="${rx * 0.14}" fill="#FFFFFF"/>`;
+    if (o.k === 'pool') return `<ellipse cx="${x}" cy="${y}" rx="${rx * 1.15}" ry="${ry * 1.15}" fill="#FF7A2F" opacity=".45"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#FF7A2F" stroke="#5A1A0A" stroke-width="2"/><ellipse cx="${x}" cy="${y}" rx="${rx * 0.55}" ry="${ry * 0.55}" fill="#FFD23F"/>`;
+    if (o.k === 'portal') return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="none" stroke="#C890FF" stroke-width="3"/><ellipse cx="${x}" cy="${y}" rx="${rx * 0.65}" ry="${ry * 0.65}" fill="#FFFFFF" fill-opacity=".5" stroke="#4CC9F0" stroke-width="2.5"/>`;
+    return '';
+  }).join('');
+}
 // The lobby stage: the current arena seen in perspective, with neon rings where the squad stands.
 // k keeps the gradient/filter ids unique when two copies are on the page (the lobby and the new-arena popup).
 export function arenaSvg(id, k) {
@@ -94,7 +133,8 @@ export function arenaSvg(id, k) {
 <filter id="gl${k}" x="-50%" y="-150%" width="200%" height="400%"><feGaussianBlur stdDeviation="9"/></filter>
 <clipPath id="fl${k}"><path d="M62 104H296L344 426H14Z"/></clipPath></defs>
 <path d="M62 14H296V104H62Z" fill="${th.back}"/>
-<path d="M103 14V96M144 14V96M185 14V96M226 14V96M267 14V96" stroke="rgba(0,0,0,0.3)" stroke-width="2"/>
+<clipPath id="bw${k}"><path d="M62 14H296V104H62Z"/></clipPath><g clip-path="url(#bw${k})">${BACKDROP[id] ?? BACKDROP.night}</g>
+<path d="M62 14H296" stroke="rgba(0,0,0,0.25)" stroke-width="4"/>
 <path d="M62 96H296V104H62Z" fill="${top}"/>
 <path d="M14 14H62V104L14 426Z" fill="${left}"/><path d="M344 14H296V104L344 426Z" fill="${right}"/>
 <path d="M14 14H62V104L14 426ZM344 14H296V104L344 426Z" fill="#000" opacity="0.18"/>
@@ -103,6 +143,7 @@ export function arenaSvg(id, k) {
 <path d="M62 14V104L14 426M296 14V104L344 426" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="2.5"/>
 <g clip-path="url(#fl${k})">${ring(76, 326, 58, 15, ally, 2.5)}${ring(282, 326, 58, 15, ally, 2.5)}${ring(179, 394, 100, 24, lead, 3)}</g>
 <rect x="14" y="14" width="330" height="412" fill="url(#vg${k})"/>
+${stageMap(id)}
 <ellipse ${e(76, 325, 32, 8)} fill="#000" opacity="0.45"/><ellipse ${e(282, 325, 32, 8)} fill="#000" opacity="0.45"/><ellipse ${e(179, 393, 56, 12)} fill="#000" opacity="0.45"/>
 <path d="M0 0H358L344 14H14Z" fill="${top}"/><path d="M0 440H358L344 426H14Z" fill="${bottom}"/>
 <path d="M0 0L14 14V426L0 440Z" fill="${left}"/><path d="M358 0L344 14V426L358 440Z" fill="${right}"/>
@@ -186,6 +227,11 @@ export function bannerSvg(id, k) {
 <path d="M2 6 H246" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3"/></g>
 <path d="${shape}" fill="none" stroke="#0A0E1F" stroke-width="3" stroke-linejoin="round"/></svg>`;
 }
+const MODE_ICON = {
+  classic: '<svg viewBox="0 0 32 32"><path d="M6 6l14 14M26 6L12 20" stroke="#0A0E1F" stroke-width="5" stroke-linecap="round"/><path d="M6 6l14 14M26 6L12 20" stroke="#E6EDF7" stroke-width="2.6" stroke-linecap="round"/><path d="M8.5 19.5l4 4M23.5 19.5l-4 4" stroke="#FFCC33" stroke-width="3.5" stroke-linecap="round"/><path d="M6 26l3-3M26 26l-3-3" stroke="#8A5A1A" stroke-width="3.5" stroke-linecap="round"/></svg>',
+  duo: '<svg viewBox="0 0 32 32"><circle cx="12" cy="18" r="8" fill="#4CC9F0" stroke="#0A0E1F" stroke-width="2.2"/><circle cx="21" cy="13" r="7.5" fill="#36D27A" stroke="#0A0E1F" stroke-width="2.2"/><circle cx="18.5" cy="10.5" r="2.2" fill="#FFFFFF" opacity=".7"/><circle cx="9.5" cy="15.5" r="2.2" fill="#FFFFFF" opacity=".7"/></svg>',
+  boss: '<svg viewBox="0 0 32 32"><circle cx="16" cy="19" r="11" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.2"/><path d="M8 9l2-6 4 4 2-5 2 5 4-4 2 6z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2" stroke-linejoin="round"/><path d="M11 18l3 1.5M21 18l-3 1.5" stroke="#0A0E1F" stroke-width="2.2" stroke-linecap="round"/><circle cx="12.5" cy="15.5" r="2.5" fill="#FFFFFF" opacity=".6"/></svg>',
+};
 export const decoSvg = id => (DECO_SVG[id] ? `<svg viewBox="0 0 40 40" aria-hidden="true">${DECO_SVG[id]}</svg>` : '');
 const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
 const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
@@ -244,9 +290,10 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // ---------- top bar ----------
   function top() {
-    $('#h-avatar').replaceChildren(icon(save.avatar, 44, save.skinOf[save.avatar]));
+    const lv = levelOf(save.xp);
+    $('#h-avatar').replaceChildren(icon(save.avatar, 44, save.skinOf[save.avatar]), el('b', 'lvl-badge', String(lv.lv)));
+    $('#h-xp').style.width = Math.round((lv.xp / lv.need) * 100) + '%';
     $('#h-nick').textContent = nickText(save.nick, lang);
-    $('#h-trophies').textContent = save.trophies;
     $('#h-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
     $('#h-league').innerHTML = leagueSvg(leagueFor(save.trophies));
     $('#h-banner').innerHTML = bannerSvg(save.wear.banner, 'me');
@@ -572,6 +619,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#p-league small').textContent = t('leagueTitle');
     $('#p-league b').textContent = leagueName(lg);
     $('#p-league span').textContent = lg.next ? t('leagueNext', { n: lg.next - save.trophies }) : t('leagueTop');
+    const lv = levelOf(save.xp);
+    $('#p-league').insertAdjacentHTML('beforeend', `<div class="p-level"><b class="lvl-badge big">${lv.lv}</b><small></small><span class="xp-bar"><i style="width:${Math.round((lv.xp / lv.need) * 100)}%"></i></span></div>`);
+    $('#p-league .p-level small').textContent = t('xpOf', { n: lv.xp, max: lv.need });
     const how = x => (x.ball ? t('ttlHowMaster', { name: ballName(x.ball) }) : x.arena ? t('ttlHowArena', { name: t('arena_' + x.arena) })
       : x.stat === 'balls' ? t('ttlHowAll') : t({ wins: 'ttlHowWins', flawless: 'ttlHowFlawless', supers: 'ttlHowSupers', challenges: 'ttlHowChallenges', skins: 'ttlHowSkins' }[x.stat], { n: x.goal }));
     $('#p-titles').replaceChildren(...TITLES.filter(x => !x.ball || titleOk(save, x.id)).map(x => {
@@ -769,6 +819,22 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#op-done').onclick = () => { $('#scr-open').hidden = true; op = null; render(); };
 
   $('#ch-close').onclick = () => { $('#scr-chest').hidden = true; render(); };
+
+  // ---------- modes: classic (trophies), 2 vs 2, boss ----------
+  function modes() {
+    $('#md-list').replaceChildren(...['classic', 'duo', 'boss'].map(m => {
+      const b = el('button', 'md-card' + (save.mode === m ? ' on' : ''));
+      b.innerHTML = `<span class="mode-ic">${MODE_ICON[m]}</span><span class="md-txt"><b></b><small></small><em></em></span>`;
+      b.querySelector('b').textContent = t('mode_' + m);
+      b.querySelector('small').textContent = t('modeDesc_' + m);
+      b.querySelector('em').textContent = m === 'classic' ? t('modeTrophies') : t('modeNoTrophies');
+      b.onclick = () => { save.mode = m; persist(); sfx.click(); $('#scr-modes').hidden = true; render(); };
+      return b;
+    }));
+    $('#scr-modes').hidden = false;
+  }
+  $('#l-modebtn').onclick = () => { sfx.click(); modes(); };
+  $('#md-close').onclick = () => { $('#scr-modes').hidden = true; };
 
   // ---------- chest slots: wins fill them; one unlocks at a time; gems open now, an ad takes 30 minutes off ----------
   let slotOpen = -1;
@@ -1007,8 +1073,11 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }
     $('#l-lead').textContent = ballName(lead);
     $('#l-tr').textContent = save.trophies;
-    $('#l-mode').textContent = net.online ? t('modeRanked') : t('modeTraining');
-    $('#l-mode').classList.toggle('live', net.online);
+    const ranked = save.mode === 'classic' && net.online;
+    $('#l-mode').textContent = save.mode === 'classic' ? (net.online ? t('modeRanked') : t('modeTraining')) : t('mode_' + save.mode);
+    $('#l-mode').classList.toggle('live', ranked);
+    $('#l-modeic').innerHTML = MODE_ICON[save.mode];
+    $('#l-modename').textContent = t('mode_' + save.mode);
     const total = KINDS.reduce((n, k) => n + save.chests[k], 0), best = [...KINDS].reverse().find(k => save.chests[k] > 0);
     $('#l-chest-art').innerHTML = chestSvg(best || 'box');
     $('#l-chest-n').hidden = !total;

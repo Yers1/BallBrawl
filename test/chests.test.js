@@ -196,3 +196,16 @@ test('inbox gifts are claimed once, also across devices', () => {
   assert.deepEqual(mergeSave(a, b, { trophies: 0, max_trophies: 0 }).mailClaimed.sort(), [0, 7, 9]);
   assert.deepEqual(migrate({ mailClaimed: [1, 'x', 2.5] }).mailClaimed, [1]);
 });
+
+test('experience: levels pay coins and gems; every 5th level pays more', async () => {
+  const { gainXp, levelOf, xpNeed } = await import('../src/progress.js');
+  const s = freshSave();
+  assert.equal(levelOf(0).lv, 1);
+  const ups = gainXp(s, xpNeed(1) + xpNeed(2));
+  assert.deepEqual(ups.map(u => u.lv), [2, 3]);
+  assert.equal(levelOf(s.xp).lv, 3);
+  s.xp = 0;
+  let total = 0;
+  for (let lv = 1; lv < 5; lv++) total += xpNeed(lv);
+  assert.equal(gainXp(s, total).at(-1).gems, 10);
+});

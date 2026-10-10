@@ -1,5 +1,5 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
-import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
+import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
 import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
@@ -12,8 +12,9 @@ import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, gainXp, XP_WIN, XP_PLAY,
 } from './progress.js';
+const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
 import * as online from './net.js';
 const { net } = online;
@@ -123,7 +124,7 @@ function toast(text) {
 // A random AI-vs-AI fight that plays behind the menus.
 function demo() {
   const r = Math.random, pick = () => ORDER[Math.floor(r() * ORDER.length)];
-  S.world = createWorld({ seed: Math.floor(r() * 1e9), a: { id: pick() }, b: { id: pick() } });
+  S.world = createWorld({ seed: Math.floor(r() * 1e9), a: { id: pick() }, b: { id: pick() }, map: anyMap() });
   launch(S.world, r() * Math.PI * 2, r() * Math.PI * 2);
   S.ais = [createAI(0, 12, Math.floor(r() * 1e9)), createAI(1, 12, Math.floor(r() * 1e9))];
   S.demo = true;
@@ -285,7 +286,8 @@ async function startMatch() {
   S.mode = 'starting';
   $('#s-fight').disabled = $('#s-back').disabled = true; // leaving now would orphan a server match (= a loss)
   S.matchId = null;
-  if (net.online) {
+  const mode = save.mode;
+  if (net.online && mode === 'classic') { // only classic counts for trophies
     try { S.matchId = await online.startMatch(S.opponent?.id); } catch { /* server unreachable: this one is training */ }
   }
   $('#s-fight').disabled = $('#s-back').disabled = false;
@@ -298,6 +300,8 @@ async function startMatch() {
     seed: S.nextSeed,
     skinsA: save.skinOf,
     skinsB: S.opponent?.skins ?? {},
+    mode,
+    map: arenaFor(save.maxTrophies).id, // your arena decides the map
   });
   S.aiLevel = aiLevel(save.trophies);
   beginMatch();
@@ -314,7 +318,7 @@ function nextRound() {
   S.world = roundWorld(S.match);
   S.ai = createAI(1, S.aiLevel, S.match.seed + S.match.round);
   resetFx();
-  const [me, foe] = S.world.ents;
+  const me = S.world.ents.find(e => e.side === 0), foe = S.world.ents.find(e => e.side === 1);
   S.aim = Math.atan2(foe.y - me.y, foe.x - me.x);
   S.foeAim = aiAngle(foe.x, foe.y, me.x, me.y, S.aiLevel, S.world.rand); // decided now so it can be shown; nothing else draws from rand before launch
   S.aimLeft = AIM_TIME; // counted down in frame time, so a backgrounded tab doesn't fire the round on return
@@ -457,7 +461,7 @@ function onRoundOver(now) {
 const CHALLENGE_BONUS = 10;
 function finishMatch(r) {
   const won = r === 0, c = S.challenge, before = save.trophies;
-  const flawless = won && S.match.a.length === 3 && !S.match.revived; // not a single ball lost
+  const flawless = won && S.match.mode === 'classic' && S.match.a.length === 3 && !S.match.revived; // not a single ball lost
   S.outcome = r;
   S.delta = 0;
   S.settleLater = false;
@@ -477,6 +481,8 @@ function finishMatch(r) {
   save.coins += S.earned;
   S.chestDrop = won ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
+  S.xpGot = won ? XP_WIN : XP_PLAY;
+  S.lvlUps = gainXp(save, S.xpGot); // the player level
   save.matches++;
   track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, ...S.ms });
   S.ms = { dashes: 0, supers: 0, kills: 0 };
@@ -553,6 +559,9 @@ function showResult() {
   $('#r-chest').hidden = S.chestDrop == null;
   if (S.chestDrop != null) $('#r-chest').textContent = S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull');
   $('#r-reward').hidden = true;
+  const lv = (S.lvlUps ?? []).at(-1);
+  $('#r-xp').textContent = lv ? `${t('levelUp', { n: lv.lv })} +${lv.coins} · +${lv.gems}` : t('xpGain', { n: S.xpGot });
+  $('#r-xp').classList.toggle('up', !!lv);
   const ups = S.ups ?? [];
   $('#r-rank').hidden = !ups.length;
   $('#r-rank').textContent = ups.map(u => t('rankUp', { name: ballName(u.id), n: u.rank })
@@ -588,7 +597,7 @@ function showResult() {
     coinsUI();
     $('#r-coins').textContent = '+' + S.earned;
   });
-  else if (r === 1 && !S.match.revived) offer('revive', t('revive'), () => {
+  else if (r === 1 && !S.match.revived && S.match.mode === 'classic') offer('revive', t('revive'), () => {
     // the match isn't over after all: take back what the loss changed (trophies weren't reported yet)
     save.pendingFinish = null;
     S.settleLater = false;
@@ -638,7 +647,7 @@ function renderWatch() {
 }
 
 function startWatch() {
-  S.world = createWorld({ seed: Math.floor(Math.random() * 1e9), a: { id: S.watch[0] }, b: { id: S.watch[1] } });
+  S.world = createWorld({ seed: Math.floor(Math.random() * 1e9), a: { id: S.watch[0] }, b: { id: S.watch[1] }, map: anyMap() });
   S.ais = [createAI(0, 20, Math.floor(Math.random() * 1e9)), createAI(1, 20, Math.floor(Math.random() * 1e9))];
   resetFx();
   S.demo = false;

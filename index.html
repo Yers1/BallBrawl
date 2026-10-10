@@ -65,11 +65,11 @@
         <div class="lobby-top">
           <div class="me">
             <span id="h-banner" class="me-bg"></span>
-            <span id="h-avatar" class="avatar"></span>
+            <span id="h-avatar" class="avatar"><b id="h-level" class="lvl-badge">1</b></span>
             <div class="me-txt">
               <b id="h-nick"></b>
               <small id="h-title" class="me-title"></small>
-              <span class="trophies"><i class="trophy"></i><span id="h-trophies">0</span></span>
+              <span class="xp-bar"><i id="h-xp"></i></span>
             </div>
             <span id="h-league" class="league-ic"></span>
             <span id="h-deco" class="me-deco"></span>
@@ -101,6 +101,7 @@
         
         <div class="play-line">
           <button id="l-chest" class="chest-btn" aria-label="chests" hidden><span id="l-chest-art" class="chest-art"></span><b id="l-chest-n" class="chest-n" hidden></b><small id="l-chest-wins"></small></button>
+          <button id="l-modebtn" class="mode-btn"><span id="l-modeic" class="mode-ic"></span><b id="l-modename"></b></button>
           <button id="h-play" class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M20 4L9 15" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round"/><path d="M6.5 13.5l4 4M17.5 13.5l-4 4M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round"/></svg><span class="pl-txt"><small id="l-mode"></small><b data-t="play"></b></span></button>
         </div>
         <div id="l-slots" class="slots"></div>
@@ -249,6 +250,14 @@
     </div>
   </section>
 
+  <section id="scr-modes" class="overlay" hidden>
+    <div class="card result modes">
+      <h2 data-t="modesTitle"></h2>
+      <div id="md-list" class="md-list"></div>
+      <button class="btn ghost wide-btn" id="md-close" data-t="close"></button>
+    </div>
+  </section>
+
   <section id="scr-slot" class="overlay" hidden>
     <div class="card result slot-card">
       <div id="sl-art" class="sl-art"></div>
@@ -311,6 +320,7 @@
       <div id="r-trophies" class="trophy-line" hidden></div>
       <p id="r-chest" class="chest-line" hidden></p>
       <p id="r-rank" class="chest-line rank-line" hidden></p>
+      <p id="r-xp" class="chest-line xp-line"></p>
       <div class="coins-big"><i class="coin"></i><span id="r-coins"></span></div>
       <p id="r-reward" class="reply-note" hidden></p>
       <div id="r-ads" class="col"></div>

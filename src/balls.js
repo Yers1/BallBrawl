@@ -11,7 +11,7 @@ export const NINJA = { first: 0.8, base: 0.4, scale: 1.2, speed: 500, dmg: 6 };
 // from its far end up to the ball, hitting and knocking aside every foe it touches (once per train).
 export const TRAIN = {
   life: 3, gap: 10, warm: 0.3, halfWidth: 13, boostMul: 1.25, boostDmg: 1.15,
-  first: 1.4, every: 2.6, minLen: 150, speed: 560, cars: 5, spacing: 32, dmg: 13,
+  first: 2.5, every: 5, minLen: 150, speed: 560, cars: 5, spacing: 32, dmg: 19,
   express: 820, expressCars: 9, superDmg: 26,
 };
 export const MAGNET = { first: 1.5, every: 4.5, speed: 650, dmg: 3, pull: 800, grip: 0.5, slam: 8, superSlam: 14 };
@@ -372,6 +372,7 @@ export const BALLS = {
     onEnemyHit(w, me, foe) {
       foe.chillUntil = w.t + ICE.chill;
       foe.chillSlow = Math.min(ICE.slow, foe.chillUntil > w.t && foe.chillSlow < 1 ? foe.chillSlow : 1);
+      w.events.push({ type: 'chill', id: foe.id, x: foe.x, y: foe.y, r: foe.r }); // for the picture only
     },
     onSuper(w, me) {
       const f = nearest(foes(w, me), me);

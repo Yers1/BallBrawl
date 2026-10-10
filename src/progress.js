@@ -65,6 +65,27 @@ export function gainMastery(s, squad, won) {
   return ups;
 }
 
+// Player level from experience: every fight gives XP (more for a win); each new level pays coins and gems.
+export const XP_WIN = 20, XP_PLAY = 8;
+export const xpNeed = lv => 60 + lv * 40; // XP from level lv to lv + 1
+export function levelOf(xp) {
+  let lv = 1, left = xp;
+  while (left >= xpNeed(lv)) { left -= xpNeed(lv); lv++; }
+  return { lv, xp: left, need: xpNeed(lv) };
+}
+export function gainXp(s, n) {
+  const before = levelOf(s.xp).lv;
+  s.xp += n;
+  const ups = [];
+  for (let lv = before + 1; lv <= levelOf(s.xp).lv; lv++) {
+    const coins = 30 + lv * 10, gems = lv % 5 ? 2 : 10;
+    s.coins += coins;
+    s.gems += gems;
+    ups.push({ lv, coins, gems });
+  }
+  return ups;
+}
+
 // Leagues by current trophies, each split into I–II–III like Brawl Stars ranked; Master has no tiers.
 export const LEAGUES = [
   { id: 'bronze', at: 0 }, { id: 'silver', at: 100 }, { id: 'gold', at: 250 }, { id: 'diamond', at: 450 },
@@ -107,6 +128,8 @@ export function freshSave() {
     own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
     deals: [], adGems: { day: null, n: 0 },
     mailRead: [], mailClaimed: [], foeEmotes: true, // inbox ids read / gifts taken; show the opponent's emotes
+    mode: 'classic', // classic | duo | boss
+    xp: 0, // experience: the player level
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
     // cloud bookkeeping
@@ -164,6 +187,8 @@ export function migrate(raw) {
   s.mailRead = list(r.mailRead, Number.isInteger).slice(-60);
   s.mailClaimed = list(r.mailClaimed, Number.isInteger).slice(-60);
   s.foeEmotes = r.foeEmotes !== false;
+  if (['classic', 'duo', 'boss'].includes(r.mode)) s.mode = r.mode;
+  s.xp = int(r.xp) ?? 0;
   if (r.adGems && typeof r.adGems.day === 'string') s.adGems = { day: r.adGems.day, n: int(r.adGems.n, 0, 99) ?? 0 };
   if (r.quests && typeof r.quests.day === 'string' && Array.isArray(r.quests.list)) {
     s.quests = { day: r.quests.day, list: r.quests.list.filter(q => QUESTS.some(d => d.id === q?.id)).map(q => ({ id: q.id, progress: int(q.progress) ?? 0, claimed: q.claimed === true })) };
@@ -273,9 +298,9 @@ export function equipSkin(s, ball, style) {
 // Chests from the Glory Road and ball paths are opened right away (save.chests).
 export const FRAG_NEED = 10;
 export const CHESTS = {
-  box: { coins: [25, 45], stacks: 2, frags: [2, 4], gems: 0, ball: 0.04, emote: 0.08, tiers: ['common', 'rare'] },
-  big: { coins: [70, 110], stacks: 3, frags: [3, 5], gems: 2, ball: 0.12, emote: 0.2, tiers: ['common', 'rare', 'epic'] },
-  mega: { coins: [180, 260], stacks: 4, frags: [4, 6], gems: 5, ball: 0.35, skin: true, emote: 0.45, tiers: ['common', 'rare', 'epic', 'legend'] },
+  box: { coins: [25, 45], stacks: 1, frags: [2, 4], gems: 0, ball: 0.04, emote: 0.08, tiers: ['common', 'rare'] },
+  big: { coins: [70, 110], stacks: 2, frags: [3, 5], gems: 2, ball: 0.12, emote: 0.2, tiers: ['common', 'rare', 'epic'] },
+  mega: { coins: [180, 260], stacks: 3, frags: [4, 6], gems: 5, ball: 0.35, skin: true, emote: 0.45, tiers: ['common', 'rare', 'epic', 'legend'] },
 };
 const skinPool = s => s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !SKINS[st].path && !hasSkin(s, b, st)).map(st => `${b}:${st}`));
 // What one chest of `kind` gives; `rand` is injected so tests are repeatable.
@@ -365,8 +390,8 @@ const EMOTE_PRICE = { free: {}, common: { coins: 150 }, rare: { gems: 20 }, epic
 export const SHOP = {
   aura: { fire: { gems: 40 }, frost: { gems: 40 }, storm: { gems: 60 }, hearts: { gems: 60 }, void: { gems: 80 }, stars: { gems: 100 } },
   banner: {
-    night: {}, red: { coins: 300 }, green: { coins: 300 }, purple: { coins: 300 }, orange: { coins: 300 },
-    sunset: { gems: 30 }, ocean: { gems: 30 }, galaxy: { gems: 50 }, lava: { gems: 50 }, gold: { gems: 80 },
+    night: {}, red: { coins: 2500 }, green: { coins: 2500 }, purple: { coins: 2500 }, orange: { coins: 2500 },
+    sunset: { coins: 5000 }, ocean: { coins: 5000 }, galaxy: { coins: 5000 }, lava: { coins: 5000 }, gold: { coins: 5000 },
   },
   deco: {
     none: {}, target: { coins: 400 }, sword: { coins: 400 }, shield: { coins: 500 }, star: { gems: 25 },
@@ -555,6 +580,7 @@ export function mergeSave(local, cloudRaw, server) {
   for (const k of Object.keys(SHOP)) s.own[k] = union(s.own[k], cloud.own[k]);
   s.deals = union(s.deals, cloud.deals).slice(-12);
   s.mailRead = union(s.mailRead, cloud.mailRead).slice(-60);
+  s.xp = Math.max(s.xp, cloud.xp);
   s.mailClaimed = union(s.mailClaimed, cloud.mailClaimed).slice(-60);
   for (const k of Object.keys(CHESTS)) {
     s.chestsGot[k] = Math.max(s.chestsGot[k], cloud.chestsGot[k]);

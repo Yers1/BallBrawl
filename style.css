@@ -931,3 +931,39 @@ body.record { background: #000; }
 .dock { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .lobby-top .me { flex: 1; }
 @media (max-height: 700px) { .side { gap: 6px; } .side-btn .ic { width: 40px; height: 40px; } .side-btn svg { width: 24px; height: 24px; } }
+
+/* modes */
+.mode-btn {
+  position: relative; flex: none; width: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px;
+  border: 3px solid var(--stroke); border-radius: 14px; cursor: pointer; color: var(--text); background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 6px 0 var(--stroke);
+}
+.mode-btn:active { transform: translateY(3px); box-shadow: inset 0 2px 0 var(--hi), 0 3px 0 var(--stroke); }
+.mode-btn b { font-size: 11px; font-weight: 900; line-height: 1; white-space: nowrap; }
+.mode-ic { display: grid; place-items: center; }
+.mode-ic svg { width: 34px; height: 34px; display: block; }
+.md-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 14px; }
+.md-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid transparent; border-radius: 16px; cursor: pointer; text-align: left;
+  color: var(--text); background: var(--panel-2); box-shadow: 0 4px 0 var(--stroke);
+}
+.md-card.on { border-color: var(--gold); }
+.md-card .mode-ic svg { width: 48px; height: 48px; }
+.md-txt { display: flex; flex-direction: column; gap: 3px; }
+.md-txt b { font: 400 18px/1.1 var(--display); }
+.md-txt small { font-size: 13px; color: var(--muted); }
+.md-txt em { font-style: normal; font-size: 11px; font-weight: 900; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* player level */
+.avatar { position: relative; }
+.lvl-badge {
+  position: absolute; left: -6px; bottom: -6px; z-index: 2; min-width: 22px; height: 22px; padding: 0 4px; display: grid; place-items: center;
+  font: 400 12px/1 var(--display); color: #FFFFFF; text-shadow: 0 1px 0 #0A0E1F; border-radius: 8px; background: #3D86FF; border: 2px solid #0A0E1F;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); border-radius: 0; min-width: 24px; height: 26px;
+}
+.lvl-badge.big { position: static; min-width: 34px; height: 38px; font-size: 16px; }
+.xp-bar { display: block; width: 100%; max-width: 130px; height: 6px; margin-top: 3px; border-radius: 3px; background: rgba(10, 14, 31, 0.6); overflow: hidden; }
+.xp-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #4CC9F0, #8EEBFF); }
+.p-level { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-direction: column; }
+.p-level .xp-bar { width: 90px; }
+.xp-line { color: #8EEBFF; }
+.xp-line.up { color: var(--gold); font-size: 18px; }

@@ -3,6 +3,20 @@ import { BALLS, ICE, POISON } from './balls.js';
 
 export const W = 400, H = 400, R = 30, SPEED = 300, DMG = 10, HIT_CD = 0.3, SUDDEN = 30;
 export const SPAWN = [[90, 310], [310, 90]];
+// Where a team of 1, 2 or 3 starts (side 1 is mirrored through the centre).
+const SPAWNS = { 1: [[90, 310]], 2: [[70, 270], [150, 340]], 3: [[60, 240], [110, 320], [190, 350]] };
+const spawnAt = (side, n, i) => { const [x, y] = SPAWNS[n][i]; return side ? [W - x, H - y] : [x, y]; };
+// Maps: every arena has its own obstacles. rock/ice: solid, balls bounce off; bumper: bounces and kicks the ball
+// forward; pool: lava that burns while you're in it; portal: a pair, you come out of the other one.
+export const MAPS = {
+  night: [],
+  canyon: [{ k: 'rock', x: 200, y: 200, r: 26 }, { k: 'rock', x: 105, y: 105, r: 20 }, { k: 'rock', x: 295, y: 295, r: 20 }],
+  frost: [{ k: 'ice', x: 200, y: 128, r: 18 }, { k: 'ice', x: 200, y: 272, r: 18 }, { k: 'ice', x: 128, y: 200, r: 18 }, { k: 'ice', x: 272, y: 200, r: 18 }],
+  jungle: [{ k: 'bumper', x: 200, y: 200, r: 24 }, { k: 'bumper', x: 110, y: 110, r: 18 }, { k: 'bumper', x: 290, y: 290, r: 18 }],
+  lava: [{ k: 'pool', x: 200, y: 200, r: 40 }, { k: 'pool', x: 105, y: 105, r: 26 }, { k: 'pool', x: 295, y: 295, r: 26 }],
+  space: [{ k: 'portal', x: 105, y: 105, r: 20, to: 2 }, { k: 'rock', x: 200, y: 200, r: 22 }, { k: 'portal', x: 295, y: 295, r: 20, to: 0 }],
+};
+export const POOL = { every: 0.5, dmg: 4 };
 const JITTER = 0.3; // rad of random spin on each wall bounce
 const TURN = 0.275; // rad/s a ball curves toward its nearest enemy (halved again: players felt balls glued together)
 export const DASH = { charges: 2, regen: 2.5, time: 0.35, mul: 2.2, dmg: 1.3 };
@@ -18,18 +32,26 @@ export function rng(seed) { // mulberry32
   };
 }
 
-export function createWorld({ seed = 1, a, b, hpMulB = 1 }) {
+export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night' }) {
   const w = {
     t: 0, tick: 0, launched: false, rand: rng(seed), ents: [], shots: [], zones: [], events: [], hitCd: {}, result: null, nextId: 1,
+    map: MAPS[map] ? map : 'night', obstacles: (MAPS[map] ?? []).map(o => ({ ...o })),
     sides: [0, 1].map(() => ({ dashes: DASH.charges, regen: 0, meter: 0 })),
     log: [], // every accepted command: { tick, side, type, x?, y? } — seed + log replays the fight
   };
-  [a, b].forEach((spec, side) => {
-    const [x, y] = SPAWN[side];
-    const e = spawnBall(w, side, spec.id, { x, y, hpMul: side ? hpMulB : 1 });
-    if (spec.hp != null) e.hp = Math.min(spec.hp, e.maxHp);
-    e.split = !!spec.split;
-    e.skin = spec.skin || null; // cosmetic only — the sim never reads it
+  [a, b].forEach((spec, side) => { // a spec, or a team of specs (2v2, the boss fight)
+    const team = Array.isArray(spec) ? spec : [spec];
+    team.forEach((sp, i) => {
+      const [x, y] = spawnAt(side, team.length, i), base = BALLS[sp.id];
+      const e = spawnBall(w, side, sp.id, {
+        x, y, r: sp.r ?? R, hpMul: (side ? hpMulB : 1) * (sp.hpMul ?? 1),
+        dmg: sp.dmgMul ? (base.dmg ?? DMG) * sp.dmgMul : undefined, speed: sp.speedMul ? (base.speed ?? SPEED) * sp.speedMul : undefined,
+      });
+      if (sp.hp != null) e.hp = Math.min(sp.hp, e.maxHp);
+      e.split = !!sp.split;
+      e.boss = !!sp.boss;
+      e.skin = sp.skin || null; // cosmetic only — the sim never reads it
+    });
   });
   return w;
 }
@@ -48,8 +70,12 @@ export function spawnBall(w, side, kind, { x, y, vx = 0, vy = 0, r = R, hp, hpMu
 }
 
 export function launch(w, angA, angB) {
-  w.ents.slice(0, 2).forEach((e, i) => {
-    const a = i ? angB : angA;
+  for (const side of [0, 1]) w.ents.filter(e => e.side === side).forEach((e, i) => {
+    let a = side ? angB : angA;
+    if (i > 0) { // teammates go for the nearest foe, with a little spread
+      const f = w.ents.filter(o => o.side !== side).reduce((b, o) => (!b || Math.hypot(o.x - e.x, o.y - e.y) < Math.hypot(b.x - e.x, b.y - e.y) ? o : b), null);
+      a = Math.atan2(f.y - e.y, f.x - e.x) + (w.rand() * 2 - 1) * 0.5;
+    }
     e.vx = Math.cos(a) * e.speed;
     e.vy = Math.sin(a) * e.speed;
   });
@@ -158,6 +184,7 @@ function move(w, e, dt) {
   const k = e.slow * (b ? b.mul : 1);
   e.x += e.vx * k * dt;
   e.y += e.vy * k * dt;
+  for (const o of w.obstacles) obstacle(w, e, o);
   let wall = null, sx = 0, sy = 0;
   if (e.x < e.r) { e.x = e.r; sx = 1; wall = [0, e.y]; }
   else if (e.x > W - e.r) { e.x = W - e.r; sx = -1; wall = [W, e.y]; }
@@ -172,6 +199,34 @@ function move(w, e, dt) {
   if (sy) e.vy = sy * Math.max(Math.abs(e.vy), e.speed * 0.2);
   w.events.push({ type: 'wall', x: wall[0], y: wall[1] });
   BALLS[e.kind].onWallHit?.(w, e, wall[0], wall[1]);
+}
+
+function obstacle(w, e, o) {
+  const dx = e.x - o.x, dy = e.y - o.y, d = Math.hypot(dx, dy) || 0.01;
+  if (o.k === 'pool') { // lava burns while you're in it
+    if (d < o.r && (e.cd.pool ?? 0) <= w.t) { e.cd.pool = w.t + POOL.every; hurt(w, e, POOL.dmg); }
+    return;
+  }
+  if (o.k === 'portal') { // in one, out of the other, same heading
+    if (d < o.r && (e.cd.portal ?? 0) <= w.t) {
+      const to = w.obstacles[o.to], m = Math.hypot(e.vx, e.vy) || 1, gap = to.r + e.r + 2;
+      e.x = Math.min(W - e.r, Math.max(e.r, to.x + (e.vx / m) * gap));
+      e.y = Math.min(H - e.r, Math.max(e.r, to.y + (e.vy / m) * gap));
+      e.cd.portal = w.t + 1;
+      w.events.push({ type: 'portal', x: o.x, y: o.y, x2: to.x, y2: to.y });
+    }
+    return;
+  }
+  const min = o.r + e.r; // rock, ice, bumper: solid
+  if (d >= min) return;
+  const nx = dx / d, ny = dy / d, vn = e.vx * nx + e.vy * ny;
+  e.x = o.x + nx * min;
+  e.y = o.y + ny * min;
+  if (vn < 0) { e.vx -= 2 * vn * nx; e.vy -= 2 * vn * ny; }
+  if (o.k === 'bumper') {
+    e.boost = { until: w.t + 0.45, mul: 1.6, dmg: 1.2 };
+    w.events.push({ type: 'bump', i: w.obstacles.indexOf(o), x: o.x, y: o.y });
+  } else w.events.push({ type: 'wall', x: o.x + nx * o.r, y: o.y + ny * o.r });
 }
 
 const norm = e => {

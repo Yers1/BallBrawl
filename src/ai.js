@@ -12,7 +12,7 @@ export function createAI(side, level, seed = 1) {
     think(w) {
       if (!w.launched || w.result != null) return;
       const me = w.ents.find(e => e.side === side && !e.dead);
-      const foe = w.ents.find(e => e.side !== side && !e.dead);
+      const foe = w.ents.filter(e => e.side !== side && !e.dead).reduce((b, e) => (!b || Math.hypot(e.x - me.x, e.y - me.y) < Math.hypot(b.x - me.x, b.y - me.y) ? e : b), null);
       if (!me || !foe) return;
       const s = w.sides[side];
 

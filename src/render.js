@@ -1,7 +1,7 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
 import { W, H, SUDDEN, canSuper } from './sim.js';
-import { BALLS, TRAIN, LEECH, POISON, trainCars } from './balls.js';
+import { BALLS, TRAIN, LEECH, POISON, ICE, trainCars } from './balls.js';
 import { SKINS, EMOTE_LIST } from './progress.js';
 import { THEMES } from './themes.js';
 
@@ -10,7 +10,7 @@ const SIDE_RGB = ['76,201,240', '255,77,94'];
 const FONT = 'Nunito, system-ui, sans-serif';
 const INK = '#0A0F1C'; // outline for numbers and small shapes
 export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
-const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {} };
+const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {} };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
@@ -21,7 +21,7 @@ const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
 
 export function resetFx() {
   fx.parts.length = fx.floats.length = fx.rings.length = 0;
-  fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {}; fx.emotes = {};
+  fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {}; fx.emotes = {}; fx.bump = {};
   fx.shake = 0;
 }
 
@@ -267,6 +267,16 @@ function absorb(w, now) {
       if (ev.amount >= 1) dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
       burst(ev.x, ev.y, 5, '#ffffff', 120, [2, 3]);
       if (ev.amount >= 15) ring(ev.x, ev.y, 10, 3.2, 0.3, '255,255,255', 4);
+    } else if (ev.type === 'chill') { // hit by Ice: "-50%" in ice blue, a puff of snow
+      float(ev.x, ev.y - ev.r - 12, '-50%', '#8FE3FF', 22, 1.2, 26, 0);
+      burst(ev.x, ev.y, 14, '#DFF7FF', 170, [2, 4]);
+      ring(ev.x, ev.y, ev.r * 0.8, 1.8, 0.35, '143,227,255', 4);
+    } else if (ev.type === 'bump') {
+      fx.bump[ev.i] = now;
+      burst(ev.x, ev.y, 6, '#FFFFFF', 140, [2, 3]);
+    } else if (ev.type === 'portal') {
+      ring(ev.x, ev.y, 12, 2.5, 0.35, '200,144,255', 4);
+      ring(ev.x2, ev.y2, 12, 2.5, 0.35, '76,201,240', 4);
     } else if (ev.type === 'text') {
       float(ev.x, ev.y, ev.text, '#FFCC33', 18, 2, 10, 0);
     } else if (ev.type === 'clash') {
@@ -308,7 +318,7 @@ function absorb(w, now) {
 
 // The arena is a sunken box seen from above, like the original: a floor, four bevelled walls lit from the top.
 // Its colours and floor pattern come from the current arena (themes.js); decorations are laid out once per arena.
-let THEME = THEMES.night, DECOR = [];
+let THEME = THEMES.night, DECOR = [], ARENA = 'night';
 const FACE_PTS = [ // the corners of each wall face: top, left, right, bottom
   [[-M, -M], [W + M, -M], [W, 0], [0, 0]],
   [[-M, -M], [0, 0], [0, H], [-M, H + M]],
@@ -317,6 +327,7 @@ const FACE_PTS = [ // the corners of each wall face: top, left, right, bottom
 ];
 export function setArena(id) {
   THEME = THEMES[id] || THEMES.night;
+  ARENA = THEMES[id] ? id : 'night';
   let seed = 7;
   const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const n = { ice: 12, grass: 34, cracks: 9, stars: 70, tiles: 0, grid: 0, dots: 0, neon: 0, waves: 0 }[THEME.pattern] ?? 0;
@@ -386,6 +397,126 @@ function floorPattern(ctx, now) {
   }
   ctx.restore();
 }
+// Each arena dresses its walls differently, so they don't look like one template in other colours.
+function wallScenery(ctx, now) {
+  const P = Math.PI;
+  ctx.save();
+  if (ARENA === 'night') { // lamps along the top wall
+    for (let x = 40; x < W; x += 80) {
+      ctx.fillStyle = `rgba(255,236,150,${0.5 + 0.3 * Math.sin(now * 2 + x)})`;
+      ctx.beginPath(); ctx.arc(x, -M / 2, 3.5, 0, P * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,236,150,0.12)'; ctx.beginPath(); ctx.arc(x, -M / 2, 9, 0, P * 2); ctx.fill();
+    }
+  } else if (ARENA === 'canyon') { // sandstone rocks on the rim, a cactus in two corners
+    ctx.fillStyle = '#9A5A26';
+    for (let x = 20; x < W; x += 56) { ctx.beginPath(); ctx.ellipse(x, -M * 0.55, 10, 5, 0.2, 0, P * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(W - x, H + M * 0.55, 10, 5, -0.2, 0, P * 2); ctx.fill(); }
+    for (const [cx, cy] of [[-M / 2, -M / 2], [W + M / 2, H + M / 2]]) {
+      ctx.fillStyle = '#3E8E4A'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(cx - 3, cy - 10, 6, 20, 3); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(cx - 9, cy - 4, 5, 8, 2.5); ctx.fill(); ctx.stroke();
+    }
+  } else if (ARENA === 'frost') { // snow on the rim, icicles hanging inside
+    ctx.fillStyle = '#FFFFFF';
+    for (let x = 0; x <= W; x += 22) { ctx.beginPath(); ctx.ellipse(x, -2, 14, 5, 0, 0, P * 2); ctx.fill(); }
+    ctx.fillStyle = 'rgba(220,245,255,0.95)';
+    for (let x = 14; x < W; x += 34) { const L = 8 + ((x * 7) % 9); ctx.beginPath(); ctx.moveTo(x - 4, 0); ctx.lineTo(x + 4, 0); ctx.lineTo(x, L); ctx.fill(); }
+  } else if (ARENA === 'jungle') { // leaves hanging over the walls
+    for (let x = 10; x < W; x += 30) {
+      const sw = Math.sin(now * 1.5 + x) * 0.15;
+      ctx.fillStyle = x % 60 ? '#2E8B3A' : '#49B24F';
+      ctx.save(); ctx.translate(x, -2); ctx.rotate(0.4 + sw); ctx.beginPath(); ctx.ellipse(0, 7, 4.5, 9, 0, 0, P * 2); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.translate(-2, x); ctx.rotate(-0.9 + sw); ctx.beginPath(); ctx.ellipse(0, 7, 4, 8, 0, 0, P * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.fillStyle = '#FF5C8A';
+    for (const [x, y] of [[W + M / 2, 60], [W + M / 2, 260], [120, H + M / 2], [300, -M / 2]]) { ctx.beginPath(); ctx.arc(x, y, 4, 0, P * 2); ctx.fill(); }
+  } else if (ARENA === 'lava') { // glowing seams in the walls, little flames in the corners
+    ctx.strokeStyle = `rgba(255,122,47,${0.6 + 0.3 * Math.sin(now * 3)})`; ctx.lineWidth = 2;
+    for (let x = 30; x < W; x += 90) { ctx.beginPath(); ctx.moveTo(x, -M); ctx.lineTo(x + 8, -M / 2); ctx.lineTo(x + 2, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W - x, H + M); ctx.lineTo(W - x - 8, H + M / 2); ctx.lineTo(W - x - 2, H); ctx.stroke(); }
+    for (const [cx, cy] of [[-M / 2, -M / 2], [W + M / 2, -M / 2], [-M / 2, H + M / 2], [W + M / 2, H + M / 2]]) {
+      const f = 1 + 0.2 * Math.sin(now * 10 + cx);
+      ctx.fillStyle = '#FF7A2F'; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 4); ctx.quadraticCurveTo(cx, cy - 12 * f, cx + 5, cy + 4); ctx.fill();
+      ctx.fillStyle = '#FFD23F'; ctx.beginPath(); ctx.moveTo(cx - 2.5, cy + 4); ctx.quadraticCurveTo(cx, cy - 5 * f, cx + 2.5, cy + 4); ctx.fill();
+    }
+  } else if (ARENA === 'space') { // metal plates with blinking lights
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 50) { ctx.beginPath(); ctx.moveTo(x, -M); ctx.lineTo(x, 0); ctx.moveTo(x, H); ctx.lineTo(x, H + M); ctx.stroke(); }
+    for (let x = 25; x < W; x += 100) {
+      ctx.fillStyle = Math.sin(now * 4 + x) > 0 ? '#4CC9F0' : '#FF4D5E';
+      ctx.beginPath(); ctx.arc(x, -M / 2, 2.5, 0, P * 2); ctx.arc(W - x, H + M / 2, 2.5, 0, P * 2); ctx.fill();
+    }
+  } else if (ARENA === 'candy') {
+    const cols = ['#FF4D8D', '#7FE7FF', '#FFD23F', '#A6FF4D'];
+    for (let x = 8, i = 0; x < W; x += 18, i++) { ctx.fillStyle = cols[i % 4]; ctx.beginPath(); ctx.arc(x, -M / 2, 3, 0, P * 2); ctx.arc(W - x, H + M / 2, 3, 0, P * 2); ctx.fill(); }
+  } else if (ARENA === 'neon') {
+    ctx.shadowBlur = 10;
+    for (const [c, y] of [['#00F0FF', -M / 2], ['#FF2BD6', H + M / 2]]) { ctx.strokeStyle = c; ctx.shadowColor = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  } else if (ARENA === 'ocean') {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 0; i < 8; i++) { const y = H + M - ((now * 20 + i * 47) % (H + 2 * M)); ctx.beginPath(); ctx.arc(-M / 2 + Math.sin(y / 20) * 2, y, 2 + (i % 3), 0, P * 2); ctx.fill(); }
+    ctx.fillStyle = '#FF7A5C';
+    for (const x of [60, 200, 340]) { ctx.beginPath(); ctx.moveTo(x, H + M); ctx.quadraticCurveTo(x - 6, H + 4, x - 2, H); ctx.quadraticCurveTo(x + 2, H + 6, x + 6, H + M); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+// Map obstacles, seen from above: boulders, ice crystals, bouncy mushrooms, lava pools, portals.
+const ROCK = { canyon: ['#C98A4B', '#8E5524'], space: ['#7A7F92', '#4A4E5E'] };
+function obstacles(ctx, w, now) {
+  const P = Math.PI;
+  w.obstacles.forEach((o, i) => {
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    if (o.k === 'rock') {
+      const [c, d] = ROCK[ARENA] ?? ROCK.space;
+      ctx.fillStyle = 'rgba(8,16,32,0.35)'; ctx.beginPath(); ctx.ellipse(4, 6, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
+      ctx.beginPath();
+      for (let k = 0; k < 9; k++) { const a = (k / 9) * P * 2, rr = o.r * (0.86 + 0.14 * Math.sin(k * 2.7 + i)); k ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      ctx.closePath();
+      const g = ctx.createRadialGradient(-o.r * 0.35, -o.r * 0.4, o.r * 0.1, 0, 0, o.r);
+      g.addColorStop(0, shade(c, 0.35)); g.addColorStop(1, d);
+      ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-o.r * 0.2, -o.r * 0.1); ctx.lineTo(o.r * 0.15, o.r * 0.2); ctx.lineTo(o.r * 0.1, o.r * 0.5); ctx.stroke();
+    } else if (o.k === 'ice') {
+      ctx.fillStyle = 'rgba(8,16,32,0.3)'; ctx.beginPath(); ctx.ellipse(3, 5, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
+      ctx.beginPath();
+      for (let k = 0; k < 6; k++) { const a = (k / 6) * P * 2 + P / 6; k ? ctx.lineTo(Math.cos(a) * o.r, Math.sin(a) * o.r) : ctx.moveTo(Math.cos(a) * o.r, Math.sin(a) * o.r); }
+      ctx.closePath();
+      ctx.fillStyle = '#BFF3FF'; ctx.fill(); ctx.strokeStyle = '#2E6E9E'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); for (let k = 0; k < 3; k++) { const a = (k / 3) * P * 2 + P / 6; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * o.r * 0.8, Math.sin(a) * o.r * 0.8); } ctx.stroke();
+    } else if (o.k === 'bumper') { // a mushroom cap that squashes when hit
+      const since = now - (fx.bump?.[i] ?? -9), sq = since < 0.25 ? 1 + 0.25 * Math.sin((since / 0.25) * P) : 1;
+      ctx.scale(sq, sq);
+      ctx.fillStyle = 'rgba(8,16,32,0.35)'; ctx.beginPath(); ctx.ellipse(3, 6, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
+      const g = ctx.createRadialGradient(-o.r * 0.3, -o.r * 0.35, o.r * 0.1, 0, 0, o.r);
+      g.addColorStop(0, '#FF8A8A'); g.addColorStop(1, '#C81E3A');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, P * 2); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = '#FFFFFF';
+      for (const [x, y, r] of [[-0.4, -0.3, 0.2], [0.35, -0.35, 0.16], [0.1, 0.3, 0.22], [-0.45, 0.35, 0.12], [0.5, 0.25, 0.11]]) { ctx.beginPath(); ctx.arc(x * o.r, y * o.r, r * o.r, 0, P * 2); ctx.fill(); }
+    } else if (o.k === 'pool') { // lava, bubbling
+      const g = ctx.createRadialGradient(0, 0, o.r * 0.2, 0, 0, o.r * 1.15);
+      g.addColorStop(0, '#FFD23F'); g.addColorStop(0.55, '#FF7A2F'); g.addColorStop(1, 'rgba(160,30,10,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r * 1.15, 0, P * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(60,10,5,0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, P * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,240,180,0.85)';
+      for (let k = 0; k < 4; k++) { const ph = (now * 0.8 + k * 0.27) % 1, a = k * 1.9 + i; ctx.globalAlpha = 1 - ph; ctx.beginPath(); ctx.arc(Math.cos(a) * o.r * 0.5, Math.sin(a) * o.r * 0.5, 2 + ph * 4, 0, P * 2); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    } else if (o.k === 'portal') { // two spinning rings
+      for (const [c, rr, dir] of [['#C890FF', 1, 1], ['#4CC9F0', 0.7, -1]]) {
+        ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.lineCap = 'round';
+        for (let k = 0; k < 3; k++) { const a = dir * now * 3 + (k * P * 2) / 3; ctx.beginPath(); ctx.arc(0, 0, o.r * rr, a, a + 1.4); ctx.stroke(); }
+      }
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, o.r * 0.6);
+      g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(1, 'rgba(200,144,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.6, 0, P * 2); ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+
 function arena(ctx, w, now) {
   const sudden = w.launched && w.t > SUDDEN;
   ctx.fillStyle = THEME.faces[3];
@@ -403,6 +534,8 @@ function arena(ctx, w, now) {
   ctx.fillStyle = THEME.floor;
   ctx.fillRect(0, 0, W, H);
   floorPattern(ctx, now);
+  obstacles(ctx, w, now);
+  wallScenery(ctx, now);
   for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
     const g = ctx.createLinearGradient(0, 0, gx * 18, gy * 18);
     g.addColorStop(0, 'rgba(8,16,32,0.4)');
@@ -1002,14 +1135,25 @@ function spikes(ctx, e, t) {
 // Chilled: a frosty tint with drifting crystals. Frozen: a block of ice around the ball that cracks as it thaws.
 function frost(ctx, e, t) {
   const { x, y, r } = e, frozen = e.chillSlow <= 0.1;
-  ctx.fillStyle = frozen ? 'rgba(200,240,255,0.5)' : 'rgba(150,220,255,0.3)';
+  ctx.fillStyle = frozen ? 'rgba(200,240,255,0.5)' : 'rgba(140,215,255,0.45)';
   ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-  if (!frozen) {
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    for (let i = 0; i < 5; i++) {
-      const a = i * 1.26 + t * 2, d = r * (0.5 + 0.35 * Math.sin(t * 3 + i));
-      ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.05, 0, Math.PI * 2); ctx.fill();
+  if (!frozen) { // chilled: frosty rim, icicles, sparkles, and a ring that counts down the slow
+    ctx.save();
+    ctx.strokeStyle = 'rgba(225,248,255,0.95)';
+    ctx.lineWidth = r * 0.13;
+    ctx.beginPath(); ctx.arc(x, y, r * 0.93, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(220,246,255,0.95)';
+    for (const dx of [-0.45, 0, 0.45]) { const L = r * (0.35 + 0.1 * Math.sin(dx * 9)); ctx.beginPath(); ctx.moveTo(x + dx * r - r * 0.1, y + r * 0.86); ctx.lineTo(x + dx * r + r * 0.1, y + r * 0.86); ctx.lineTo(x + dx * r, y + r * 0.86 + L); ctx.fill(); }
+    ctx.fillStyle = '#FFFFFF';
+    for (let i = 0; i < 6; i++) {
+      const a = i * 1.05 + t * 1.2, d = r * 1.15, s = r * 0.12;
+      const sx = x + Math.cos(a) * d, sy = y + Math.sin(a) * d;
+      ctx.beginPath(); ctx.moveTo(sx, sy - s); ctx.quadraticCurveTo(sx, sy, sx + s, sy); ctx.quadraticCurveTo(sx, sy, sx, sy + s); ctx.quadraticCurveTo(sx, sy, sx - s, sy); ctx.quadraticCurveTo(sx, sy, sx, sy - s); ctx.fill();
     }
+    const k = Math.max(0, Math.min(1, (e.chillUntil - t) / ICE.chill));
+    ctx.strokeStyle = '#4FB6FF'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(x, y, r + 6, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
+    ctx.restore();
     return;
   }
   ctx.save();
@@ -1298,6 +1442,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t);
   for (const e of w.ents) {
     if (!e.dead && e.kind === 'train' && (e.vx || e.vy) && Math.random() < 0.3) puff(e);
+    if (!e.dead && e.chillUntil > w.t && Math.random() < 0.6) fx.parts.push({ x: e.x + rnd(-e.r, e.r) * 0.6, y: e.y + rnd(-e.r, e.r) * 0.6, vx: 0, vy: 12, life: 0.6, age: 0, color: '#CFF4FF', size: rnd(3, 5), round: true }); // an icy trail
     const frozen = !e.dead && e.chillUntil > w.t && e.chillSlow <= 0.1; // thawing out: the ice block shatters
     if (fx.frozen[e.id] && !frozen) { burst(e.x, e.y, 18, '#DDF6FF', 220); ring(e.x, e.y, e.r, 1.8, 0.35, '200,240,255', 4); }
     fx.frozen[e.id] = frozen;
@@ -1315,8 +1460,9 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
   }
   for (const e of w.ents) if (!e.dead && e.yank && !e.yank.by.dead) chain(ctx, e.yank.by.x, e.yank.by.y, e.x, e.y);
   for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : sh.kind === 'hook' ? hookShot(ctx, sh) : shuriken(ctx, sh, w.t);
-  if (aim != null) aimArrow(ctx, w.ents[0], aim, now);
-  if (foeAim != null && w.ents[1]) aimArrow(ctx, w.ents[1], foeAim, now); // the opponent's shot is no secret, like the original
+  const lead = side => w.ents.find(e => e.side === side);
+  if (aim != null) aimArrow(ctx, lead(0), aim, now);
+  if (foeAim != null && lead(1)) aimArrow(ctx, lead(1), foeAim, now); // the opponent's shot is no secret, like the original
 
   ctx.save();
   ctx.shadowBlur = 14;
