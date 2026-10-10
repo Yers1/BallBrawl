@@ -19,6 +19,8 @@ const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
   return `rgb(${c})`;
 };
 
+let shakeOn = true;
+export const setShakeOn = on => { shakeOn = on; }; // settings: some players get dizzy
 export function resetFx() {
   fx.parts.length = fx.floats.length = fx.rings.length = 0;
   fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {}; fx.emotes = {}; fx.bump = {};
@@ -1839,7 +1841,7 @@ function puff(e) {
 export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null }) {
   absorb(w, now);
   ctx.setTransform(s, 0, 0, s, M * s, M * s);
-  if (fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
+  if (shakeOn && fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
   fx.shake = Math.max(0, fx.shake - dt * 40);
   arena(ctx, w, now);
   if (chessBoard(ctx, w, w.t)) obstacles(ctx, w, now); // rocks and pools stay visible on the board

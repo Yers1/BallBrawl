@@ -299,15 +299,45 @@
   <section id="scr-settings" class="overlay" hidden>
     <div class="card result settings">
       <h2 data-t="settingsTitle"></h2>
-      <div class="set-row"><span data-t="setSound"></span><button id="set-sound" class="toggle" role="switch"></button></div>
-      <div class="set-row"><span data-t="setMusic"></span><button id="set-music" class="toggle" role="switch"></button></div>
-      <div class="set-row"><span data-t="setFoeEmotes"></span><button id="set-emotes" class="toggle" role="switch"></button></div>
+      <h3 data-t="setFeel"></h3>
+      <div class="set-group">
+        <div class="set-row"><span data-t="setSound"></span><button id="set-sound" class="toggle" role="switch"></button></div>
+        <div class="set-row"><span data-t="setMusic"></span><button id="set-music" class="toggle" role="switch"></button></div>
+        <div class="set-row"><span data-t="setShake"></span><button id="set-shake" class="toggle" role="switch"></button></div>
+        <div class="set-row" id="set-vib-row"><span data-t="setVibrate"></span><button id="set-vibrate" class="toggle" role="switch"></button></div>
+        <div class="set-row"><span data-t="setFoeEmotes"></span><button id="set-emotes" class="toggle" role="switch"></button></div>
+      </div>
       <h3 data-t="langTitle"></h3>
       <div id="p-langs" class="chip-row"></div>
+      <h3 data-t="setHelp"></h3>
+      <div class="set-group">
+        <button class="set-link" id="set-report"><span data-t="setReport"></span><i>›</i></button>
+        <button class="set-link" id="set-parents"><span data-t="setParents"></span><i>›</i></button>
+        <a class="set-link" href="privacy.html"><span data-t="privacy"></span><i>›</i></a>
+      </div>
       <button class="btn wide-btn" id="set-account" data-t="setAccount"></button>
-      <p class="center"><a href="privacy.html" data-t="privacy"></a></p>
       <p id="set-version" class="muted small center"></p>
       <button class="btn ghost wide-btn" id="set-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-report" class="overlay" hidden>
+    <div class="card result report">
+      <h2 data-t="repTitle"></h2>
+      <div id="rep-kinds" class="chip-row"></div>
+      <label id="rep-about-row" class="rep-field" hidden><span data-t="repAbout"></span><input id="rep-about" maxlength="40" autocomplete="off"></label>
+      <label class="rep-field"><span data-t="repWhat"></span><textarea id="rep-text" maxlength="500" rows="5"></textarea></label>
+      <p class="muted small" data-t="repSafe"></p>
+      <button class="btn primary wide-btn" id="rep-send" data-t="repSend"></button>
+      <button class="btn ghost wide-btn" id="rep-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-parents" class="overlay" hidden>
+    <div class="card result parents">
+      <h2 data-t="parentsTitle"></h2>
+      <p class="parents-body" data-t="parentsBody"></p>
+      <button class="btn ghost wide-btn" id="par-close" data-t="close"></button>
     </div>
   </section>
 

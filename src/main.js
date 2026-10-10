@@ -3,7 +3,7 @@ import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METE
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -782,6 +782,7 @@ function feel(w, now) {
   for (const ev of w.events) {
     if (ev.type === 'hit' && hits++ < 2) sfx.hit(ev.amount, w.ents.find(e => e.id === ev.id)?.kind);
     if (ev.type === 'hit' && ev.amount >= 18) S.freezeUntil = Math.max(S.freezeUntil, now + 0.05);
+    if (ev.type === 'hit' && ev.amount >= 15 && ev.side === 0 && save.vibrate) navigator.vibrate?.(30); // your ball took a big one
     if (ev.type === 'hit' && ev.amount >= 8) { cmdReact(ev.side, 'ouch', ev.amount >= 22); cmdReact(1 - ev.side, 'cheer'); }
     if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(S.match?.map ?? w.map); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
@@ -1126,6 +1127,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
+const VERSION = '1.7';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);
@@ -1134,6 +1136,35 @@ const muteUI = () => {
   $('#set-music').classList.toggle('on', save.music);
   $('#set-music').setAttribute('aria-checked', String(save.music));
   $('#set-emotes').setAttribute('aria-checked', String(save.foeEmotes));
+  for (const [id, on] of [['#set-shake', save.shake], ['#set-vibrate', save.vibrate]]) { $(id).classList.toggle('on', on); $(id).setAttribute('aria-checked', String(on)); }
+};
+$('#set-vib-row').hidden = !navigator.vibrate; // phones only
+$('#set-shake').onclick = () => { save.shake = !save.shake; setShakeOn(save.shake); persist(); muteUI(); sfx.click(); };
+$('#set-vibrate').onclick = () => { save.vibrate = !save.vibrate; persist(); muteUI(); if (save.vibrate) navigator.vibrate?.(40); };
+setShakeOn(save.shake);
+// "Report a problem": what kind, who (for a complaint about a player), what happened. Stored for the team in bb_feedback.
+const REP_KINDS = ['bug', 'player', 'idea', 'payment', 'other'];
+let repKind = 'bug';
+const repKinds = () => $('#rep-kinds').replaceChildren(...REP_KINDS.map(k => {
+  const b = el('button', 'chip' + (k === repKind ? ' on' : ''), t('repKind_' + k));
+  b.onclick = () => { repKind = k; $('#rep-about-row').hidden = k !== 'player'; repKinds(); };
+  return b;
+}));
+$('#set-report').onclick = () => { sfx.click(); repKinds(); $('#rep-about-row').hidden = repKind !== 'player'; $('#scr-report').hidden = false; };
+$('#rep-close').onclick = () => { $('#scr-report').hidden = true; };
+$('#set-parents').onclick = () => { sfx.click(); $('#scr-parents').hidden = false; };
+$('#par-close').onclick = () => { $('#scr-parents').hidden = true; };
+$('#rep-send').onclick = async () => {
+  const body = $('#rep-text').value.trim();
+  if (body.length < 3) { toast(t('repEmpty')); return; }
+  if (!net.online) { toast(t('repOffline')); return; }
+  $('#rep-send').disabled = true;
+  try {
+    const ok = await online.sendFeedback(repKind, body, $('#rep-about').value, { v: VERSION, lang, trophies: save.trophies, id: save.profileId ?? null, screen: `${innerWidth}x${innerHeight}` });
+    toast(t(ok ? 'repSent' : 'repLimit'));
+    if (ok) { $('#rep-text').value = $('#rep-about').value = ''; $('#scr-report').hidden = true; }
+  } catch { toast(t('repOffline')); }
+  $('#rep-send').disabled = false;
 };
 $('#set-sound').onclick = () => { save.muted = !save.muted; setMuted(save.muted); persist(); muteUI(); };
 $('#set-music').onclick = () => { save.music = !save.music; setMusicOn(save.music); persist(); muteUI(); };
@@ -1141,7 +1172,7 @@ $('#set-emotes').onclick = () => { save.foeEmotes = !save.foeEmotes; setFoeEmote
 $('#gear').onclick = () => { sfx.click(); home.settings(); muteUI(); $('#scr-settings').hidden = false; };
 $('#set-close').onclick = () => { $('#scr-settings').hidden = true; };
 $('#set-account').onclick = () => { $('#scr-settings').hidden = true; if (S.mode === 'home') home.open('profile'); };
-$('#set-version').textContent = 'BallBrawl · v1.6';
+$('#set-version').textContent = `BallBrawl · v${VERSION}` + (save.profileId ? ` · ID ${save.profileId.slice(0, 8).toUpperCase()}` : ''); // the ID helps find a player's report
 setFoeEmotes(save.foeEmotes);
 if (!langChosen() && RECORD == null) { // first launch: choose the language before anything else
   $('#lang-list').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {

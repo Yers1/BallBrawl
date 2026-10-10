@@ -181,7 +181,7 @@ export function freshSave() {
     slots: [null, null, null, null], cycle: 0, slotsOpened: [], // the 4 chest slots, the chest order, opened slot chest ids
     own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
     deals: [], adGems: { day: null, n: 0 },
-    mailRead: [], mailClaimed: [], foeEmotes: true, // inbox ids read / gifts taken; show the opponent's emotes
+    mailRead: [], mailClaimed: [], foeEmotes: true, shake: true, vibrate: true, // inbox ids read / gifts taken; show the opponent's emotes
     mode: 'classic', // classic | duo | boss
     xp: 0, // experience: the player level
     fam: { lv: 1, xp: 0, skin: 'king', own: ['king'] }, // the familiar: its level, XP toward the next one, look, looks owned
@@ -248,6 +248,8 @@ export function migrate(raw) {
   s.mailRead = list(r.mailRead, Number.isInteger).slice(-60);
   s.mailClaimed = list(r.mailClaimed, Number.isInteger).slice(-60);
   s.foeEmotes = r.foeEmotes !== false;
+  s.shake = r.shake !== false;
+  s.vibrate = r.vibrate !== false;
   if (['classic', 'duo', 'boss'].includes(r.mode)) s.mode = r.mode;
   s.xp = int(r.xp) ?? 0;
   if (r.fam && typeof r.fam === 'object') {

@@ -142,6 +142,7 @@ export const clanInfo = id => rpc('clan_info', { p_clan: id ?? null });
 export const clanCreate = (name, badge) => rpc('clan_create', { p_name: name, p_badge: badge });
 export const clanJoin = id => rpc('clan_join', { p_clan: id });
 export const clanLeave = () => rpc('clan_leave');
+export const sendFeedback = (kind, body, about, meta) => rpc('send_feedback', { p_kind: kind, p_body: body, p_about: about || null, p_meta: meta });
 export const logEvent = type => (net.online ? rpc('log_event', { p_type: type }).catch(() => {}) : null);
 export async function deleteProfile() {
   await rpc('delete_profile');
