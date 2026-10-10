@@ -5,7 +5,7 @@ const CORE = [
   './', 'index.html', 'style.css', 'privacy.html', 'manifest.webmanifest', 'icon.svg',
   'src/main.js', 'src/sim.js', 'src/balls.js', 'src/match.js', 'src/ai.js', 'src/render.js',
   'src/i18n.js', 'src/ads.js', 'src/nick.js', 'src/challenge.js', 'src/sfx.js', 'src/progress.js', 'src/meta.js',
-  'src/net.js', 'src/config.js',
+  'src/net.js', 'src/config.js', 'src/themes.js',
 ];
 
 self.addEventListener('install', e => {

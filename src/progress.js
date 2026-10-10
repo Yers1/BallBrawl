@@ -29,6 +29,14 @@ export function enemySquadFor(tr, rand) {
   return [0, 1, 2].map(() => pool[Math.floor(rand() * pool.length)]);
 }
 
+// ---------- arenas (Clash-Royale style): unlocked by your best trophies, never taken back ----------
+export const ARENAS = [
+  { id: 'night', at: 0 }, { id: 'canyon', at: 120 }, { id: 'frost', at: 350 },
+  { id: 'jungle', at: 700 }, { id: 'lava', at: 1200 }, { id: 'space', at: 1900 },
+];
+export const arenaFor = maxTrophies => ARENAS.reduce((a, x) => (maxTrophies >= x.at ? x : a), ARENAS[0]);
+export const arenaIndex = id => Math.max(0, ARENAS.findIndex(a => a.id === id));
+
 // ---------- save ----------
 export function freshSave() {
   return {
@@ -37,7 +45,9 @@ export function freshSave() {
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
     chests: { box: 0, big: 0, mega: 0 }, chestWins: 0, // chests waiting to be opened; wins toward the next one
+    chestsGot: { box: 0, big: 0, mega: 0 }, chestsOpened: { box: 0, big: 0, mega: 0 }, // ever earned / ever opened: only grow, so merges can't revive opened chests
     accountGift: false, // made an email account: the rainbow skin is theirs on every ball
+    arenaSeen: 'night', // the newest arena the player has been welcomed to (the unlock celebration shows once)
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
     // cloud bookkeeping
@@ -66,8 +76,13 @@ export function migrate(raw) {
   s.accountGift = r.accountGift === true;
   s.skins = list(r.skins, k => typeof k === 'string' && /^[a-z]+:[a-z]+$/.test(k) && BALLS[k.split(':')[0]] && SKINS[k.split(':')[1]] && !SKINS[k.split(':')[1]].gift);
   for (const [b, st] of Object.entries(r.skinOf || {})) if (hasSkin(s, b, st)) s.skinOf[b] = st;
-  for (const k of Object.keys(CHESTS)) s.chests[k] = int(r.chests?.[k], 0, 999) ?? 0;
+  for (const k of Object.keys(CHESTS)) {
+    s.chests[k] = int(r.chests?.[k], 0, 999) ?? 0;
+    s.chestsOpened[k] = int(r.chestsOpened?.[k]) ?? 0;
+    s.chestsGot[k] = Math.max(int(r.chestsGot?.[k]) ?? 0, s.chests[k] + s.chestsOpened[k]);
+  }
   s.chestWins = int(r.chestWins, 0, CHEST_WINS - 1) ?? 0;
+  if (ARENAS.some(a => a.id === r.arenaSeen)) s.arenaSeen = r.arenaSeen;
   if (r.quests && typeof r.quests.day === 'string' && Array.isArray(r.quests.list)) {
     s.quests = { day: r.quests.day, list: r.quests.list.filter(q => QUESTS.some(d => d.id === q?.id)).map(q => ({ id: q.id, progress: int(q.progress) ?? 0, claimed: q.claimed === true })) };
   }
@@ -128,6 +143,7 @@ export function claim(s, node) {
   }
   if (node.chest) {
     s.chests[node.chest]++;
+    s.chestsGot[node.chest]++;
     return { chest: node.chest };
   }
   if (node.skin) {
@@ -179,6 +195,7 @@ export function winTowardChest(s) {
   if (s.chestWins < CHEST_WINS) return false;
   s.chestWins = 0;
   s.chests.box++;
+  s.chestsGot.box++;
   return true;
 }
 // Opens one chest of `kind`; `rand` is injected so tests are repeatable. Returns what fell out, or null.
@@ -186,6 +203,7 @@ export function openChest(s, kind, rand) {
   const c = CHESTS[kind];
   if (!c || !(s.chests[kind] > 0)) return null;
   s.chests[kind]--;
+  s.chestsOpened[kind]++;
   const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), ball: null, skin: null };
   const balls = ORDER.filter(id => !s.owned.includes(id));
   if (balls.length && rand() < c.ball) { out.ball = balls[Math.floor(rand() * balls.length)]; s.owned.push(out.ball); }
@@ -308,9 +326,16 @@ export function mergeSave(local, cloudRaw, server) {
   s.matches = Math.max(s.matches, cloud.matches);
   for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);
   for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;
-  for (const k of Object.keys(CHESTS)) s.chests[k] = Math.max(s.chests[k], cloud.chests[k]);
-  s.chestWins = Math.max(s.chestWins, cloud.chestWins);
+  // the win meter belongs to whichever copy has dropped more win chests (the other one is older)
+  const dw = cloud.chestsGot.box - s.chestsGot.box;
+  s.chestWins = dw > 0 ? cloud.chestWins : dw < 0 ? s.chestWins : Math.max(s.chestWins, cloud.chestWins);
+  for (const k of Object.keys(CHESTS)) {
+    s.chestsGot[k] = Math.max(s.chestsGot[k], cloud.chestsGot[k]);
+    s.chestsOpened[k] = Math.max(s.chestsOpened[k], cloud.chestsOpened[k]);
+    s.chests[k] = Math.max(0, s.chestsGot[k] - s.chestsOpened[k]);
+  }
   s.accountGift ||= cloud.accountGift;
+  if (arenaIndex(cloud.arenaSeen) > arenaIndex(s.arenaSeen)) s.arenaSeen = cloud.arenaSeen;
   if (dayNum(cloud.quests.day) > dayNum(s.quests.day)) s.quests = cloud.quests;
   else if (cloud.quests.day === s.quests.day) {
     for (const q of s.quests.list) {

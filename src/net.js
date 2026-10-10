@@ -6,6 +6,7 @@ import { mergeSave } from './progress.js';
 
 let sb = null;
 export const net = { online: false, code: null, email: null }; // email = signed in with an account, not anonymous
+let uid = null; // the user this page connected as: after a sign-in (here or in another tab) its save must not sync
 
 const timeout = (p, ms = 6000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), ms))]);
 async function rpc(name, args = {}) {
@@ -31,6 +32,7 @@ export async function connect(save) {
       session = data.session;
     }
     net.email = session?.user && !session.user.is_anonymous ? session.user.email ?? null : null;
+    uid = session?.user?.id ?? null;
     const p = await rpc('ensure_profile', {
       p_nick: save.nick, p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar,
       p_local_trophies: save.profileId ? 0 : save.trophies, // offline trophies are imported only once
@@ -55,30 +57,39 @@ export async function connect(save) {
   }
 }
 // When a profile moved away, start this device over (coins/balls stay on the phone that owns the profile now).
-const freshCounters = () => ({ coins: 0, owned: ['basic'], claimed: [], skins: [], skinOf: {}, achieved: [], trophies: 0, maxTrophies: 0 });
+const freshCounters = () => ({
+  coins: 0, owned: ['basic'], claimed: [], skins: [], skinOf: {}, achieved: [], trophies: 0, maxTrophies: 0,
+  chests: { box: 0, big: 0, mega: 0 }, chestsGot: { box: 0, big: 0, mega: 0 }, chestsOpened: { box: 0, big: 0, mega: 0 }, chestWins: 0, accountGift: false,
+});
 
 let syncTimer = 0;
+const upload = (save, at) => {
+  const { profileId, pendingFinish, ...blob } = save; // bookkeeping stays local
+  return rpc('sync_save', {
+    p_save: blob, p_save_at: new Date(at).toISOString(),
+    p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar, p_nick: save.nick,
+  });
+};
+const sameUser = async () => (await sb.auth.getSession()).data.session?.user?.id === uid;
 export function queueSync(save) {
   if (!net.online) return;
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => {
-    const { profileId, pendingFinish, ...blob } = save; // bookkeeping stays local
-    rpc('sync_save', {
-      p_save: blob, p_save_at: new Date(save.savedAt || Date.now()).toISOString(),
-      p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar, p_nick: save.nick,
-    }).then(r => { net.code = r.code; }).catch(() => {});
+  syncTimer = setTimeout(async () => {
+    if (!(await sameUser().catch(() => false))) return; // signed into another account: the reload merges instead
+    upload(save, save.savedAt || Date.now()).then(r => { net.code = r.code; }).catch(() => {});
   }, 2500);
 }
 
-// Send the save right now (before signing in or out), instead of waiting for the debounce.
+// Before signing out: merge in the cloud copy (another device may be ahead), upload that and check it landed.
+// Throws on any failure, so the caller keeps the local save.
 export async function flushSync(save) {
-  if (!net.online) return;
+  if (!net.online) throw new Error('offline');
   clearTimeout(syncTimer);
-  const { profileId, pendingFinish, ...blob } = save;
-  await rpc('sync_save', {
-    p_save: blob, p_save_at: new Date(save.savedAt || Date.now()).toISOString(),
-    p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar, p_nick: save.nick,
-  });
+  const cur = await upload(save, 0); // an old timestamp never overwrites: this only reads the cloud copy
+  const merged = mergeSave(save, cur.save || {}, cur);
+  merged.flushId = Math.random().toString(36).slice(2);
+  const r = await upload(merged, Math.max(Date.now(), (Date.parse(cur.save_at) || 0) + 1));
+  if (r.save?.flushId !== merged.flushId) throw new Error('not stored');
 }
 
 // Email accounts. Turning this device's anonymous player into an account keeps the same profile (same user id);
@@ -94,8 +105,10 @@ export async function signInAccount(email, password) {
   const { error } = await timeout(sb.auth.signInWithPassword({ email, password }), 10000);
   if (error) throw error;
 }
-export async function signOutAccount() {
-  await sb?.auth.signOut().catch(() => {});
+export async function signOutAccount() { // this device only; other devices stay signed in
+  if (!sb) throw new Error('offline');
+  const { error } = await timeout(sb.auth.signOut({ scope: 'local' }));
+  if (error) throw error;
 }
 
 export const findOpponent = () => rpc('find_opponent');

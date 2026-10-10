@@ -3,6 +3,7 @@
 import { W, H, SUDDEN, canSuper } from './sim.js';
 import { BALLS, TRAIN, LEECH, POISON, trainCars } from './balls.js';
 import { SKINS } from './progress.js';
+import { THEMES } from './themes.js';
 
 export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
 const SIDE_RGB = ['76,201,240', '255,77,94'];
@@ -91,29 +92,82 @@ function absorb(w, now) {
 
 // ---------- pieces ----------
 
-// The arena is a sunken box seen from above, like the original: navy floor, four bevelled walls lit from the top.
-const FACES = [ // colour, then the corners of each wall face
-  ['#2E4C77', [-M, -M], [W + M, -M], [W, 0], [0, 0]],
-  ['#1B3254', [-M, -M], [0, 0], [0, H], [-M, H + M]],
-  ['#14284A', [W + M, -M], [W + M, H + M], [W, H], [W, 0]],
-  ['#10213D', [-M, H + M], [0, H], [W, H], [W + M, H + M]],
+// The arena is a sunken box seen from above, like the original: a floor, four bevelled walls lit from the top.
+// Its colours and floor pattern come from the current arena (themes.js); decorations are laid out once per arena.
+let THEME = THEMES.night, DECOR = [];
+const FACE_PTS = [ // the corners of each wall face: top, left, right, bottom
+  [[-M, -M], [W + M, -M], [W, 0], [0, 0]],
+  [[-M, -M], [0, 0], [0, H], [-M, H + M]],
+  [[W + M, -M], [W + M, H + M], [W, H], [W, 0]],
+  [[-M, H + M], [0, H], [W, H], [W + M, H + M]],
 ];
+export function setArena(id) {
+  THEME = THEMES[id] || THEMES.night;
+  let seed = 7;
+  const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const n = { ice: 12, grass: 34, cracks: 9, stars: 70, tiles: 0, grid: 0 }[THEME.pattern] ?? 0;
+  DECOR = Array.from({ length: n }, () => ({ x: r() * W, y: r() * H, a: r() * Math.PI, s: r(), k: Array.from({ length: 4 }, () => r() * 2 - 1) }));
+}
+function floorPattern(ctx, now) {
+  const p = THEME.pattern;
+  ctx.save();
+  if (p === 'grid') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 50; i < W; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.moveTo(0, i); ctx.lineTo(W, i); }
+    ctx.stroke();
+  } else if (p === 'tiles') { // sandstone blocks
+    ctx.strokeStyle = 'rgba(90,50,10,0.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let y = 0, row = 0; y < H; y += 40, row++) {
+      ctx.moveTo(0, y); ctx.lineTo(W, y);
+      for (let x = row % 2 ? 30 : 0; x < W; x += 60) { ctx.moveTo(x, y); ctx.lineTo(x, y + 40); }
+    }
+    ctx.stroke();
+  } else if (p === 'ice') { // glossy streaks across the ice
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineCap = 'round';
+    for (const d of DECOR) { ctx.lineWidth = 2 + d.s * 4; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 30 + d.s * 40, d.y - 20 - d.s * 26); ctx.stroke(); }
+  } else if (p === 'grass') { // darker tufts
+    ctx.fillStyle = 'rgba(20,60,20,0.28)';
+    for (const d of DECOR) { ctx.beginPath(); ctx.ellipse(d.x, d.y, 10 + d.s * 22, 6 + d.s * 10, d.a, 0, Math.PI * 2); ctx.fill(); }
+  } else if (p === 'cracks') { // glowing lava cracks that breathe
+    ctx.strokeStyle = `rgba(255,122,47,${0.55 + 0.25 * Math.sin(now * 2)})`;
+    ctx.shadowColor = '#FF7A2F';
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    for (const d of DECOR) {
+      ctx.beginPath(); ctx.moveTo(d.x, d.y);
+      let x = d.x, y = d.y;
+      for (const k of d.k) { x += Math.cos(d.a + k) * 26; y += Math.sin(d.a + k) * 26; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+  } else if (p === 'stars') {
+    ctx.fillStyle = '#FFFFFF';
+    for (const d of DECOR) { ctx.globalAlpha = 0.25 + 0.6 * Math.abs(Math.sin(now * (0.5 + d.s) + d.a)); ctx.fillRect(d.x, d.y, 1.5 + d.s * 1.5, 1.5 + d.s * 1.5); }
+  }
+  ctx.restore();
+}
 function arena(ctx, w, now) {
   const sudden = w.launched && w.t > SUDDEN;
-  ctx.fillStyle = '#0F1F38';
+  ctx.fillStyle = THEME.faces[3];
   ctx.fillRect(-M - 20, -M - 20, W + 2 * M + 40, H + 2 * M + 40); // oversized: camera shake never shows an edge
-  for (const [color, ...pts] of FACES) {
+  FACE_PTS.forEach((pts, i) => {
     ctx.beginPath();
-    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.fillStyle = color;
+    pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.fillStyle = THEME.faces[i];
     ctx.fill();
     if (sudden) { // walls glow red in sudden death
       ctx.fillStyle = `rgba(255,60,80,${0.3 + 0.3 * Math.sin(now * 9)})`;
       ctx.fill();
     }
-  }
-  ctx.fillStyle = '#203A5E';
+  });
+  ctx.fillStyle = THEME.floor;
   ctx.fillRect(0, 0, W, H);
+  floorPattern(ctx, now);
   for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
     const g = ctx.createLinearGradient(0, 0, gx * 18, gy * 18);
     g.addColorStop(0, 'rgba(8,16,32,0.4)');

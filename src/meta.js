@@ -6,8 +6,10 @@ import { nickText, randomNick, validNick } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, SKIN_PRICE, hasSkin, buySkin, equipSkin, buyBall,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, CHEST_WINS, openChest,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, CHEST_WINS, openChest, ARENAS, arenaFor, arenaIndex,
 } from './progress.js';
+import { THEMES } from './themes.js';
+import { setArena } from './render.js';
 import { sfx, confetti } from './sfx.js';
 
 const $ = s => document.querySelector(s);
@@ -51,6 +53,36 @@ ${rivets([30.5, 89.5], [24, 38])}
 </svg>`;
 }
 
+// The lobby stage: the current arena seen in perspective, with neon rings where the squad stands.
+// k keeps the gradient/filter ids unique when two copies are on the page (the lobby and the new-arena popup).
+export function arenaSvg(id, k) {
+  const th = THEMES[id] || THEMES.night, [top, left, right, bottom] = th.faces, [ally, lead] = th.rings;
+  const e = (cx, cy, rx, ry) => `cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"`;
+  const ring = (cx, cy, rx, ry, c, w) => `<ellipse ${e(cx, cy, rx, ry)} fill="${c}" fill-opacity="0.15"/>`
+    + `<ellipse ${e(cx, cy, rx, ry)} fill="none" stroke="${c}" stroke-opacity="0.6" stroke-width="${w * 2.7}" filter="url(#ne${k})"/>`
+    + `<ellipse ${e(cx, cy, rx, ry)} fill="none" stroke="${c}" stroke-width="${w}"/>`
+    + `<ellipse ${e(cx, cy - 6, rx * 0.76, ry * 0.66)} fill="${c}" opacity="0.45" filter="url(#gl${k})"/>`;
+  return `<svg viewBox="0 0 358 440" aria-hidden="true"><defs>
+<radialGradient id="vg${k}" cx="0.5" cy="0.62" r="0.72"><stop offset="0.5" stop-color="#050A18" stop-opacity="0"/><stop offset="1" stop-color="#050A18" stop-opacity="0.65"/></radialGradient>
+<filter id="ne${k}" x="-20%" y="-100%" width="140%" height="300%"><feGaussianBlur stdDeviation="4"/></filter>
+<filter id="gl${k}" x="-50%" y="-150%" width="200%" height="400%"><feGaussianBlur stdDeviation="9"/></filter>
+<clipPath id="fl${k}"><path d="M62 104H296L344 426H14Z"/></clipPath></defs>
+<path d="M62 14H296V104H62Z" fill="${th.back}"/>
+<path d="M103 14V96M144 14V96M185 14V96M226 14V96M267 14V96" stroke="rgba(0,0,0,0.3)" stroke-width="2"/>
+<path d="M62 96H296V104H62Z" fill="${top}"/>
+<path d="M14 14H62V104L14 426Z" fill="${left}"/><path d="M344 14H296V104L344 426Z" fill="${right}"/>
+<path d="M14 14H62V104L14 426ZM344 14H296V104L344 426Z" fill="#000" opacity="0.18"/>
+<path d="M62 104H296L344 426H14Z" fill="${th.floor}"/>
+<g clip-path="url(#fl${k})" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="1.5" fill="none"><path d="M91.3 104L55.3 426M120.5 104L96.5 426M149.8 104L137.8 426M179 104V426M208.3 104L220.3 426M237.5 104L261.5 426M266.8 104L302.8 426"/><path d="M0 120H358M0 143H358M0 172H358M0 210H358M0 259H358M0 317H358M0 384H358"/></g>
+<path d="M62 14V104L14 426M296 14V104L344 426" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="2.5"/>
+<g clip-path="url(#fl${k})">${ring(76, 326, 58, 15, ally, 2.5)}${ring(282, 326, 58, 15, ally, 2.5)}${ring(179, 394, 100, 24, lead, 3)}</g>
+<rect x="14" y="14" width="330" height="412" fill="url(#vg${k})"/>
+<ellipse ${e(76, 325, 32, 8)} fill="#000" opacity="0.45"/><ellipse ${e(282, 325, 32, 8)} fill="#000" opacity="0.45"/><ellipse ${e(179, 393, 56, 12)} fill="#000" opacity="0.45"/>
+<path d="M0 0H358L344 14H14Z" fill="${top}"/><path d="M0 440H358L344 426H14Z" fill="${bottom}"/>
+<path d="M0 0L14 14V426L0 440Z" fill="${left}"/><path d="M358 0L344 14V426L358 440Z" fill="${right}"/>
+<rect x="1" y="1" width="356" height="438" fill="none" stroke="#0A0E1F" stroke-width="2"/></svg>`;
+}
+
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
   const { net, leaderboard, redeemCode, deleteProfile } = online;
   let tab = 'lobby';
@@ -65,7 +97,11 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     hero.className = 'ball-hero pop';
     let text = '', sub = '';
     $('#rw-open').hidden = !res.chest;
-    if (res.chest) { // a chest from the road: it waits in the chest button, or can be opened right here
+    if (res.arena) { // a new arena unlocked: show its stage
+      hero.innerHTML = `<span class="arena-pop">${arenaSvg(res.arena, 'rw')}</span>`;
+      text = t('arenaNew', { name: t('arena_' + res.arena) });
+      sub = t('arenaNewSub');
+    } else if (res.chest) { // a chest from the road: it waits in the chest button, or can be opened right here
       hero.innerHTML = chestSvg(res.chest);
       text = t('chestNew', { name: t('chest_' + res.chest) });
       sub = t('chestNewSub');
@@ -90,7 +126,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#rw-sub').textContent = sub;
     $('#scr-reward').hidden = false;
     sfx.coin();
-    if (res.ball || res.skin || res.chest || res.gift) confetti();
+    if (res.ball || res.skin || res.chest || res.gift || res.arena) confetti();
     persist();
     coinsUI();
     render();
@@ -205,6 +241,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       nextBox.append(txt);
     }
     hero.replaceChildren(el('div', 'ph-trophies', `<i class="trophy"></i><b>${save.trophies}</b>`), nextBox);
+    const nx = ARENAS[arenaIndex(arenaFor(save.maxTrophies).id) + 1], ar = el('div', 'ph-arena');
+    ar.textContent = nx ? t('arenaNext', { name: t('arena_' + nx.id), n: nx.at - save.maxTrophies }) : t('arenaLast');
+    hero.append(ar);
     if (ready.length > 1) {
       const all2 = el('button', 'btn primary sm claim-all', `${t('claimAll')} (${ready.length})`);
       all2.onclick = () => {
@@ -386,7 +425,11 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     } catch { toast(t('needNet')); }
   };
   // ---------- chests ----------
-  const odds = k => t('chestOdds', { a: CHESTS[k].coins[0], b: CHESTS[k].coins[1], s: Math.round(CHESTS[k].skin * 100), c: Math.round(CHESTS[k].ball * 100) });
+  const odds = k => { // the real odds for this player: 0% once everything of that kind is collected
+    const c = CHESTS[k], ballsLeft = ORDER.some(id => !save.owned.includes(id));
+    const skinsLeft = save.owned.some(b => Object.keys(SKINS).some(st => !SKINS[st].gift && !hasSkin(save, b, st)));
+    return t('chestOdds', { a: c.coins[0], b: c.coins[1], s: skinsLeft ? Math.round(c.skin * 100) : 0, c: ballsLeft ? Math.round(c.ball * 100) : 0 });
+  };
   function chestList() {
     $('#ch-wins').textContent = t('chestWins', { n: save.chestWins, max: CHEST_WINS });
     $('#ch-list').replaceChildren(...KINDS.map(k => {
@@ -427,6 +470,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#op-title').textContent = t('chest_' + kind);
     $('#op-chest').innerHTML = chestSvg(kind);
     $('#op-chest').className = 'op-chest drop';
+    $('#op-chest').hidden = false;
     $('#op-item').hidden = true;
     $('#op-sum').hidden = true;
     $('#op-btns').hidden = true;
@@ -565,8 +609,20 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   };
   $('#acct-out').onclick = async () => {
     if (!confirm(t('acctOutConfirm'))) return;
-    await online.flushSync(save).catch(() => {});
-    await online.signOutAccount();
+    const btn = $('#acct-out');
+    btn.disabled = true;
+    try {
+      if (save.pendingFinish) { // report a ranked result first, or the server would count it as abandoned
+        await online.finishMatch(save.pendingFinish).catch(() => {});
+        save.pendingFinish = null;
+      }
+      await online.flushSync(save); // the local save is wiped below only once the account provably has it
+      await online.signOutAccount();
+    } catch {
+      btn.disabled = false;
+      toast(t('acctOutFail'));
+      return;
+    }
     try { localStorage.removeItem('ballbrawl.v1'); } catch { /* blocked storage */ }
     location.reload();
   };
@@ -575,7 +631,14 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- lobby ----------
   function lobby() {
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
-    $('#l-trio').replaceChildren(icon(l, 64, sk(l)), icon(lead, 112, sk(lead)), icon(r, 64, sk(r)));
+    $('#l-trio').replaceChildren(icon(l, 136, sk(l)), icon(lead, 232, sk(lead)), icon(r, 136, sk(r)));
+    const a = arenaFor(save.maxTrophies).id;
+    $('#l-arena-n').textContent = t('arenaN', { n: arenaIndex(a) + 1 });
+    $('#l-arena').textContent = t('arena_' + a);
+    if (arenaIndex(a) > arenaIndex(save.arenaSeen)) { // reached a new arena: celebrate it once
+      save.arenaSeen = a;
+      setTimeout(() => reward({ arena: a }), 300);
+    }
     $('#l-lead').textContent = ballName(lead);
     const { next, p } = nextReward();
     $('#l-tr').textContent = save.trophies;
@@ -609,7 +672,19 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   }
   for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sfx.click(); open(b.dataset.tab); };
 
+  // The current arena paints the fight and the menus: page sky, battle floor and walls, the lobby stage.
+  let shownArena = '';
+  function applyArena() {
+    const a = arenaFor(save.maxTrophies).id;
+    if (a === shownArena) return;
+    shownArena = a;
+    document.documentElement.style.setProperty('--sky', THEMES[a].sky);
+    setArena(a);
+    $('#l-arena-art').innerHTML = arenaSvg(a, 'l');
+  }
+
   function render() {
+    applyArena();
     top();
     if (tab === 'lobby') lobby();
     if (tab === 'path') { pathHero(); road(); }

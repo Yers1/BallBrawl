@@ -4,7 +4,9 @@
 
 A browser game where balls with superpowers fight in an arena. You build a squad of 3 balls, aim and launch. During a fight you tap the arena to dash (2 charges), and when the meter fills up you hit SUPER: every ball has its own super move.
 15 balls: Basic, Leech, Cell, Spider, Ninja, Train, Magnet, Bomb, Turtle, Lightning, Hedgehog, Ice, Spike, Shackles, Forge. Each has its own ability and super. Every round starts with an 8-second aim phase: ability cards for both balls, and the opponent's aim arrow is shown too, like in the original.
-**Trophy Road** from the main menu: wins earn trophies, and the road unlocks balls, skins and coins (rewards are kept forever, even if your trophies drop). There are skins (cosmetic only), 3 daily quests, a 7-day login reward and achievements. No random chests: every reward is known in advance.
+**Arenas, Clash Royale style:** Night Arena, Canyon, Frost Peak, Jungle, Lava Crater and Space unlock at 0, 120, 350, 700, 1200 and 1900 best trophies. Each arena repaints the battle floor and walls and the whole menu, and the first visit gets a celebration.
+**Glory Road** from the main menu: wins earn trophies, and the road (to 3000 trophies) unlocks balls, skins, coins and chests. Rewards are kept forever, even if your trophies drop. **Chests** are earned only, every 3 wins and on the road. They are never sold, and the chest screen shows the real odds for the player. There are skins (cosmetic only), 3 daily quests, a 7-day login reward and achievements.
+**Email account** (optional): turns the anonymous player into an account that can sign in on another device, and gives the Rainbow skin as a thank-you.
 **Challenge a friend by link:** the squad, seed, nickname and level live right in the link, no server needed. Your friend plays with the same squad and can send back a reply challenge with their result.
 Nicknames are built only from preset words ("Fast Hedgehog 482"), never free text. The game is made for kids, so ads run in child-safe mode (non-personalized). Works offline (service worker).
 Revenue comes from Google AdSense ads (H5 Games Ads); haram categories are blocked in the AdSense dashboard.
@@ -43,10 +45,11 @@ Rule: keep every ball's average win rate roughly within **35–65%**. Right now 
 | `src/sim.js` | Physics of one round: movement, bounces, homing, contact damage, dash, super meter, sudden death. Deterministic, no DOM. Player commands go through `act()` and are recorded in `world.log`: "seed + log" replays a fight exactly. |
 | `src/balls.js` | Balls: HP, colour, price and abilities. All balance numbers are at the top of the file. |
 | `src/match.js` | Squads, rounds, AI aiming, revive. |
-| `src/progress.js` | Trophies, road, skins, quests, daily reward, achievements, old-save migration. Pure functions, covered by tests. |
-| `src/meta.js` | Main menu (lobby: squad, section buttons, road bar, Play) and the pages it opens with a back button: Road, Balls (skins), Quests, Leaders, Profile. |
+| `src/progress.js` | Trophies, arenas, Glory Road, chests, skins, quests, daily reward, achievements, old-save migration and cloud merge. Pure functions, covered by tests. |
+| `src/themes.js` | How each arena looks: sky, floor, walls, floor pattern, neon ring colours. Pure data. |
+| `src/meta.js` | Main menu (lobby: the squad standing in the current arena, road bar, chests, Play, a six-tile dock) and the pages it opens with a back button: Glory Road, Balls (skins), Quests, Leaders, Profile with the email account. |
 | `src/ai.js` | The computer opponent: leading dashes, dodging the train, supers. Gets stronger with level. |
-| `src/render.js` | Drawing: the bevelled navy arena box, glossy balls with HP in the centre and a glowing team rim, webs, train, shurikens, pixel debris, damage numbers, screen shake. |
+| `src/render.js` | Drawing: the bevelled arena box in the current arena's colours, glossy balls with HP in the centre and a glowing team rim, webs, train, shurikens, pixel debris, damage numbers, screen shake. |
 | `src/main.js` | Screens, aiming, game loop, saving, ads. |
 | `src/net.js`, `src/config.js` | Online: Supabase client (anonymous profile, cloud save, ranked matches, leaderboards). |
 | `src/ads.js` | Wrapper around the AdSense Ad Placement API. |

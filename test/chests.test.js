@@ -50,7 +50,31 @@ test('chests and the gift merge across devices', () => {
   const b = { ...freshSave(), chests: { box: 1, big: 3, mega: 0 }, chestWins: 2, accountGift: true };
   const m = mergeSave(a, b, { trophies: 0, max_trophies: 0 });
   assert.deepEqual(m.chests, { box: 2, big: 3, mega: 1 });
-  assert.equal(m.chestWins, 2);
+  assert.equal(m.chestWins, 1, 'a dropped more win chests, so its meter is the newer one');
   assert.equal(m.accountGift, true);
   assert.deepEqual(migrate({ chests: { box: -5, big: 'x', mega: 1e12 } }).chests, { box: 0, big: 0, mega: 999 }, 'validated');
+});
+
+test('an opened chest does not come back from a stale cloud copy', () => {
+  const cloud = { ...freshSave(), chests: { box: 0, big: 3, mega: 0 } };
+  const local = migrate(cloud);
+  for (let i = 0; i < 3; i++) openChest(local, 'big', rng(i + 1));
+  const coins = local.coins;
+  const m = mergeSave(local, cloud, { trophies: 0, max_trophies: 0 });
+  assert.equal(m.chests.big, 0, 'no dupe');
+  assert.equal(m.coins, coins, 'loot kept');
+  const other = migrate(cloud); // a second device opens one of the same three
+  openChest(other, 'big', rng(9));
+  assert.equal(mergeSave(other, m, { trophies: 0, max_trophies: 0 }).chests.big, 0);
+});
+
+test('arenas unlock by best trophies and never go back', async () => {
+  const { ARENAS, arenaFor } = await import('../src/progress.js');
+  const { THEMES } = await import('../src/themes.js');
+  assert.equal(arenaFor(0).id, 'night');
+  assert.equal(arenaFor(119).id, 'night');
+  assert.equal(arenaFor(120).id, 'canyon');
+  assert.equal(arenaFor(99999).id, ARENAS.at(-1).id);
+  for (const a of ARENAS) assert.ok(THEMES[a.id], `theme for ${a.id}`);
+  assert.equal(migrate({ arenaSeen: 'nope' }).arenaSeen, 'night', 'validated');
 });
