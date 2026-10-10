@@ -541,8 +541,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // One skin button: owned → wear it; Silver and the rest → buy with coins; Gold → the ball's rank 7; Rainbow → an account.
   function skinOpt(id, style, again) {
     const ownSkin = style == null || hasSkin(save, id, style), on = (save.skinOf[id] ?? null) === style, sk = SKINS[style];
-    const b = el('button', `skin ${on ? 'on' : ''} ${ownSkin ? '' : 'locked'}`);
+    const b = el('button', `skin ${on ? 'on' : ''} ${ownSkin ? '' : 'locked'} r-${sk?.rar ?? 'common'}`);
     b.append(icon(id, 44, style), document.createTextNode(style == null ? t('skinDefault') : skinName(style)));
+    if (sk) b.append(el('i', 'rar', t('rarity_' + sk.rar)));
     if (!ownSkin) b.append(el('span', 'price', sk.gift ? t('skinGift') : sk.path ? t('skinRankLock') : `<i class="coin"></i>${skinPrice(style)}`));
     const fr = save.frags[`${id}:${style}`];
     if (!ownSkin && fr) b.append(el('span', 'frag-bar', `<i style="width:${(fr / FRAG_NEED) * 100}%"></i>`), el('small', 'frag-n', `${fr}/${FRAG_NEED}`));
@@ -887,7 +888,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const [ball, style] = it.res.skin;
       d.append(icon(ball, size, style), el('b', ''), el('small', ''));
       d.children[1].textContent = t('opSkin', { skin: skinName(style) });
-      d.children[2].textContent = ballName(ball);
+      d.children[2].textContent = `${ballName(ball)} · ${t('rarity_' + SKINS[style].rar)}`;
     } else {
       d.append(el('span', 'ribbon', t('opNew')), icon(it.res.ball, size), el('b', ''), el('small', ''));
       d.children[2].textContent = ballName(it.res.ball);
@@ -1441,6 +1442,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       + `<span class="xp-bar fam-bar"><i style="width:${Math.min(100, Math.round((f.xp / need) * 100))}%"></i></span>`
       + `<button class="btn primary big wide-btn fam-up"></button><p class="muted center fam-note"></p>`;
     hero.querySelector('.fam-name').textContent = t('fam_' + f.skin);
+    hero.querySelector('.fam-name').append(Object.assign(el('i', `rar-chip r-${FAMILIARS[f.skin].rar}`), { textContent: t('rarity_' + FAMILIARS[f.skin].rar) }));
     hero.querySelector('.fam-perk').textContent = t('famPerk_' + f.skin);
     const up = hero.querySelector('.fam-up');
     if (f.lv >= cap) { up.textContent = t('famTop'); up.disabled = true; }
@@ -1456,10 +1458,10 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const grid = el('div', 'sh-grid');
     for (const id of Object.keys(FAMILIARS)) {
       const own = f.own.includes(id), on = f.skin === id, it = FAMILIARS[id], price = it.gems ? ['gems', it.gems] : ['coins', it.coins ?? 0];
-      const card = el('button', 'sh-tile fam-card' + (own ? ' own' : '') + (on ? ' on' : '') + (famConfirm === id ? ' confirm' : ''));
-      card.append(el('span', 'fam-mini', heroSvg(id)), el('b', ''), el('small', 'fam-what'), el('span', 'sh-price'));
-      card.children[1].textContent = t('fam_' + id);
-      card.children[2].textContent = t('famPerk_' + id); // what it gives, before you buy it
+      const card = el('button', `sh-tile fam-card r-${it.rar}` + (own ? ' own' : '') + (on ? ' on' : '') + (famConfirm === id ? ' confirm' : ''));
+      card.append(el('i', 'rar', t('rarity_' + it.rar)), el('span', 'fam-mini', heroSvg(id)), el('b', ''), el('small', 'fam-what'), el('span', 'sh-price'));
+      card.children[2].textContent = t('fam_' + id);
+      card.children[3].textContent = t('famPerk_' + id); // what it gives, before you buy it
       card.lastChild.innerHTML = on ? t('famPicked') : own ? t('shWear') : famConfirm === id ? `${t('shBuy')} ${money(price)}` : money(price);
       card.onclick = () => {
         sfx.click();

@@ -1388,7 +1388,6 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .cmd.cast .cmd-art { animation: cmdCast 0.7s ease-out; }
 .cmd.win .cmd-art { animation: cmdWin 0.6s ease-in-out infinite; }
 .cmd.sad .cmd-art { animation: none; transform: translateY(6px) rotate(-4deg); filter: grayscale(0.5) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); }
-@keyframes cmdIdle { 50% { transform: translateY(-3px) scaleY(1.02); } }
 @keyframes cmdCheer { 40% { transform: translateY(-14px) rotate(-6deg); } }
 @keyframes cmdOuch { 30% { transform: translateX(-6px) rotate(-8deg); filter: brightness(1.8) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); } 60% { transform: translateX(4px) rotate(4deg); } }
 @keyframes cmdCast { 30% { transform: scale(1.18) rotate(4deg); filter: drop-shadow(0 0 14px #FFE38A); } }
@@ -1400,3 +1399,27 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
   .cmd-art { width: 150px; }
   .cmd-name { font-size: 12px; max-width: 170px; }
 }
+
+/* ---------- rarity on skins and commanders, the same colours as the balls ---------- */
+.skin[class*=' r-'] { border-color: color-mix(in srgb, var(--rar) 70%, #0A0E1F); box-shadow: inset 0 0 14px -6px var(--rar); }
+.skin.on[class*=' r-'] { border-color: var(--gold); }
+.skin .rar, .fam-card .rar { padding: 1px 6px; border-radius: 6px; background: var(--rar); color: #0A0E1F; font: 400 8px var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
+.fam-card[class*=' r-'] { border-color: color-mix(in srgb, var(--rar) 75%, #0A0E1F); box-shadow: 0 5px 0 var(--stroke), inset 0 0 18px -6px var(--rar); }
+.fam-card .rar { align-self: center; }
+.fam-name .rar-chip { margin-left: 8px; vertical-align: middle; font-size: 9px; }
+
+/* ---------- commanders, more alive: breathing, a sway, a pedestal, a "go!" gesture and speech bubbles ---------- */
+.cmd { position: relative; }
+.cmd::before { content: ''; position: absolute; left: 50%; bottom: 18px; width: 74%; height: 16px; translate: -50% 0; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--you) 55%, transparent), transparent); animation: cmdGlow 2.4s ease-in-out infinite; }
+.cmd.them::before { background: radial-gradient(closest-side, color-mix(in srgb, var(--foe) 55%, transparent), transparent); }
+.cmd-art { position: relative; animation: cmdIdle 2.4s ease-in-out infinite; }
+@keyframes cmdIdle { 0%, 100% { transform: translateY(0) rotate(-1.5deg) scaleY(1); } 50% { transform: translateY(-4px) rotate(1.5deg) scaleY(1.03); } }
+@keyframes cmdGlow { 50% { opacity: 0.55; scale: 0.9; } }
+.cmd.point .cmd-art { animation: cmdPoint 0.45s ease-out; }
+@keyframes cmdPoint { 35% { transform: translateX(8px) rotate(9deg) scale(1.06); } }
+.cmd-say { position: absolute; z-index: 2; bottom: calc(100% - 14px); left: 50%; translate: -50% 0; padding: 4px 10px; border-radius: 12px; border: 2.5px solid var(--stroke); background: #fff; color: #0A0E1F; font: 400 12px var(--display); white-space: nowrap; pointer-events: none; opacity: 0; scale: 0.4; }
+.cmd-say::after { content: ''; position: absolute; left: 50%; top: 100%; translate: -50% -2px; border: 7px solid transparent; border-top-color: #fff; }
+.cmd-say.on { animation: cmdSay 1.6s ease-out; }
+@keyframes cmdSay { 0% { opacity: 0; scale: 0.4; } 12% { opacity: 1; scale: 1.1; } 20%, 80% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.9; translate: -50% -8px; } }
+.cmd.win .cmd-say.on, .cmd.sad .cmd-say.on { animation-duration: 3s; }
+@media (prefers-reduced-motion: reduce) { .cmd-art, .cmd::before { animation: none !important; } }

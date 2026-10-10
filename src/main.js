@@ -345,10 +345,19 @@ function commanders(fams, foeNick) {
 }
 function cmdReact(side, kind) {
   const box = $('#cmds .cmd.' + (side ? 'them' : 'you'));
-  if (!box || $('#cmds').hidden) return;
-  box.classList.remove('cheer', 'ouch', 'cast', 'win', 'sad');
+  if (!box || $('#cmds').hidden || box.hidden) return;
+  box.classList.remove('cheer', 'ouch', 'cast', 'point', 'win', 'sad');
   void box.offsetWidth; // restart the animation
   box.classList.add(kind);
+  clearTimeout(box.calm);
+  if (kind !== 'win' && kind !== 'sad') box.calm = setTimeout(() => box.classList.remove(kind), 750); // then back to breathing
+  const now = performance.now(), say = box.querySelector('.cmd-say');
+  if (kind !== 'win' && kind !== 'sad' && now < (box.saidAt ?? 0) + 2500) return; // a line now and then, not on every bump
+  box.saidAt = now;
+  say.textContent = t('cmdSay_' + kind);
+  say.classList.remove('on');
+  void say.offsetWidth;
+  say.classList.add('on');
 }
 // How the opponent looks on the VS screen: a real player's banner, clan and level; the computer shows its lead ball.
 function foeCard() {
@@ -392,6 +401,7 @@ function fire() {
   if (S.mode !== 'aim') return;
   launch(S.world, S.aim, S.foeAim);
   S.mode = 'fight';
+  playMusic(S.match.mode === 'boss' ? 'boss' : 'battle');
   show(null);
   hideCards();
 }
@@ -768,7 +778,7 @@ function feel(w, now) {
     if (ev.type === 'hit' && ev.amount >= 8) { cmdReact(ev.side, 'ouch'); cmdReact(1 - ev.side, 'cheer'); }
     if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(S.match?.map ?? w.map); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
-    if (ev.type === 'dash') { sfx.dash(); if (mine && ev.side === 0) S.ms.dashes++; }
+    if (ev.type === 'dash') { sfx.dash(); cmdReact(ev.side, 'point'); if (mine && ev.side === 0) S.ms.dashes++; }
     if (ev.type === 'train') sfx.train(ev.express);
     if (ev.type === 'chess') sfx.chess();
     if (ev.type === 'death') {
@@ -1014,6 +1024,7 @@ function partyFrame(dt) {
     if (now < F.launchAt) return;
     const a = w.ents.find(e => e.side === 0), b = w.ents.find(e => e.side === 1);
     launch(w, Math.atan2(b.y - a.y, b.x - a.x), Math.atan2(a.y - b.y, a.x - b.x));
+    playMusic(F.m.mode === 'boss' ? 'boss' : 'battle');
     return;
   }
   if (F.final) return;

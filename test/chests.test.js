@@ -183,15 +183,15 @@ test('shop: buy with coins or gems, wear, daily deals, ad gems', () => {
   assert.equal(m.wear.banner, 'night');
 });
 
-test('15 emotes: 4 free, the rest bought or dropped', async () => {
+test('23 emotes: 4 free, the rest bought or dropped', async () => {
   const { EMOTE_LIST, SHOP } = await import('../src/progress.js');
-  assert.equal(EMOTE_LIST.length, 15);
+  assert.equal(EMOTE_LIST.length, 23);
   const s = freshSave();
   assert.equal(EMOTE_LIST.filter(e => owns(s, 'emote', e.id)).length, 4);
   s.coins = 150;
   assert.ok(buy(s, 'emote', 'leech_laugh'));
   assert.ok(owns(s, 'emote', 'leech_laugh'));
-  assert.ok(Object.keys(SHOP.emote).length === 15);
+  assert.ok(Object.keys(SHOP.emote).length === 23);
 });
 
 test('inbox gifts are claimed once, also across devices', () => {

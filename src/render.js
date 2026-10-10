@@ -279,6 +279,8 @@ function emoteArt(ctx, id, R, t) {
   ctx.scale(R / 20, R / 20);
   if (em.anim && em.mood === 'laugh') ctx.translate(0, -Math.abs(Math.sin(a * 7)) * 3);
   if (em.anim && em.mood === 'angry') ctx.translate(Math.sin(a * 45) * 1.2, 0);
+  if (em.anim && (em.mood === 'love' || em.mood === 'wow')) { const k = 1 + Math.abs(Math.sin(a * 5)) * 0.1; ctx.scale(k, k); }
+  if (em.anim && (em.mood === 'cool' || em.mood === 'gg')) ctx.rotate(Math.sin(a * 4) * 0.15);
   drawBall(ctx, art(id), 0, 0, { rim: false });
   face(ctx, em.mood, a, em.anim);
   ctx.restore();
@@ -525,10 +527,17 @@ function wallScenery(ctx, now) {
   } else if (ARENA === 'canyon') { // sandstone rocks on the rim, a cactus in two corners
     ctx.fillStyle = '#9A5A26';
     for (let x = 20; x < W; x += 56) { ctx.beginPath(); ctx.ellipse(x, -M * 0.55, 10, 5, 0.2, 0, P * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(W - x, H + M * 0.55, 10, 5, -0.2, 0, P * 2); ctx.fill(); }
-    for (const [cx, cy] of [[-M / 2, -M / 2], [W + M / 2, H + M / 2]]) {
-      ctx.fillStyle = '#3E8E4A'; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(cx - 3, cy - 10, 6, 20, 3); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.roundRect(cx - 9, cy - 4, 5, 8, 2.5); ctx.fill(); ctx.stroke();
+    for (const [cx, cy] of [[-M / 2, -M / 2 + 4], [W + M / 2, H + M / 2 - 2]]) { // a little saguaro with a pink flower, standing on the corner
+      ctx.save(); ctx.translate(cx, cy);
+      ctx.fillStyle = 'rgba(60,30,10,0.3)'; ctx.beginPath(); ctx.ellipse(0, 10, 9, 3, 0, 0, P * 2); ctx.fill();
+      ctx.fillStyle = '#3FA34D'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.roundRect(-9, -8, 5, 12, 2.5); ctx.fill(); ctx.stroke(); // left arm
+      ctx.beginPath(); ctx.roundRect(4, -12, 5, 12, 2.5); ctx.fill(); ctx.stroke(); // right arm
+      ctx.beginPath(); ctx.roundRect(-4, -20, 8, 30, 4); ctx.fill(); ctx.stroke(); // trunk
+      ctx.strokeStyle = '#7FD48A'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(0, 6); ctx.stroke(); // a light rib
+      ctx.fillStyle = '#FF6FA8'; ctx.beginPath(); ctx.arc(0, -21, 3, 0, P * 2); ctx.fill();
+      ctx.fillStyle = '#FFE08A'; ctx.beginPath(); ctx.arc(0, -21, 1.2, 0, P * 2); ctx.fill();
+      ctx.restore();
     }
   } else if (ARENA === 'frost') { // snow on the rim, icicles hanging inside
     ctx.fillStyle = '#FFFFFF';
@@ -1550,6 +1559,30 @@ function pattern(ctx, e, sk, t) {
       const a = k * 2.399, d = r * 0.7 * Math.sqrt((k + 0.5) / 7);
       ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.12, 0, Math.PI * 2); ctx.fill();
     }
+  } else if (sk.pattern === 'flame') { // animated: tongues of fire licking up the ball
+    for (let k = 0; k < 6; k++) {
+      const ph = (t * 1.6 + k / 6) % 1, fxp = x + Math.sin(k * 2.3 + t * 3) * r * 0.55, fy = y + r - ph * r * 2.1, s2 = r * (0.5 - ph * 0.35);
+      ctx.fillStyle = `rgba(255,${180 + Math.round(60 * ph)},60,${0.85 - ph * 0.7})`;
+      ctx.beginPath(); ctx.moveTo(fxp - s2 * 0.6, fy + s2); ctx.quadraticCurveTo(fxp - s2 * 0.5, fy - s2 * 0.2, fxp, fy - s2 * 1.2); ctx.quadraticCurveTo(fxp + s2 * 0.5, fy - s2 * 0.2, fxp + s2 * 0.6, fy + s2); ctx.fill();
+    }
+  } else if (sk.pattern === 'aurora') { // animated: green-violet northern lights drifting across
+    for (let k = 0; k < 3; k++) {
+      ctx.strokeStyle = ['rgba(90,255,180,0.55)', 'rgba(150,120,255,0.5)', 'rgba(80,220,255,0.45)'][k];
+      ctx.lineWidth = r * 0.28;
+      ctx.beginPath();
+      for (let i = 0; i <= 10; i++) { const px = x - r + (i / 10) * r * 2, py = y - r * 0.35 + k * r * 0.35 + Math.sin(i * 0.8 + t * 2 + k * 1.7) * r * 0.18; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.stroke();
+    }
+  } else if (sk.pattern === 'storm') { // animated: electric arcs that flash and jump
+    const flash = Math.floor(t * 6);
+    ctx.strokeStyle = '#BFE8FF'; ctx.shadowColor = '#7FD0FF'; ctx.shadowBlur = r * 0.4; ctx.lineWidth = r * 0.08;
+    for (let k = 0; k < 2; k++) {
+      const a0 = ((flash * 7 + k * 3) % 10) * 0.63;
+      ctx.beginPath(); ctx.moveTo(x + Math.cos(a0) * r, y + Math.sin(a0) * r);
+      for (let i = 1; i <= 4; i++) { const q = 1 - i / 4.5, a = a0 + i * 0.5 + (((flash + i * k) % 3) - 1) * 0.3; ctx.lineTo(x + Math.cos(a) * r * q, y + Math.sin(a) * r * q); }
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
   } else if (sk.pattern === 'rainbow') { // the account gift: a turning hue wheel with sparkles
     const g = ctx.createConicGradient ? ctx.createConicGradient(t * 1.2, x, y) : ctx.createLinearGradient(x - r, y - r, x + r, y + r);
     for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${i * 60}, 95%, 62%)`);

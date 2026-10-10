@@ -62,7 +62,7 @@ export default {
   clanLeaveConfirm: 'Klandan ayrılınsın mı?', clanMembers: 'Üyeler: {n}/{max}', clanLeader: 'lider', clanTop: 'En iyi klanlar', clanFull: 'Klan dolu',
   clanSafe: 'Klanlarda sohbet yok: isimler, takma adlar gibi kelimelerden oluşur. Güvenlidir.', clanCreated: 'Klan kuruldu!', clanJoined: 'Klana katıldın!', clanEmpty: 'Henüz klan yok: ilkini sen kur!',
   xpGain: '+{n} TP', levelUp: 'Seviye {n}!', xpOf: '{n} / {max} TP',
-  modesTitle: 'Modlar', mode_classic: 'Klasik', mode_duo: '2’ye 2', mode_boss: 'Boss', boss_slime: 'Balçık Kral', boss_frost: 'Buz Devi', boss_dragon: 'Ateş Ejderi', boss_golem: 'Demir Golem', bossRage: 'Boss öfkelendi!',
+  modesTitle: 'Modlar', mode_classic: 'Klasik', mode_duo: '2’ye 2', mode_boss: 'Boss', boss_slime: 'Balçık Kral', boss_frost: 'Buz Devi', boss_dragon: 'Ateş Ejderi', boss_golem: 'Demir Golem', bossRage: 'Boss öfkelendi!', cmdSay_cheer: 'Evet!', cmdSay_ouch: 'Ah!', cmdSay_cast: 'Süper!', cmdSay_point: 'Hadi!', cmdSay_win: 'Zafer!', cmdSay_sad: 'Eyvah…',
   modeDesc_classic: 'Takıma karşı takım: toplar sırayla çıkar.', modeDesc_duo: 'İki topun aynı anda ikiye karşı. Ya da arkadaşlarınla çevrimiçi!', modeDesc_boss: "Üç topun bir boss'a karşı. Her savaşta kendi saldırısı olan yeni bir boss: uyarıya bak ve kaç!",
   modeTrophies: 'Çevrimiçiyken kupa', modeNoTrophies: 'Jeton ve sandık, kupa yok',
   tabShop: 'Mağaza', tabMail: 'Mesajlar', shOwned: 'Sende', shWorn: 'Giyili', shWear: 'Giy', shBuy: 'Satın al?', shDeals: 'Günün fırsatları', shEmotes: 'İfadeler',
@@ -100,7 +100,7 @@ export default {
   deleteProfile: 'Profili sil', deleteConfirm: 'Profilin sonsuza dek silinsin mi? Kupalar ve tüm ilerleme kaybolur.',
   quests: { win3: '3 maç kazan', dash15: '15 kez atıl', super3: '3 süper kullan', kills10: '10 düşman topunu nakavt et', flawless1: 'Hiç top kaybetmeden kazan', challenge1: 'Arkadaşına meydan oku ya da bir meydan okumayı kabul et', matches5: '5 maç oyna' },
   achievements: { firstWin: 'İlk zafer', wins10: '10 zafer', wins50: '50 zafer', tr100: '100 kupa', tr500: '500 kupa', tr1000: '1000 kupa', collector: 'Tüm topları topla', supers25: '25 süper', challenger: '5 meydan okuma', flawless5: '5 kayıpsız zafer', chests10: '10 sandık aç', chests50: '50 sandık aç', skins5: '5 kostüm topla', skins20: '20 kostüm topla', level5: 'Seviye 5', level10: 'Seviye 10', rank5: 'Bir topla Rütbe 5', rank10: 'Bir topla Rütbe 10', duo10: '2’ye 2 modunda 10 zafer', boss5: '5 boss yen', emotes20: '20 ifade gönder' },
-  skins: { silver: 'Gümüş', gold: 'Altın', neon: 'Neon', candy: 'Şeker', galaxy: 'Galaksi', lava: 'Lav', mint: 'Nane', rainbow: 'Gökkuşağı' },
+  skins: { silver: 'Gümüş', gold: 'Altın', neon: 'Neon', candy: 'Şeker', galaxy: 'Galaksi', lava: 'Lav', mint: 'Nane', rainbow: 'Gökkuşağı', flame: 'Alev', aurora: 'Kutup Işığı', storm: 'Fırtına' },
   names: { basic: 'Basit', leech: 'Sülük', cell: 'Hücre', spider: 'Örümcek', ninja: 'Ninja', train: 'Tren', magnet: 'Mıknatıs', bomb: 'Bomba', turtle: 'Kaplumbağa', lightning: 'Şimşek', hedgehog: 'Kirpi', ice: 'Buz', poison: 'Diken', chain: 'Pranga', forge: 'Demirci', chess: 'Satranç' },
   supers: { basic: 'Koçbaşı', leech: 'Sıçrayış', cell: 'Bölünme', spider: 'Tuzak', ninja: 'Yelpaze', train: 'Ekspres', magnet: 'Çekim', bomb: 'Bombardıman', turtle: 'Kale', lightning: 'Fırtına', hedgehog: 'İğneler', ice: 'Ayaz', poison: 'Çit', chain: 'Kapan', forge: 'Sertleşme', chess: 'Vezir' },
   superAbout: {

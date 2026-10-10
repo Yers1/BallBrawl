@@ -62,7 +62,7 @@ export default {
   clanLeaveConfirm: 'Sair do clã?', clanMembers: 'Membros: {n}/{max}', clanLeader: 'líder', clanTop: 'Melhores clãs', clanFull: 'O clã está cheio',
   clanSafe: 'Clãs não têm chat: os nomes são feitos de palavras, como os apelidos. É seguro.', clanCreated: 'Clã criado!', clanJoined: 'Você entrou no clã!', clanEmpty: 'Nenhum clã ainda: crie o primeiro!',
   xpGain: '+{n} XP', levelUp: 'Nível {n}!', xpOf: '{n} / {max} XP',
-  modesTitle: 'Modos', mode_classic: 'Clássico', mode_duo: '2 x 2', mode_boss: 'Chefão', boss_slime: 'Rei Gosma', boss_frost: 'Gigante de Gelo', boss_dragon: 'Dragão de Fogo', boss_golem: 'Golem de Ferro', bossRage: 'O chefe ficou furioso!',
+  modesTitle: 'Modos', mode_classic: 'Clássico', mode_duo: '2 x 2', mode_boss: 'Chefão', boss_slime: 'Rei Gosma', boss_frost: 'Gigante de Gelo', boss_dragon: 'Dragão de Fogo', boss_golem: 'Golem de Ferro', bossRage: 'O chefe ficou furioso!', cmdSay_cheer: 'Isso!', cmdSay_ouch: 'Ai!', cmdSay_cast: 'Super!', cmdSay_point: 'Vai!', cmdSay_win: 'Vitória!', cmdSay_sad: 'Ah, não…',
   modeDesc_classic: 'Time contra time: as bolas entram uma de cada vez.', modeDesc_duo: 'Duas bolas suas contra duas, ao mesmo tempo. Ou com amigos online!', modeDesc_boss: 'Suas três bolas contra um chefe. A cada luta, um chefe novo com seu próprio ataque: veja o aviso e desvie!',
   modeTrophies: 'Troféus quando online', modeNoTrophies: 'Moedas e baús, sem troféus',
   tabShop: 'Loja', tabMail: 'Mensagens', shOwned: 'Já tem', shWorn: 'Em uso', shWear: 'Usar', shBuy: 'Comprar?', shDeals: 'Ofertas do dia', shEmotes: 'Emotes',
@@ -100,7 +100,7 @@ export default {
   deleteProfile: 'Apagar perfil', deleteConfirm: 'Apagar seu perfil para sempre? Os troféus e todo o progresso vão sumir.',
   quests: { win3: 'Vença 3 partidas', dash15: 'Faça 15 investidas', super3: 'Use 3 supers', kills10: 'Derrube 10 bolas inimigas', flawless1: 'Vença sem perder nenhuma bola', challenge1: 'Desafie um amigo ou aceite um desafio', matches5: 'Jogue 5 partidas' },
   achievements: { firstWin: 'Primeira vitória', wins10: '10 vitórias', wins50: '50 vitórias', tr100: '100 troféus', tr500: '500 troféus', tr1000: '1000 troféus', collector: 'Junte todas as bolas', supers25: '25 supers', challenger: '5 desafios', flawless5: '5 vitórias sem perdas', chests10: 'Abra 10 baús', chests50: 'Abra 50 baús', skins5: 'Junte 5 skins', skins20: 'Junte 20 skins', level5: 'Nível 5', level10: 'Nível 10', rank5: 'Rank 5 com uma bola', rank10: 'Rank 10 com uma bola', duo10: '10 vitórias no 2 x 2', boss5: 'Vença 5 chefões', emotes20: 'Mande 20 emotes' },
-  skins: { silver: 'Prata', gold: 'Ouro', neon: 'Neon', candy: 'Doce', galaxy: 'Galáxia', lava: 'Lava', mint: 'Menta', rainbow: 'Arco-íris' },
+  skins: { silver: 'Prata', gold: 'Ouro', neon: 'Neon', candy: 'Doce', galaxy: 'Galáxia', lava: 'Lava', mint: 'Menta', rainbow: 'Arco-íris', flame: 'Chama', aurora: 'Aurora', storm: 'Tempestade' },
   names: { basic: 'Básico', leech: 'Sanguessuga', cell: 'Célula', spider: 'Aranha', ninja: 'Ninja', train: 'Trem', magnet: 'Ímã', bomb: 'Bomba', turtle: 'Tartaruga', lightning: 'Raio', hedgehog: 'Ouriço', ice: 'Gelo', poison: 'Espinho', chain: 'Correntes', forge: 'Forja', chess: 'Xadrez' },
   supers: { basic: 'Aríete', leech: 'Bote', cell: 'Mitose', spider: 'Armadilha', ninja: 'Leque', train: 'Expresso', magnet: 'Atração', bomb: 'Bombardeio', turtle: 'Fortaleza', lightning: 'Tempestade', hedgehog: 'Agulhas', ice: 'Congelar', poison: 'Paliçada', chain: 'Laço', forge: 'Têmpera', chess: 'Rainha' },
   superAbout: {

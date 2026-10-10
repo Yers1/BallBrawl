@@ -174,6 +174,25 @@ const SONGS = {
     const n = LOBBY_LEAD[bar][s];
     if (n) m(NOTE(n), 0.24, { type: 'square', vol: 0.05, delay: d });
   } },
+  battle: { bpm: 132, step(i, d) { // D minor, Bb, C, A: a driving fight loop with a hook that climbs
+    const bar = Math.floor(i / 16) % 4, s = i % 16, root = [38, 34, 36, 33][bar];
+    if (s % 4 === 0 || s === 14) kick(d);
+    if (s === 4 || s === 12) snare(d, 0.12);
+    hat(d, s % 2 ? 0.02 : 0.035);
+    if (s % 2 === 0) m(NOTE(root + (s % 8 === 6 ? 7 : 0)), 0.14, { type: 'sawtooth', vol: 0.08, delay: d });
+    if (s === 0 || s === 8) [12, 15, 19].forEach(k => m(NOTE(root + 24 + k - (bar === 3 && k === 15 ? -1 : 0)), 0.5, { type: 'triangle', vol: 0.03, delay: d }));
+    const lead = [[74, 0, 77, 0, 76, 74, 0, 72], [70, 0, 74, 0, 72, 70, 0, 69], [72, 0, 76, 0, 79, 76, 0, 74], [73, 0, 76, 0, 81, 0, 79, 76]][bar][s >> 1];
+    if (s % 2 === 0 && lead) m(NOTE(lead), 0.13, { type: 'square', vol: 0.04, delay: d });
+  } },
+  boss: { bpm: 112, step(i, d) { // E minor, heavy: low drums, a stomping bass and an alarm-like brass stab
+    const bar = Math.floor(i / 16) % 4, s = i % 16, root = [28, 28, 31, 30][bar];
+    if (s === 0 || s === 3 || s === 8 || s === 11) kick(d);
+    if (s === 4 || s === 12) snare(d, 0.16);
+    if (s % 2 === 0) hat(d, 0.03);
+    if (s % 2 === 0) m(NOTE(root + (s % 4 === 2 ? 12 : 0)), 0.18, { type: 'sawtooth', vol: 0.09, delay: d });
+    if (s === 0) [12, 19, 24].forEach(k => m(NOTE(root + 24 + k), 0.45, { type: 'square', vol: 0.03, delay: d }));
+    if (bar % 2 === 1 && (s === 10 || s === 13)) m(NOTE(root + 36 + (s === 13 ? 1 : 0)), 0.16, { type: 'square', vol: 0.05, delay: d });
+  } },
   danger: { bpm: 150, step(i, d) { // A minor and F, a pounding pulse: hurry up!
     const bar = Math.floor(i / 16) % 2, s = i % 16, root = bar ? 41 : 45;
     if (s % 4 === 0) kick(d);

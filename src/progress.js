@@ -26,7 +26,7 @@ export const BY_UNLOCK = [...ORDER].sort((a, b) => UNLOCK[a] - UNLOCK[b]);
 // you meet there bring a familiar of the arena's usual level — so a maxed familiar never meets a level-1 one.
 export const FAM = { maxLv: 10, hpPer: 0.02, dmgPer: 0.01 };
 export const FAM_COST = [0, 0, 300, 700, 1500, 3000, 5000, 8000, 12000, 18000, 25000]; // coins to reach level i
-export const FAMILIARS = { king: { perk: 'all' }, dragon: { coins: 1200, perk: 'dmg' }, cat: { coins: 1200, perk: 'dash' }, owl: { gems: 45, perk: 'meter' }, robot: { coins: 2500, perk: 'armor' }, ghost: { gems: 80, perk: 'regen' } };
+export const FAMILIARS = { king: { rar: 'common', perk: 'all' }, dragon: { rar: 'rare', coins: 1200, perk: 'dmg' }, cat: { rar: 'rare', coins: 1200, perk: 'dash' }, owl: { rar: 'mythic', gems: 45, perk: 'meter' }, robot: { rar: 'mythic', coins: 2500, perk: 'armor' }, ghost: { rar: 'legend', gems: 80, perk: 'regen' } };
 export const famNeed = lv => 60 * lv; // XP to fill before the next level can be bought
 export const famCap = maxTrophies => Math.min(FAM.maxLv, 2 + Math.floor(arenaIndex(arenaFor(maxTrophies).id) * 0.75));
 export const famPar = maxTrophies => Math.max(1, famCap(maxTrophies) - 1); // what the computer's familiar has here
@@ -330,14 +330,18 @@ export function claim(s, node) {
 
 // ---------- skins (looks only) ----------
 export const SKINS = {
-  silver: { color: '#c9d4e6', pattern: 'shine', price: 60 }, // cheap, for coins
-  gold: { color: '#f5c542', pattern: 'shine', path: 7 }, // only from the ball's own path (rank 7)
-  neon: { color: '#151b30', pattern: 'neon' },
-  candy: { color: '#ff7eb6', pattern: 'stripes' },
-  galaxy: { color: '#3b2a7a', pattern: 'stars' },
-  lava: { color: '#e5482d', pattern: 'cracks' },
-  mint: { color: '#7be0c3', pattern: 'dots' },
-  rainbow: { color: '#ff4d6d', pattern: 'rainbow', gift: true }, // the email-account gift: every ball, never sold
+  silver: { color: '#c9d4e6', pattern: 'shine', price: 60, rar: 'common' }, // cheap, for coins
+  gold: { color: '#f5c542', pattern: 'shine', path: 7, rar: 'legend' }, // only from the ball's own path (rank 7)
+  neon: { color: '#151b30', pattern: 'neon', rar: 'rare' },
+  candy: { color: '#ff7eb6', pattern: 'stripes', rar: 'rare' },
+  galaxy: { color: '#3b2a7a', pattern: 'stars', rar: 'mythic' },
+  lava: { color: '#e5482d', pattern: 'cracks', rar: 'mythic' },
+  mint: { color: '#7be0c3', pattern: 'dots', rar: 'common' },
+  rainbow: { color: '#ff4d6d', pattern: 'rainbow', gift: true, rar: 'legend' }, // the email-account gift: every ball, never sold
+  // animated: they move all the time, in the fight too
+  flame: { color: '#ff6a1f', pattern: 'flame', price: 600, rar: 'legend' },
+  aurora: { color: '#1d3b6e', pattern: 'aurora', price: 400, rar: 'mythic' },
+  storm: { color: '#2b2f5e', pattern: 'storm', price: 400, rar: 'mythic' },
 };
 export const SKIN_PRICE = 150;
 export const skinPrice = style => SKINS[style]?.price ?? SKIN_PRICE;
@@ -454,6 +458,8 @@ export const EMOTE_LIST = [
   E('leech', 'laugh', 'common'), E('cell', 'wow', 'common'), E('turtle', 'sleepy', 'common'),
   E('ninja', 'cool', 'rare'), E('magnet', 'love', 'rare'), E('ice', 'cry', 'rare'), E('spider', 'angry', 'rare'),
   E('train', 'laugh', 'epic'), E('bomb', 'angry', 'epic'), E('lightning', 'love', 'legend'), E('forge', 'cool', 'legend'),
+  E('hedgehog', 'sleepy', 'common'), E('chain', 'wow', 'rare'), E('chess', 'cool', 'rare'), E('poison', 'laugh', 'epic'),
+  E('turtle', 'gg', 'epic'), E('chess', 'wow', 'epic'), E('train', 'love', 'legend'), E('poison', 'cool', 'legend'),
 ];
 const EMOTE_PRICE = { free: {}, common: { coins: 150 }, rare: { gems: 20 }, epic: { gems: 50 }, legend: { gems: 100 } };
 

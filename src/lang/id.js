@@ -62,7 +62,7 @@ export default {
   clanLeaveConfirm: 'Yakin keluar dari klan?', clanMembers: 'Anggota: {n}/{max}', clanLeader: 'ketua', clanTop: 'Klan terbaik', clanFull: 'Klan sudah penuh',
   clanSafe: 'Klan tidak punya chat: nama dibuat dari kata-kata, seperti nickname. Jadi aman.', clanCreated: 'Klan dibuat!', clanJoined: 'Kamu masuk klan!', clanEmpty: 'Belum ada klan: buat yang pertama!',
   xpGain: '+{n} XP', levelUp: 'Level {n}!', xpOf: '{n} / {max} XP',
-  modesTitle: 'Mode', mode_classic: 'Klasik', mode_duo: '2 vs 2', mode_boss: 'Bos', boss_slime: 'Raja Lendir', boss_frost: 'Raksasa Es', boss_dragon: 'Naga Api', boss_golem: 'Golem Besi', bossRage: 'Bos marah!',
+  modesTitle: 'Mode', mode_classic: 'Klasik', mode_duo: '2 vs 2', mode_boss: 'Bos', boss_slime: 'Raja Lendir', boss_frost: 'Raksasa Es', boss_dragon: 'Naga Api', boss_golem: 'Golem Besi', bossRage: 'Bos marah!', cmdSay_cheer: 'Yes!', cmdSay_ouch: 'Aduh!', cmdSay_cast: 'Super!', cmdSay_point: 'Maju!', cmdSay_win: 'Menang!', cmdSay_sad: 'Yah…',
   modeDesc_classic: 'Skuad lawan skuad: bola maju satu per satu.', modeDesc_duo: 'Dua bolamu melawan dua bola sekaligus. Atau bareng teman online!', modeDesc_boss: 'Ketiga bolamu melawan bos. Tiap pertarungan bos baru dengan serangannya sendiri: lihat tandanya dan menghindar!',
   modeTrophies: 'Dapat trofi saat online', modeNoTrophies: 'Koin dan peti, tanpa trofi',
   tabShop: 'Toko', tabMail: 'Pesan', shOwned: 'Punya', shWorn: 'Dipakai', shWear: 'Pakai', shBuy: 'Beli?', shDeals: 'Penawaran harian', shEmotes: 'Emote',
@@ -101,7 +101,7 @@ export default {
   deleteProfile: 'Hapus profil', deleteConfirm: 'Hapus profilmu selamanya? Trofi dan semua progres akan hilang.',
   quests: { win3: 'Menangkan 3 laga', dash15: 'Melesat 15 kali', super3: 'Pakai 3 super', kills10: 'Jatuhkan 10 bola lawan', flawless1: 'Menang tanpa kehilangan bola', challenge1: 'Tantang teman atau terima tantangan', matches5: 'Main 5 laga' },
   achievements: { firstWin: 'Kemenangan pertama', wins10: '10 kemenangan', wins50: '50 kemenangan', tr100: '100 trofi', tr500: '500 trofi', tr1000: '1000 trofi', collector: 'Kumpulkan semua bola', supers25: '25 super', challenger: '5 tantangan', flawless5: '5 kemenangan sempurna', chests10: 'Buka 10 peti', chests50: 'Buka 50 peti', skins5: 'Kumpulkan 5 skin', skins20: 'Kumpulkan 20 skin', level5: 'Level 5', level10: 'Level 10', rank5: 'Rank 5 dengan bola', rank10: 'Rank 10 dengan bola', duo10: '10 menang di 2 vs 2', boss5: 'Kalahkan 5 bos', emotes20: 'Kirim 20 emote' },
-  skins: { silver: 'Perak', gold: 'Emas', neon: 'Neon', candy: 'Permen', galaxy: 'Galaksi', lava: 'Lava', mint: 'Mint', rainbow: 'Pelangi' },
+  skins: { silver: 'Perak', gold: 'Emas', neon: 'Neon', candy: 'Permen', galaxy: 'Galaksi', lava: 'Lava', mint: 'Mint', rainbow: 'Pelangi', flame: 'Api', aurora: 'Aurora', storm: 'Badai' },
   names: { basic: 'Biasa', leech: 'Lintah', cell: 'Sel', spider: 'Laba-laba', ninja: 'Ninja', train: 'Kereta', magnet: 'Magnet', bomb: 'Bom', turtle: 'Kura-kura', lightning: 'Petir', hedgehog: 'Landak', ice: 'Es', poison: 'Duri', chain: 'Belenggu', forge: 'Tempa', chess: 'Catur' },
   supers: { basic: 'Seruduk', leech: 'Terkam', cell: 'Membelah', spider: 'Jebakan', ninja: 'Kipas', train: 'Ekspres', magnet: 'Tarikan', bomb: 'Hujan Bom', turtle: 'Benteng', lightning: 'Badai', hedgehog: 'Jarum', ice: 'Beku', poison: 'Pagar Duri', chain: 'Jerat', forge: 'Membara', chess: 'Ratu' },
   superAbout: {
