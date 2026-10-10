@@ -1,6 +1,6 @@
 # BallBrawl — design (v1)
 
-Working title. A web game: balls with superpowers fight in an arena. Inspired by Roblox "Ball VS Ball", but the balls, names and graphics are original.
+Working title. A web game: balls with superpowers fight in an arena. The balls, names, graphics and code are our own.
 The goal is to earn money from Google AdSense ads (H5 Games Ads) with haram categories blocked.
 
 ## Decisions
