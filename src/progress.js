@@ -11,6 +11,13 @@ import { rng } from './sim.js';
 // Every arena opens its own balls (Clash Royale style): Night 4, Canyon 3, Frost 3, Jungle 2, Lava 2, Space 1.
 // The Glory Road gives each ball at its mark. leech/cell keep their old marks (players already claimed them).
 export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 960, poison: 1210, chain: 1560, forge: 1910, chess: 220 };
+// How rare each ball is — grows with the arena that opens it. Shown as a coloured frame and tag on its card.
+export const RARITY = {
+  basic: 'common', leech: 'common', cell: 'common', spider: 'common',
+  ninja: 'rare', train: 'rare', chess: 'rare', magnet: 'rare', bomb: 'rare',
+  turtle: 'mythic', lightning: 'mythic', hedgehog: 'mythic', ice: 'mythic',
+  poison: 'legend', chain: 'legend', forge: 'legend',
+};
 // Balls in the order they unlock (ORDER itself never changes: challenge links store balls by their place in it)
 export const BY_UNLOCK = [...ORDER].sort((a, b) => UNLOCK[a] - UNLOCK[b]);
 

@@ -1232,3 +1232,14 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .vs-intro .vs-card.foe { animation: vsFromRight 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both, vsShake 0.35s 0.6s; }
 @keyframes vsFlash { 0% { opacity: 0.75; } 100% { opacity: 0; } }
 @keyframes vsShake { 20% { translate: -8px 3px; } 40% { translate: 7px -2px; } 60% { translate: -5px 2px; } 80% { translate: 3px -1px; } }
+
+/* ---------- ball rarity: a coloured frame, a glow and a tag (common · rare · mythic · legendary) ---------- */
+.r-common { --rar: #A9B8D0; } .r-rare { --rar: #4C9EFF; } .r-mythic { --rar: #B05CFF; } .r-legend { --rar: #FFB627; }
+.tile[class*=' r-'], .tile[class^='r-'] { border-color: color-mix(in srgb, var(--rar) 75%, #0A0E1F); box-shadow: 0 5px 0 var(--stroke), inset 0 0 18px -6px var(--rar); }
+.tile.r-legend:not(.locked) { background: radial-gradient(circle at 50% 28%, rgba(255, 182, 39, 0.22), var(--panel-2) 70%); }
+.tile.r-mythic:not(.locked) { background: radial-gradient(circle at 50% 28%, rgba(176, 92, 255, 0.2), var(--panel-2) 70%); }
+.tile.info { border-color: var(--gold); }
+.tile .rar { order: 9; margin-top: 3px; padding: 1px 7px; border-radius: 6px; background: var(--rar); color: #0A0E1F; font: 400 9px var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
+#s-cards .tile .rar { display: none; } /* the picker already shows the super's name; the frame colour says the rarity */
+.vr-row.is-ball { border-color: var(--rar, var(--stroke)); }
+.rar-chip { padding: 2px 8px; border-radius: 7px; background: var(--rar); color: #0A0E1F; font: 400 10px var(--display); text-transform: uppercase; }

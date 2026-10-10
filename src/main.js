@@ -12,7 +12,7 @@ import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -250,13 +250,14 @@ function renderSquad() {
   $('#s-info').innerHTML = `<span class="si-head"><b></b><span class="hp-pill">${HEART}${BALLS[info].hp} ${t('hp')}</span></span><span class="si-about"></span>`
     + `<span class="si-super"><i>${BOLT}</i><span><b></b><span></span></span></span>`;
   $('#s-info .si-head b').textContent = ballName(info);
+  $('#s-info .si-head b').after(Object.assign(el('i', `rar-chip r-${RARITY[info]}`), { textContent: t('rarity_' + RARITY[info]) }));
   $('#s-info .si-about').textContent = ballAbout(info);
   $('#s-info .si-super b').textContent = `${t('super')} · ${superName(info)}`;
   $('#s-info .si-super span span').textContent = superAbout(info);
 
   $('#s-cards').replaceChildren(...BY_UNLOCK.map(id => {
     const d = BALLS[id], ok = has(id), slots = save.squad.map((s, i) => (s === id ? i + 1 : 0)).filter(Boolean);
-    const tile = el('div', 'tile' + (ok ? '' : ' locked') + (id === info ? ' info' : ''));
+    const tile = el('div', `tile r-${RARITY[id]}` + (ok ? '' : ' locked') + (id === info ? ' info' : ''));
     tile.style.setProperty('--c', d.color);
     if (ok && slots.length) tile.append(el('i', 'pos', slots.join('·')));
     tile.append(icon(id, 60, save.skinOf[id]), el('b', ''), el('small', ''));

@@ -7,7 +7,7 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, RARITY, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
 } from './progress.js';
@@ -399,7 +399,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
         continue;
       }
       const n = it.n, state = save.claimed.includes(n.at) ? 'done' : ready.has(n.at) ? 'ready' : 'locked';
-      const row = el('div', `vr-row ${state} ${n.ball ? 'is-ball' : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}`);
+      const row = el('div', `vr-row ${state} ${n.ball ? 'is-ball r-' + RARITY[n.ball] : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}`);
       row.append(el('span', 'vr-at', `<i class="trophy"></i>${n.at}`), n.gems ? el('i', 'gem big-gem') : rewardIcon(n, 50), el('b', 'vr-name'));
       row.querySelector('.vr-name').textContent = n.gems ? `+${n.gems}` : rewardName(n);
       if (state === 'ready') {
@@ -481,12 +481,13 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   function balls() { // character tiles; details and skins open on tap
     $('#b-grid').replaceChildren(...BY_UNLOCK.map(id => {
       const own = save.owned.includes(id);
-      const tile = el('button', 'tile' + (own ? '' : ' locked'));
+      const tile = el('button', `tile r-${RARITY[id]}` + (own ? '' : ' locked'));
       tile.style.setProperty('--c', BALLS[id].color);
       const L = !own && lockLabel(id, save.maxTrophies), small = el('small', '', own ? `${BALLS[id].hp} ${t('hp')}` : L.trophies ? '' : t('arenaN', { n: L.arena }));
       if (L.trophies) small.innerHTML = `<i class="trophy"></i>${L.trophies}`;
       tile.append(icon(id, 72, save.skinOf[id]), el('b', ''), small);
       tile.children[1].textContent = ballName(id);
+      tile.append(el('i', 'rar', t('rarity_' + RARITY[id])));
       if (own) tile.insertAdjacentHTML('beforeend', rankBadge(ballRank(save.mastery[id] ?? 0)));
       tile.onclick = () => { sfx.click(); openBall(id); };
       return tile;
