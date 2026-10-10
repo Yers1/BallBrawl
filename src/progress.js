@@ -152,7 +152,7 @@ export const titleOk = (s, id) => { const x = TITLES.find(t => t.id === id); ret
 export function freshSave() {
   return {
     v: 2, coins: 0, spent: { coins: 0, gems: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
-    nick: null, muted: false, avatar: 'basic',
+    nick: null, muted: false, avatar: 'basic', fav: null, // fav: the ball on the profile stand (null: the avatar)
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
     chests: { box: 0, big: 0, mega: 0 }, // stash: chests from the road and ball paths, opened right away
@@ -191,6 +191,7 @@ export function migrate(raw) {
   if (validNick(r.nick)) s.nick = r.nick;
   s.muted = r.muted === true;
   if (BALLS[r.avatar]) s.avatar = r.avatar;
+  if (BALLS[r.fav] && s.owned.includes(r.fav)) s.fav = r.fav;
   s.created = list(r.created, Number.isInteger).slice(-100);
   s.answered = list(r.answered, Number.isInteger).slice(-100);
   s.claimed = list(r.claimed, Number.isInteger);
@@ -619,6 +620,7 @@ export function mergeSave(local, cloudRaw, server) {
     s[cur] = Math.max(0, earned - s.spent[cur]);
   }
   s.owned = union(s.owned, cloud.owned);
+  s.fav ??= cloud.fav;
   s.skins = union(s.skins, cloud.skins);
   s.claimed = union(s.claimed, cloud.claimed);
   s.achieved = union(s.achieved, cloud.achieved);

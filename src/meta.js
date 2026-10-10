@@ -650,6 +650,27 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- profile ----------
   function profile() {
     $('#p-nick').textContent = nickText(save.nick, lang);
+    // the stand: your banner and name on a ribbon, your favourite ball on a lit pedestal, the familiar beside it
+    const fav = save.fav && save.owned.includes(save.fav) ? save.fav : save.avatar, myLv = levelOf(save.xp).lv;
+    $('#p-ribbon-bg').innerHTML = bannerSvg(save.wear.banner, 'pr');
+    $('#p-deco').innerHTML = decoSvg(save.wear.deco);
+    $('#p-av').replaceChildren(icon(save.avatar, 48, save.skinOf[save.avatar]), el('b', 'lvl-badge', String(myLv)));
+    $('#p-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
+    loadMyClan();
+    $('#p-clan').innerHTML = myClan ? `<span class="clan-badge">${clanBadge(myClan.badge)}</span><small></small>` : '';
+    if (myClan) $('#p-clan small').textContent = clanText(myClan.name, lang);
+    $('#p-fav-art').replaceWith(Object.assign(icon(fav, 150, save.skinOf[fav], save.wear.aura), { id: 'p-fav-art' }));
+    drawFamiliar($('#p-fam'), save.fam.skin, 58);
+    $('#p-fav-name').textContent = ballName(fav);
+    const r = ballRank(save.mastery[fav] ?? 0);
+    $('#p-fav-rank').innerHTML = `${rankBadge(r)}<small></small>`;
+    $('#p-fav-rank small').textContent = t('favRank', { n: r });
+    $('#p-favs').replaceChildren(...save.owned.map(id => {
+      const b = el('button', 'pick' + (fav === id ? ' sel-avatar' : ''));
+      b.append(icon(id, 40, save.skinOf[id]), document.createTextNode(ballName(id)));
+      b.onclick = () => { save.fav = id; persist(); sfx.click(); render(); };
+      return b;
+    }));
     $('#p-avatars').replaceChildren(...save.owned.map(id => {
       const b = el('button', 'pick' + (save.avatar === id ? ' sel-avatar' : ''));
       b.append(icon(id, 40, save.skinOf[id]), document.createTextNode(ballName(id)));

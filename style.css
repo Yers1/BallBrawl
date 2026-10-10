@@ -1200,3 +1200,24 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 
 /* hints over the arena sky stay readable on light arenas (candy, temple) */
 .tab > p.muted, .fam-hint { padding: 8px 12px; border-radius: 12px; background: rgba(10, 14, 31, 0.55); color: #DCE6FA; }
+
+/* ---------- the profile stand: banner ribbon on top, the favourite ball on a lit pedestal ---------- */
+.p-stand { overflow: hidden; margin-bottom: 14px; border-radius: 22px; border: 3px solid var(--stroke); box-shadow: 0 5px 0 var(--stroke);
+  background: radial-gradient(ellipse 60% 55% at 50% 30%, rgba(255, 236, 160, 0.28), transparent 70%), radial-gradient(ellipse at 50% 100%, #2A3A6E, #141B33 70%); }
+.p-ribbon { position: relative; display: flex; align-items: center; gap: 10px; height: 76px; padding: 8px 34px 8px 12px; filter: drop-shadow(0 4px 0 #0A0E1F); }
+.p-ribbon > :not(.me-bg) { position: relative; z-index: 1; }
+.p-who { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.p-who .nick-row { display: flex; align-items: center; gap: 6px; }
+.p-who .nick { font: 400 19px var(--display); text-shadow: var(--stroke-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-clan { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 900; text-shadow: 0 2px 0 var(--stroke); }
+.p-clan .clan-badge svg { width: 16px; height: 18px; display: block; }
+.p-ribbon .me-deco { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); }
+.p-ribbon .me-deco svg { width: 40px; height: 40px; display: block; }
+.p-show { position: relative; display: flex; flex-direction: column; align-items: center; padding: 6px 0 16px; }
+.p-fav { position: relative; display: flex; flex-direction: column; align-items: center; }
+.p-fav canvas { position: relative; z-index: 1; animation: famBob 2.6s ease-in-out infinite; }
+.p-ped { width: 190px; height: 40px; margin-top: -26px; border-radius: 50%; border: 3px solid var(--stroke);
+  background: radial-gradient(ellipse at 50% 40%, #FFE38A, #E0A21E 60%, #8A5A0E); box-shadow: 0 0 34px 10px rgba(255, 210, 90, 0.35), 0 6px 0 var(--stroke); }
+.p-fav-name { margin-top: 8px; font: 400 24px var(--display); text-transform: uppercase; color: var(--gold); text-shadow: var(--stroke-text); }
+.p-fav-rank { display: flex; align-items: center; gap: 6px; font-weight: 900; color: var(--muted); }
+.p-fam { position: absolute; left: 14%; top: 14px; z-index: 2; animation: famBob 2.2s ease-in-out infinite reverse; }

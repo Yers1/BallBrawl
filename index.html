@@ -182,10 +182,26 @@
                 <button type="button" class="btn ghost wide-btn" id="acct-out" data-t="acctOut"></button>
               </div>
             </div>
-            <div class="nick-row big-nick">
-              <span id="p-nick" class="nick"></span>
-              <button id="p-renick" class="icon-btn sm" aria-label="new nickname"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5M4 4v3.5h3.5M4 13a8 8 0 0 0 14.5 4.5M20 20v-3.5h-3.5"/></svg></button>
+            <div class="p-stand">
+              <div class="p-ribbon">
+                <span id="p-ribbon-bg" class="me-bg"></span>
+                <span id="p-av" class="avatar"></span>
+                <div class="p-who">
+                  <span class="nick-row"><span id="p-nick" class="nick"></span><button id="p-renick" class="icon-btn sm" aria-label="new nickname"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5M4 4v3.5h3.5M4 13a8 8 0 0 0 14.5 4.5M20 20v-3.5h-3.5"/></svg></button></span>
+                  <small id="p-title" class="me-title"></small>
+                  <span id="p-clan" class="p-clan"></span>
+                </div>
+                <span id="p-deco" class="me-deco"></span>
+              </div>
+              <div class="p-show">
+                <canvas id="p-fam" class="p-fam"></canvas>
+                <div class="p-fav"><canvas id="p-fav-art"></canvas><span class="p-ped"></span></div>
+                <b id="p-fav-name" class="p-fav-name"></b>
+                <span id="p-fav-rank" class="p-fav-rank"></span>
+              </div>
             </div>
+            <h3 data-t="favTitle"></h3>
+            <div id="p-favs" class="pick-row"></div>
             <div id="p-league" class="league-card"></div>
             <h3 data-t="avatarTitle"></h3>
             <div id="p-avatars" class="pick-row"></div>
