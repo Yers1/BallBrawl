@@ -136,7 +136,7 @@ function splitOff(w, me, hp = CELL.hp) { // two mini cells fly out sideways
   w.events.push({ type: 'split', x: me.x, y: me.y });
 }
 
-// Like the original Chess Ball: it slides to the middle, the arena turns into a chessboard, a random piece stands on
+// Chess: it slides to the middle, the arena turns into a chessboard, a random piece stands on
 // the ball and red lines show where it can go — then it strikes along the line that reaches the foe. Untouchable throughout.
 const PIECES = ['rook', 'bishop', 'knight'];
 const DIRS = { rook: [[1, 0], [-1, 0], [0, 1], [0, -1]], bishop: [[1, 1], [1, -1], [-1, 1], [-1, -1]] };
@@ -467,7 +467,7 @@ function levelUp(w, me, n) {
 }
 
 Object.assign(BALLS, {
-  poison: { // modelled on the original's Poison Spike Ball: the arena gets deadlier with every bounce
+  poison: { // every wall bounce leaves a poison spike: the arena gets deadlier as the round goes on
     hp: 105, color: '#5fd03a', price: 600,
     onWallHit(w, me, x, y) { spike(w, me, x, y); },
     onTick(w, me) {
@@ -486,7 +486,7 @@ Object.assign(BALLS, {
       for (const k of [1 / 3, 2 / 3]) { spike(w, me, W * k, 0); spike(w, me, W * k, W); spike(w, me, 0, W * k); spike(w, me, W, W * k); }
     },
   },
-  chain: { // modelled on Shackles Ball: neon chain rings that hold a foe and tick
+  chain: { // neon chain rings that hold a foe and tick
     hp: 100, color: '#c5313a', price: 650,
     onTick(w, me, dt) {
       me.cd.ring ??= CHAIN.first;
@@ -513,7 +513,7 @@ Object.assign(BALLS, {
       for (const a of [0.6, 0.6 + (Math.PI * 2) / 3, 0.6 + (Math.PI * 4) / 3]) ring(w, me, f.x + Math.cos(a) * CHAIN.r * 0.9, f.y + Math.sin(a) * CHAIN.r * 0.9);
     },
   },
-  forge: { // modelled on Forge Ball: weak at first, it levels up as the round goes on and hits harder each level
+  forge: { // weak at first, it levels up as the round goes on and hits harder each level
     hp: 105, color: '#e0b23a', price: 700,
     onTick(w, me) {
       me.lv ??= 1;
@@ -523,7 +523,7 @@ Object.assign(BALLS, {
     onSuper(w, me) { levelUp(w, me, FORGE.superLv); },
   },
 
-  chess: { // modelled on Chess Ball: the arena becomes a board, a random piece strikes along its lines
+  chess: { // the arena becomes a board, a random piece strikes along its lines
     hp: 105, color: '#EDE6D6', price: 300,
     onTick(w, me, dt) {
       if (me.chess) return chessTick(w, me, dt);

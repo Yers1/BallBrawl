@@ -51,7 +51,7 @@ function burst(x, y, n, color, speed, size = [2.5, 7]) {
   }
 }
 
-// A floating number or word. Big, tilted, long-lived like the original; at most 40 on screen.
+// A floating number or word. Big, tilted, long-lived; at most 40 on screen.
 function float(x, y, text, color, size = 22, life = 1.5, rise = 30, tilt = rnd(-0.17, 0.17)) {
   const f = { x, y, text, color, size, life, rise, tilt, age: 0, popAt: 0, vx: 0, vy: 0 };
   fx.floats.push(f);
@@ -421,7 +421,7 @@ function absorb(w, now) {
 
 // ---------- pieces ----------
 
-// The arena is a sunken box seen from above, like the original: a floor, four bevelled walls lit from the top.
+// The arena is a sunken box seen from above: a floor, four bevelled walls lit from the top.
 // Its colours and floor pattern come from the current arena (themes.js); decorations are laid out once per arena.
 let THEME = THEMES.night, DECOR = [], ARENA = 'night';
 const FACE_PTS = [ // the corners of each wall face: top, left, right, bottom
@@ -1710,7 +1710,7 @@ function legs(ctx, e, t) {
   }
 }
 
-// Chess: while a piece is in play the arena becomes a chessboard (like the original), red lines show where it can strike.
+// Chess: while a piece is in play the arena becomes a chessboard, red lines show where it can strike.
 const GLYPH = { rook: '♜', bishop: '♝', knight: '♞', queen: '♛' };
 const boardFade = (m, t) => (m.stage === 'go' ? Math.min(1, (t - m.at) / 0.2) : 1);
 function chessBoard(ctx, w, t) {
@@ -1772,7 +1772,7 @@ function trail(ctx, e, t) {
   ctx.globalAlpha = 1;
 }
 
-// HP sits in the middle of the ball, white with a dark outline, like the original.
+// HP sits in the middle of the ball, white with a dark outline.
 function hpText(ctx, e) {
   const { x, y, r } = e, n = Math.ceil(e.hp);
   ctx.font = `900 ${Math.round(r * 0.78)}px ${FONT}`;
@@ -1982,7 +1982,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   for (const sh of w.shots) sh.kind === 'needle' ? needle(ctx, sh) : sh.kind === 'hook' ? hookShot(ctx, sh) : sh.kind === 'rocket' ? rocket(ctx, sh, now) : shuriken(ctx, sh, w.t);
   const lead = side => w.ents.find(e => e.side === side);
   if (aim != null) aimArrow(ctx, lead(0), aim, now);
-  if (foeAim != null && lead(1)) aimArrow(ctx, lead(1), foeAim, now); // the opponent's shot is no secret, like the original
+  if (foeAim != null && lead(1)) aimArrow(ctx, lead(1), foeAim, now); // the opponent's shot is no secret
 
   ctx.save();
   ctx.shadowBlur = 14;

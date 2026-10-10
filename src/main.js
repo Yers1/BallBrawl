@@ -58,7 +58,7 @@ const S = {
   aiLevel: 1, freezeUntil: 0, slowUntil: 0, // freeze = hit-stop: pauses stepping only, the sim itself is untouched
   challenge: null, // decoded friend challenge while playing one
   nextSeed: 1, // the next match's seed, fixed when you open the squad screen so its preview is the real fight
-  foeAim: 0, aimLeft: 0, watchAims: [0, 0], watchEndAt: 0, // the opponent's shot is drawn during the aim phase, like the original
+  foeAim: 0, aimLeft: 0, watchAims: [0, 0], watchEndAt: 0, // the opponent's shot is drawn during the aim phase
   ms: { dashes: 0, supers: 0, kills: 0 }, // this match's stats, for quests
   opponent: null, // a real player's squad from the server (null = computer squad)
   ranked: false, matchId: null, matchStart: 0, // ranked = online match whose trophies the server decides
