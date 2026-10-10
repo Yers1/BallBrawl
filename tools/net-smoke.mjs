@@ -94,11 +94,25 @@ await step('transfer codes are switched off (moving is by email account)', async
   await call(C, 'ensure_profile', prof(0, { a: 5, n: 5, d: 77 }));
   assert.ok(!(await rpc(C, 'redeem_code', { p_code: a.code })).ok);
 });
-await step('delete_profile removes everything', async () => {
+await step('clans: create, join, see members, leave; the last one out closes the clan', async () => {
+  assert.equal(await call(A, 'clan_info', { p_clan: null }), null, 'no clan yet');
+  assert.ok(!(await rpc(A, 'clan_create', { p_name: { a: 99, n: 0 }, p_badge: 0 })).ok, 'words outside the lists are refused');
+  const id = await call(A, 'clan_create', { p_name: { a: 3, n: 4 }, p_badge: 2 });
+  assert.ok(!(await rpc(A, 'clan_create', { p_name: { a: 1, n: 1 }, p_badge: 0 })).ok, 'one clan at a time');
+  assert.equal(await call(B, 'clan_join', { p_clan: id }), true);
+  const info = await call(B, 'clan_info', { p_clan: null });
+  assert.equal(info.members.length, 2);
+  assert.ok(info.members.some(m => m.leader) && info.members.some(m => m.me));
+  assert.ok((await call(A, 'clan_list')).some(c => c.id === id && c.members === 2));
+  await call(A, 'clan_leave');
+  const after = await call(B, 'clan_info', { p_clan: id });
+  assert.ok(after.members.length === 1 && after.members[0].leader, 'B leads now');
+  await call(B, 'clan_leave');
+  assert.equal(await call(A, 'clan_info', { p_clan: id }), null, 'empty clan is gone');
+});
+await step('delete_profile removes everything, the sign-in too', async () => {
   for (const t of [A, B, C]) await call(t, 'delete_profile');
-  const o = await call(C, 'ensure_profile', prof(0));
-  assert.equal(o.created, true);
-  await call(C, 'delete_profile');
+  assert.ok(!(await rpc(C, 'ensure_profile', prof(0))).ok, 'the deleted sign-in cannot make a new profile');
 });
 console.log('backend smoke test passed');
 } finally {

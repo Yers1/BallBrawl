@@ -11,6 +11,7 @@ A browser game where balls with superpowers fight in an arena. You build a squad
 **Modes and maps:** Classic (squads take turns, trophies), 2 vs 2 and a co-op Boss fight. Every arena has its own map: canyon rocks, frost ice crystals, jungle bouncy mushrooms, lava pools, space portals, each with its own scenery. Player level from XP; levels pay coins and gems.
 **Shop and gems:** auras, banners and decorations for your name card, 15 character emotes (some animated), arena maps, daily deals and skins. Gems come from chests, the Glory Road, ball paths, day 7 and rewarded ads; buying gems with money is not built yet.
 **Chests:** wins put chests into 4 slots in a fixed order; each unlocks on a timer (gems or an ad skip it). Chests give coins, skin fragments (10 make a skin), gems, sometimes an emote or a new ball, with the odds shown.
+**Clans:** create (500 coins), join, leave; names from the nickname word lists, 8 emblems, members and clan trophies. No chat, for kids' safety.
 **Inbox and settings:** messages and gifts from the team (posted with SQL, see below), sound, opponent emotes and language in settings.
 **Email account** (optional): turns the anonymous player into an account that can sign in on another device, and gives the Rainbow skin as a thank-you.
 **Challenge a friend by link:** the squad, seed, nickname and level live right in the link, no server needed. Your friend plays with the same squad and can send back a reply challenge with their result.

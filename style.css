@@ -928,7 +928,7 @@ body.record { background: #000; }
 .side-btn #l-tr, .side-btn > #l-tr { font: 400 12px/1 var(--display); color: var(--gold); }
 .side-btn .badge { top: -3px; right: 2px; width: 14px; height: 14px; border-color: #1E2742; }
 .side-btn:active .ic { transform: translateY(2px); box-shadow: inset 0 2px 0 var(--hi), 0 1px 0 #0A0E1F; }
-.dock { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dock { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .lobby-top .me { flex: 1; }
 @media (max-height: 700px) { .side { gap: 6px; } .side-btn .ic { width: 40px; height: 40px; } .side-btn svg { width: 24px; height: 24px; } }
 
@@ -967,3 +967,31 @@ body.record { background: #000; }
 .p-level .xp-bar { width: 90px; }
 .xp-line { color: #8EEBFF; }
 .xp-line.up { color: var(--gold); font-size: 18px; }
+
+/* clans */
+.clan-head, .clan-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
+.clan-head { margin: 4px 0 12px; }
+.clan-head div, .clan-row div { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.clan-head b { font: 400 20px/1.1 var(--display); }
+.clan-row b { font-weight: 900; }
+.clan-head small, .clan-row small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.clan-badge { display: grid; place-items: center; flex: none; }
+.clan-badge svg { width: 44px; height: auto; display: block; }
+.clan-row .clan-badge svg { width: 36px; }
+.clan-make { margin: 0 0 18px; padding: 12px; border-radius: 16px; background: var(--panel-2); }
+.clan-make h3, .clan-make h4 { margin: 0 0 8px; }
+.clan-make h4 { margin-top: 12px; }
+.clan-badges { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin-bottom: 12px; }
+.clan-badges .clan-badge { padding: 4px 0; border: 2px solid transparent; border-radius: 10px; background: var(--panel); cursor: pointer; }
+.clan-badges .clan-badge svg { width: 100%; max-width: 34px; }
+.clan-badges .clan-badge.on { border-color: var(--gold); }
+.clan-top { display: flex; flex-direction: column; gap: 8px; }
+.clan-top h3 { margin: 0 0 4px; }
+
+/* the name card opens the Glory Road */
+.me { cursor: pointer; }
+.me:active { transform: translateY(2px); }
+.me .badge { top: -4px; right: 8px; z-index: 3; }
+.me-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.me-tr { display: inline-flex; align-items: center; gap: 3px; flex: none; font: 400 12px/1 var(--display); color: var(--gold); }
+.me-tr .trophy { width: 14px; height: 14px; }

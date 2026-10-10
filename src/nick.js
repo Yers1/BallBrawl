@@ -25,6 +25,10 @@ export const validNick = k =>
   !!k && Number.isInteger(k.a) && Number.isInteger(k.n) && Number.isInteger(k.d) &&
   k.a >= 0 && k.a < ADJ.length && k.n >= 0 && k.n < NOUN.length && k.d >= NICK_RANGE.dMin && k.d <= NICK_RANGE.dMax;
 
+// Clan names: the same reviewed words, without the number.
+export const validClan = k => !!k && Number.isInteger(k.a) && Number.isInteger(k.n) && k.a >= 0 && k.a < ADJ.length && k.n >= 0 && k.n < NOUN.length;
+export const clanText = (k, lang) => { const i = lang === 'ru' ? 0 : 1; return `${ADJ[k.a][i]} ${NOUN[k.n][i]}`; };
+
 export const nickText = (k, lang) => {
   const i = lang === 'ru' ? 0 : 1;
   return `${ADJ[k.a][i]} ${NOUN[k.n][i]} ${k.d}`;

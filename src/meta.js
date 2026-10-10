@@ -2,7 +2,7 @@
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
 import { t, lang, LANGS, setLang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
-import { nickText, randomNick, validNick } from './nick.js';
+import { nickText, randomNick, validNick, clanText, validClan, NICK_RANGE } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin, buyBall,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
@@ -232,6 +232,11 @@ const MODE_ICON = {
   duo: '<svg viewBox="0 0 32 32"><circle cx="12" cy="18" r="8" fill="#4CC9F0" stroke="#0A0E1F" stroke-width="2.2"/><circle cx="21" cy="13" r="7.5" fill="#36D27A" stroke="#0A0E1F" stroke-width="2.2"/><circle cx="18.5" cy="10.5" r="2.2" fill="#FFFFFF" opacity=".7"/><circle cx="9.5" cy="15.5" r="2.2" fill="#FFFFFF" opacity=".7"/></svg>',
   boss: '<svg viewBox="0 0 32 32"><circle cx="16" cy="19" r="11" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.2"/><path d="M8 9l2-6 4 4 2-5 2 5 4-4 2 6z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2" stroke-linejoin="round"/><path d="M11 18l3 1.5M21 18l-3 1.5" stroke="#0A0E1F" stroke-width="2.2" stroke-linecap="round"/><circle cx="12.5" cy="15.5" r="2.5" fill="#FFFFFF" opacity=".6"/></svg>',
 };
+// Clan emblems: a shield in one of 8 colours with an icon from the decorations.
+const CLAN_COLORS = ['#3D86FF', '#FF4D5E', '#36D27A', '#A85CFF', '#FF9F1C', '#4CC9F0', '#FFCC33', '#5A6478'];
+const CLAN_ICONS = ['star', 'sword', 'crown', 'bolt', 'flame', 'shield', 'trophy', 'target'];
+export const clanBadge = i => `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2l16 6v12c0 10-7 18-16 22C11 38 4 30 4 20V8z" fill="${CLAN_COLORS[i] ?? CLAN_COLORS[0]}" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>`
+  + `<path d="M20 6l12 4.5v9c0 7-5 13-12 16" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5"/><g transform="translate(9 9) scale(0.55)">${DECO_SVG[CLAN_ICONS[i]] ?? ''}</g></svg>`;
 export const decoSvg = id => (DECO_SVG[id] ? `<svg viewBox="0 0 40 40" aria-hidden="true">${DECO_SVG[id]}</svg>` : '');
 const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
 const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
@@ -295,6 +300,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#h-xp').style.width = Math.round((lv.xp / lv.need) * 100) + '%';
     $('#h-nick').textContent = nickText(save.nick, lang);
     $('#h-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
+    $('#h-tr').textContent = save.trophies;
     $('#h-league').innerHTML = leagueSvg(leagueFor(save.trophies));
     $('#h-banner').innerHTML = bannerSvg(save.wear.banner, 'me');
     $('#h-deco').innerHTML = decoSvg(save.wear.deco);
@@ -534,7 +540,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       if (c) box.scrollTop += c.getBoundingClientRect().top - box.getBoundingClientRect().top - (box.clientHeight - c.clientHeight) / 2;
     }, 0);
   }
-  $('#l-arena-btn').onclick = $('#l-arenas').onclick = () => { sfx.click(); open('arenas'); };
+  $('#l-arena-btn').onclick = () => { sfx.click(); open('arenas'); };
 
   // ---------- quests ----------
   function quests() {
@@ -820,6 +826,91 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   $('#ch-close').onclick = () => { $('#scr-chest').hidden = true; render(); };
 
+  // ---------- clans (no chat: names from word lists, emblems, members, clan trophies) ----------
+  const CLAN_COST = 500, CLAN_MAX = 30;
+  let clanDraft = null;
+  async function clan() {
+    const box = $('#clan-body');
+    if (!net.online) { box.replaceChildren(el('p', 'muted center', t('needNet'))); return; }
+    box.replaceChildren(el('p', 'muted center', t('loading')));
+    try {
+      const mine = await online.clanInfo(null);
+      if (tab !== 'clan') return;
+      if (mine?.id) return clanView(mine);
+      const list = await online.clanList();
+      if (tab === 'clan') clanPick(Array.isArray(list) ? list : []);
+    } catch { if (tab === 'clan') box.replaceChildren(el('p', 'muted center', t('needNet'))); }
+  }
+  const clanTitle = (c, cls = 'clan-head') => {
+    const h = el('div', cls);
+    h.innerHTML = `<span class="clan-badge">${clanBadge(Number(c.badge) || 0)}</span><div><b></b><small></small></div>`;
+    h.querySelector('b').textContent = validClan(c.name) ? clanText(c.name, lang) : '???';
+    return h;
+  };
+  function clanView(c) {
+    const members = Array.isArray(c.members) ? c.members : [], total = members.reduce((s, m) => s + (Number(m.trophies) || 0), 0);
+    const head = clanTitle(c);
+    head.querySelector('small').innerHTML = `${t('clanMembers', { n: members.length, max: CLAN_MAX })} · <i class="trophy"></i>${total}`;
+    const list = el('div', 'llist');
+    list.append(...members.map((m, i) => {
+      const row = el('div', `lrow ${m.me ? 'me' : ''}`), name = el('div', 'nm');
+      name.textContent = (validNick(m.nick) ? nickText(m.nick, lang) : '???') + (m.leader ? ` · ${t('clanLeader')}` : '');
+      const ball = BALLS[m.avatar] ? m.avatar : 'basic', skin = SKINS[m.skin] ? m.skin : null;
+      row.append(el('div', 'rk', String(i + 1)), icon(ball, 32, skin), name, el('div', 'sc', `<i class="trophy"></i>${Number(m.trophies) || 0}`));
+      return row;
+    }));
+    const leave = el('button', 'btn ghost danger wide-btn', t('clanLeave'));
+    leave.onclick = async () => {
+      if (!confirm(t('clanLeaveConfirm'))) return;
+      try { await online.clanLeave(); clan(); } catch { toast(t('needNet')); }
+    };
+    $('#clan-body').replaceChildren(head, list, el('p', 'muted small', t('clanSafe')), leave);
+  }
+  function clanPick(list) {
+    clanDraft ??= { a: Math.floor(Math.random() * NICK_RANGE.a), n: Math.floor(Math.random() * NICK_RANGE.n), badge: Math.floor(Math.random() * 8) };
+    const make = el('div', 'clan-make');
+    make.append(el('h3', '', ''), clanTitle({ name: clanDraft, badge: clanDraft.badge }, 'clan-head'));
+    make.firstChild.textContent = t('clanCreate');
+    const reroll = el('button', 'btn sm', t('clanReroll'));
+    reroll.onclick = () => { clanDraft.a = Math.floor(Math.random() * NICK_RANGE.a); clanDraft.n = Math.floor(Math.random() * NICK_RANGE.n); sfx.click(); clanPick(list); };
+    const badges = el('div', 'clan-badges');
+    badges.append(...CLAN_COLORS.map((_, i) => {
+      const b = el('button', 'clan-badge' + (clanDraft.badge === i ? ' on' : ''), clanBadge(i));
+      b.onclick = () => { clanDraft.badge = i; sfx.click(); clanPick(list); };
+      return b;
+    }));
+    const go = el('button', 'btn primary wide-btn', `${t('clanCreate')} · <i class="coin"></i>${CLAN_COST}`);
+    go.disabled = save.coins < CLAN_COST;
+    go.onclick = async () => {
+      if (save.coins < CLAN_COST) return toast(t('needCoins'));
+      go.disabled = true;
+      try {
+        await online.clanCreate({ a: clanDraft.a, n: clanDraft.n }, clanDraft.badge);
+        save.coins -= CLAN_COST; persist(); coinsUI(); sfx.coin(); confetti(40); toast(t('clanCreated')); clanDraft = null; clan();
+      } catch { go.disabled = false; toast(t('needNet')); }
+    };
+    make.append(reroll, el('h4', '', ''), badges, go);
+    make.querySelector('h4').textContent = t('clanBadge');
+    make.querySelector('.clan-head small').textContent = '';
+    const top = el('div', 'clan-top');
+    top.append(el('h3', ''));
+    top.firstChild.textContent = t('clanTop');
+    top.append(...(list.length ? list.map(c => {
+      const row = clanTitle(c, 'clan-row');
+      row.querySelector('small').innerHTML = `${t('clanMembers', { n: c.members, max: CLAN_MAX })} · <i class="trophy"></i>${Number(c.total) || 0}`;
+      const join = el('button', 'btn sm primary', t('clanJoin'));
+      join.disabled = c.members >= CLAN_MAX;
+      join.onclick = async () => {
+        join.disabled = true;
+        try { if (await online.clanJoin(c.id)) { sfx.coin(); toast(t('clanJoined')); clan(); } else { toast(t('clanFull')); join.disabled = false; } }
+        catch { join.disabled = false; toast(t('needNet')); }
+      };
+      row.append(join);
+      return row;
+    }) : [el('p', 'muted center', t('clanEmpty'))]));
+    $('#clan-body').replaceChildren(el('p', 'muted small', t('clanSafe')), make, top);
+  }
+
   // ---------- modes: classic (trophies), 2 vs 2, boss ----------
   function modes() {
     $('#md-list').replaceChildren(...['classic', 'duo', 'boss'].map(m => {
@@ -1072,7 +1163,6 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       setTimeout(() => reward({ arena: a }), 300);
     }
     $('#l-lead').textContent = ballName(lead);
-    $('#l-tr').textContent = save.trophies;
     const ranked = save.mode === 'classic' && net.online;
     $('#l-mode').textContent = save.mode === 'classic' ? (net.online ? t('modeRanked') : t('modeTraining')) : t('mode_' + save.mode);
     $('#l-mode').classList.toggle('live', ranked);
@@ -1129,13 +1219,14 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (tab === 'skins') skins();
     if (tab === 'shop') shop();
     if (tab === 'mail') mail();
+    if (tab === 'clan') clan();
     if (tab === 'arenas') arenas();
     badges();
   }
 
   function open(next = tab) {
     tab = next;
-    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'arenas', 'shop', 'mail']) $('#tab-' + name).hidden = name !== tab;
+    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'arenas', 'shop', 'mail', 'clan']) $('#tab-' + name).hidden = name !== tab;
     $('#lobby').hidden = tab !== 'lobby';
     $('#sub').hidden = tab === 'lobby';
     if (tab !== 'lobby') $('#sub-title').textContent = t('tab' + tab[0].toUpperCase() + tab.slice(1));
