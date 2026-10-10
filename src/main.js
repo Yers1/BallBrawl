@@ -186,9 +186,10 @@ function startChallenge() {
 // ---------- home ----------
 const home = createHome({
   save, persist, el, icon, coinsUI, toast, online,
-  onPlay: () => (save.mode === 'classic' ? goSquad() : partyChoice()),
+  onPlay: () => (save.mode === 'duo' || save.mode === 'boss' ? partyChoice() : goSquad()), // only these two can be played with friends
   onWatch: () => goWatch(),
   onChallenge: () => shareChallenge(),
+  onInviteFriend: f => inviteFriend(f),
 });
 function goHome(tab) {
   if (S.party) partyLeave();
@@ -935,16 +936,56 @@ $('#pc-join').onclick = () => {
   partyOpen(c, false);
 };
 $('#pc-close').onclick = () => { $('#scr-pchoice').hidden = true; };
-function partyOpen(code, host) {
+function partyOpen(code, host, mode = save.mode) {
   partyLeave();
-  const me = { uid: online.myUid(), nick: save.nick, ball: save.squad[0], skin: save.skinOf[save.squad[0]] ?? null, at: Date.now(), host, mode: host ? save.mode : null };
-  P = { code, host, me, members: [], mode: host ? save.mode : null, state: 'lobby', sawHost: false };
+  const me = { uid: online.myUid(), nick: save.nick, ball: save.squad[0], skin: save.skinOf[save.squad[0]] ?? null, at: Date.now(), host, mode: host ? mode : null };
+  P = { code, host, me, members: [], mode: host ? mode : null, state: 'lobby', sawHost: false };
   globalThis.bbParty = P; // handy in the console when a party misbehaves
   const room = P; // an old room's late events must never reach the next party
   try { P.chan = online.partyChannel(code, me, { onPresence: l => P === room && partyPresence(l), onMsg: m => P === room && partyMsg(m) }); } catch { P = null; return toast(t('needNet')); }
   partyRender();
   $('#scr-party').hidden = false;
+  partyFriends();
 }
+// Online friends in the party lobby, each with a one-tap invite
+async function partyFriends() {
+  const box = $('#pt-friends');
+  box.replaceChildren();
+  if (!P) return;
+  await home.loadFriends();
+  const list = home.onlineFriends();
+  box.replaceChildren(...(list.length ? list.map(f => {
+    const row = el('div', 'fr-row on'), nm = el('div', 'fr-nm');
+    nm.append(el('b', ''));
+    nm.firstChild.textContent = validNick(f.nick) ? nickText(f.nick, lang) : '???';
+    const b = el('button', 'btn sm primary', t('frInvite'));
+    b.onclick = () => { b.disabled = true; inviteFriend(f).finally(() => setTimeout(() => { b.disabled = false; }, 15000)); };
+    row.append(el('span', 'fr-dot'), icon(BALLS[f.avatar] ? f.avatar : 'basic', 32, SKINS[f.skin] ? f.skin : null), nm, b);
+    return row;
+  }) : [el('p', 'muted small center', t('ptNoFriends'))]));
+}
+// Call a friend: open a party first if you're not in one (2 vs 2 unless you picked the boss), then send the code
+async function inviteFriend(f) {
+  if (!P) partyOpen(newCode(), true, save.mode === 'boss' ? 'boss' : 'duo');
+  const ok = await online.partyInvite(f.id, P.code, P.mode ?? 'duo').catch(() => false);
+  toast(t(ok ? 'frInvited' : 'frInviteWait'));
+}
+// Invites to me: checked every few seconds while not in a fight; one popup at a time
+let inviteShown = null;
+setInterval(async () => {
+  if (!net.online || document.hidden || inviteShown || ['aim', 'fight', 'ending', 'upgrade', 'starting'].includes(S.mode) || P?.state === 'fight') return;
+  const list = await online.myInvites().catch(() => []);
+  const inv = list.find(x => CODE_RE.test(x.code) && x.code !== P?.code);
+  if (!inv) return;
+  inviteShown = inv;
+  $('#inv-av').replaceChildren(icon(BALLS[inv.from?.avatar] ? inv.from.avatar : 'basic', 72, SKINS[inv.from?.skin] ? inv.from.skin : null));
+  $('#inv-text').textContent = t('invText', { nick: validNick(inv.from?.nick) ? nickText(inv.from.nick, lang) : '???', mode: t('mode_' + (inv.mode === 'boss' ? 'boss' : 'duo')) });
+  $('#scr-invite').hidden = false;
+  sfx.coin();
+}, 6000);
+$('#inv-join').onclick = () => { const inv = inviteShown; $('#scr-invite').hidden = true; inviteShown = null; sfx.click(); if (inv) partyOpen(inv.code, false); };
+$('#inv-later').onclick = () => { $('#scr-invite').hidden = true; inviteShown = null; };
+setInterval(() => { if (net.online && !document.hidden && S.mode === 'home') home.loadFriends(); }, 30000); // requests badge + "I'm online"
 function partyLeave() {
   if (P) { try { P.chan.leave(); } catch { /* already gone */ } }
   P = null;

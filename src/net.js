@@ -150,6 +150,14 @@ export async function checkout(pack) { // a Dodo checkout page for this gem pack
   if (error || !data?.url) throw error || new Error('no url');
   return data.url;
 }
+// friends (by nickname word ids) and one-tap party invites
+export const findPlayers = nick => rpc('find_players', { p_nick: nick });
+export const friendRequest = id => rpc('friend_request', { p_id: id });
+export const friendAnswer = (id, ok) => rpc('friend_answer', { p_id: id, p_accept: ok });
+export const friendRemove = id => rpc('friend_remove', { p_id: id });
+export const friendsList = () => rpc('friends');
+export const partyInvite = (id, code, mode) => rpc('party_invite', { p_id: id, p_code: code, p_mode: mode });
+export const myInvites = () => rpc('my_invites');
 export const logEvent = type => (net.online ? rpc('log_event', { p_type: type }).catch(() => {}) : null);
 export async function deleteProfile() {
   await rpc('delete_profile');

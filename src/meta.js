@@ -333,7 +333,7 @@ const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, uni
 const mmss = ms => { const m = Math.ceil(ms / 60e3); return m >= 60 ? `${unit(Math.floor(m / 60), 'hour')} ${unit(m % 60, 'minute')}` : unit(m, 'minute'); };
 export const rankBadge = r => `<span class="rk-badge t-${rankTier(r)}">${r}</span>`;
 
-export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
+export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online, onInviteFriend }) {
   const { net, leaderboard, deleteProfile, news } = online;
   let tab = 'lobby';
   const coin = n => `<span class="amt"><i class="coin"></i>${n}</span>`;
@@ -1464,7 +1464,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       || save.quests.list.some(q => !q.claimed && q.progress >= questDef(q.id).goal)
       || ACHIEVEMENTS.some(a => !save.achieved.includes(a.id) && achievementValue(save, a) >= a.goal);
     const f = save.fam, famReady = f.lv < famCap(save.maxTrophies) && f.xp >= famNeed(f.lv) && save.coins >= FAM_COST[f.lv + 1];
-    const dots = { path: claimable(save).length > 0, quests: questReady, profile: net.online && !net.email, fam: famReady };
+    const dots = { path: claimable(save).length > 0, quests: questReady, profile: net.online && !net.email, fam: famReady, friends: friendReqs > 0 };
     for (const b of document.querySelectorAll('[data-tab]')) b.querySelector('.badge').hidden = !dots[b.dataset.tab];
   }
   for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sfx.click(); open(b.dataset.tab); };
@@ -1496,12 +1496,13 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (tab === 'mail') mail();
     if (tab === 'clan') clan();
     if (tab === 'fam') famScreen();
+    if (tab === 'friends') friendsScreen();
     badges();
   }
 
   function open(next = tab) {
     tab = next;
-    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'shop', 'mail', 'clan', 'fam']) $('#tab-' + name).hidden = name !== tab;
+    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'shop', 'mail', 'clan', 'fam', 'friends']) $('#tab-' + name).hidden = name !== tab;
     $('#lobby').hidden = tab !== 'lobby';
     $('#sub').hidden = tab === 'lobby';
     if (tab !== 'lobby') $('#sub-title').textContent = t('tab' + tab[0].toUpperCase() + tab.slice(1));
@@ -1682,5 +1683,64 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     });
   }
 
-  return { open, render, settings, vs, reward, hide: () => { $('#scr-home').hidden = true; } };
+  // ---------- friends: found by nickname, added when both agree, called into a party with one tap ----------
+  let friendReqs = 0, frData = [];
+  const frRow = (f, ...buttons) => {
+    const row = el('div', 'fr-row' + (f.online ? ' on' : '')), nm = el('div', 'fr-nm');
+    nm.append(el('b', ''), el('small', '', `<i class="trophy"></i>${Number(f.trophies) || 0} · ${f.online ? t('frOnline') : t('frOffline')}`));
+    nm.firstChild.textContent = validNick(f.nick) ? nickText(f.nick, lang) : '???';
+    row.append(el('span', 'fr-dot'), icon(BALLS[f.avatar] ? f.avatar : 'basic', 36, SKINS[f.skin] ? f.skin : null), nm, ...buttons);
+    return row;
+  };
+  const frBtn = (label, cls, fn) => { const b = el('button', 'btn sm ' + cls, label); b.onclick = async () => { b.disabled = true; sfx.click(); try { await fn(); } catch { toast(t('needNet')); } b.disabled = false; }; return b; };
+  function friendLists() {
+    const by = r => frData.filter(f => f.rel === r), box = $('#fr-lists'), out = [];
+    friendReqs = by('in').length;
+    if (by('in').length) out.push(el('h3', '', t('frRequests')), ...by('in').map(f => frRow(f,
+      frBtn(t('frAccept'), 'primary', async () => { await online.friendAnswer(f.id, true); await loadFriends(); }),
+      frBtn('✕', 'ghost', async () => { await online.friendAnswer(f.id, false); await loadFriends(); }))));
+    out.push(el('h3', '', t('frList')));
+    const mine = by('friend');
+    if (!mine.length) out.push(el('p', 'muted', t('frEmpty')));
+    out.push(...mine.map(f => frRow(f,
+      ...(f.online ? [frBtn(t('frInvite'), 'primary', () => onInviteFriend(f))] : []),
+      frBtn('✕', 'ghost', async () => { if (!confirm(t('frRemove'))) return; await online.friendRemove(f.id); await loadFriends(); }))));
+    if (by('out').length) out.push(el('h3', '', t('frSent')), ...by('out').map(f => frRow(f, el('small', 'fr-wait', t('frWaiting')))));
+    box.replaceChildren(...out);
+    badges();
+  }
+  async function loadFriends() {
+    if (!net.online) return;
+    frData = (await online.friendsList().catch(() => frData)) || [];
+    if (tab === 'friends') friendLists(); else { friendReqs = frData.filter(f => f.rel === 'in').length; badges(); }
+    return frData;
+  }
+  function friendsScreen() {
+    $('#fr-mynick').textContent = nickText(save.nick, lang);
+    if (!$('#fr-a').options.length) {
+      const W = nickWords(lang), opts = (sel, list) => sel.replaceChildren(...list.map((w, i) => Object.assign(document.createElement('option'), { value: i, textContent: w })));
+      opts($('#fr-a'), W.adj); opts($('#fr-n'), W.noun);
+    }
+    $('#fr-results').replaceChildren();
+    $('#fr-note').textContent = net.online ? '' : t('needNet');
+    if (net.online) loadFriends().then(friendLists);
+  }
+  $('#fr-search').onclick = async () => {
+    const nick = { a: +$('#fr-a').value, n: +$('#fr-n').value, d: Math.floor(+$('#fr-d').value) };
+    if (!validNick(nick)) return toast(t('frBadNick'));
+    if (!net.online) return toast(t('needNet'));
+    sfx.click();
+    const found = await online.findPlayers(nick).catch(() => null);
+    if (!found) return toast(t('needNet'));
+    $('#fr-note').textContent = found.length ? '' : t('frNone');
+    $('#fr-results').replaceChildren(...found.map(f => frRow(f, f.rel === 'friend' ? el('small', 'fr-wait', t('frIsFriend')) : f.rel === 'out' ? el('small', 'fr-wait', t('frWaiting'))
+      : frBtn(t(f.rel === 'in' ? 'frAccept' : 'frAdd'), 'primary', async () => {
+        const r = await online.friendRequest(f.id);
+        toast(t(r === 'friend' ? 'frNowFriends' : r === 'sent' ? 'frSentToast' : 'frFull'));
+        $('#fr-results').replaceChildren();
+        await loadFriends();
+      }))));
+  };
+
+  return { open, render, settings, vs, reward, loadFriends, onlineFriends: () => frData.filter(f => f.rel === 'friend' && f.online), hide: () => { $('#scr-home').hidden = true; } };
 }

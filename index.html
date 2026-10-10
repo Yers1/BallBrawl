@@ -101,6 +101,7 @@
         </div>
         <div class="side r">
           <button id="l-mail" class="side-btn" aria-label="messages"><span class="ic"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="19" rx="3" fill="#FFFFFF" stroke="#0F1F38" stroke-width="2.2"/><path d="M4 9l12 9 12-9" fill="none" stroke="#0F1F38" stroke-width="2.2" stroke-linejoin="round"/><path d="M3.5 25l9-8M28.5 25l-9-8" stroke="#0F1F38" stroke-width="1.6"/><rect x="3" y="7" width="26" height="4" rx="2" fill="#FF4D5E" opacity=".9"/></svg></span><span data-t="tabMail"></span><i class="badge" hidden></i></button>
+          <button class="side-btn c-friends" data-tab="friends"><span class="ic"><svg viewBox="0 0 32 32"><circle cx="11" cy="11" r="5.5" fill="#4CC9F0" stroke="#0F1F38" stroke-width="2"/><path d="M2.5 27c.5-5.5 4-8.5 8.5-8.5s8 3 8.5 8.5z" fill="#4CC9F0" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><circle cx="22" cy="12" r="5" fill="#FFCC33" stroke="#0F1F38" stroke-width="2"/><path d="M15.5 27c.4-4.8 3.2-7.6 6.5-7.6s7.6 2.8 8 7.6z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></svg></span><span data-t="tabFriends"></span><i class="badge" hidden></i></button>
           <button class="side-btn" data-tab="skins"><span class="ic"><svg viewBox="0 0 32 32"><path d="M19.5 3.5l9 9-9 9-9-9z" fill="#C890FF" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M10.5 12.5l9 9-2.6 2.6c-1.6 1.6-4 1.6-5.6 0l-3.4-3.4c-1.6-1.6-1.6-4 0-5.6z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M8 21.5c-2.2 2.2-3 5-4.5 7 2.4-.4 5.4-1.6 7.6-3.6" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></svg></span><span data-t="tabSkins"></span><i class="badge" hidden></i></button>
         </div>
         </div>
@@ -165,6 +166,19 @@
             <p id="q-daily-note" class="muted center"></p>
             <h3 class="g-h"><span data-t="hallTitle"></span><span id="q-hall-n" class="sh-note"></span></h3>
             <div id="q-ach" class="hall"></div>
+          </div>
+          <div id="tab-friends" class="tab" hidden>
+            <div class="fr-me"><small data-t="frMyNick"></small><b id="fr-mynick"></b></div>
+            <h3 data-t="frFind"></h3>
+            <div class="fr-find">
+              <select id="fr-a" aria-label="first word"></select>
+              <select id="fr-n" aria-label="second word"></select>
+              <input id="fr-d" type="number" min="10" max="999" inputmode="numeric" placeholder="123" aria-label="number">
+              <button id="fr-search" class="btn primary" data-t="frSearch"></button>
+            </div>
+            <div id="fr-results" class="fr-list"></div>
+            <p id="fr-note" class="muted center"></p>
+            <div id="fr-lists"></div>
           </div>
           <div id="tab-leaders" class="tab" hidden>
             <div class="seg">
@@ -290,6 +304,8 @@
       <h2 data-t="partyTitle"></h2>
       <p class="muted"><span id="pt-mode"></span> · <span data-t="partyCode"></span> <b id="pt-code" class="pt-code"></b></p>
       <div id="pt-list" class="pt-list"></div>
+      <h3 class="pt-fr-h" data-t="ptFriends"></h3>
+      <div id="pt-friends" class="fr-list pt-friends"></div>
       <button class="btn wide-btn" id="pt-share" data-t="partyShare"></button>
       <button class="btn primary big wide-btn" id="pt-start" data-t="partyStart"></button>
       <p id="pt-wait" class="muted center" data-t="partyWait"></p>
@@ -320,6 +336,16 @@
       <button class="btn wide-btn" id="set-account" data-t="setAccount"></button>
       <p id="set-version" class="muted small center"></p>
       <button class="btn ghost wide-btn" id="set-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-invite" class="overlay" hidden>
+    <div class="card result invite">
+      <div id="inv-av" class="inv-av"></div>
+      <h2 data-t="invTitle"></h2>
+      <p id="inv-text" class="inv-text"></p>
+      <button class="btn primary big wide-btn" id="inv-join" data-t="invJoin"></button>
+      <button class="btn ghost wide-btn" id="inv-later" data-t="invLater"></button>
     </div>
   </section>
 

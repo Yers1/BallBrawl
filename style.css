@@ -1613,3 +1613,30 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .nk-words { max-height: 150px; overflow-y: auto; justify-content: flex-start; padding: 2px; }
 .nk-words .chip { padding: 7px 11px; font-size: 13px; }
 .nick-card #nk-dice { margin-top: 10px; }
+
+/* ---------- friends ---------- */
+.fr-me { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 4px 0 12px; padding: 12px; border-radius: 16px; background: var(--panel); border: 3px solid var(--stroke); }
+.fr-me small { color: var(--muted); font-weight: 800; }
+.fr-me b { font: 400 20px var(--display); color: var(--gold); }
+#tab-friends h3 { margin: 14px 2px 8px; font: 400 13px var(--display); text-transform: uppercase; color: var(--muted); }
+.fr-find { display: grid; grid-template-columns: 1fr 1fr 70px; gap: 6px; }
+.fr-find select, .fr-find input { min-width: 0; padding: 10px 8px; border-radius: 12px; border: 2px solid var(--stroke); background: #0F1A33; color: var(--text); font: 800 14px inherit; }
+.fr-find .btn { grid-column: 1 / -1; }
+.fr-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.fr-row { display: grid; grid-template-columns: 10px 36px 1fr auto auto; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border-radius: 14px; background: var(--panel); border: 3px solid var(--stroke); }
+.fr-dot { width: 10px; height: 10px; border-radius: 50%; background: #5B6478; }
+.fr-row.on .fr-dot { background: #3DDC84; box-shadow: 0 0 8px #3DDC84; }
+.fr-nm { min-width: 0; display: flex; flex-direction: column; }
+.fr-nm b { font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-nm small { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-weight: 800; font-size: 12px; }
+.fr-nm .trophy { width: 12px; height: 12px; }
+.fr-row .btn.sm { padding: 7px 12px; font-size: 13px; }
+.fr-wait { color: var(--muted); font-weight: 800; font-size: 12px; }
+.pt-fr-h { margin: 12px 0 4px; font: 400 12px var(--display); text-transform: uppercase; color: var(--muted); }
+.pt-friends { max-height: 170px; overflow-y: auto; margin-bottom: 8px; }
+.pt-friends .fr-row { grid-template-columns: 10px 32px 1fr auto; }
+.invite { text-align: center; }
+.inv-av { display: grid; place-items: center; margin-bottom: 4px; animation: invPop 0.5s cubic-bezier(.3, 1.6, .5, 1); }
+.inv-text { font-weight: 800; font-size: 16px; }
+@keyframes invPop { from { transform: scale(0.3); opacity: 0; } }
+#fr-results:empty, #fr-note:empty { display: none; }
