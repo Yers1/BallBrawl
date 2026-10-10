@@ -1,18 +1,17 @@
-// Eight languages. Russian and English live here; the others are in ./lang/ with the same keys.
+// Seven languages. Russian and English live here; the others are in ./lang/ with the same keys.
 // The player can pick one in the profile (saved on this device); otherwise the browser language decides,
 // with Russian for other Russian-reading countries and English for everyone else. Missing texts fall back to English.
-import kk from './lang/kk.js';
 import uz from './lang/uz.js';
 import tr from './lang/tr.js';
 import es from './lang/es.js';
 import pt from './lang/pt.js';
 import id from './lang/id.js';
 
-export const LANGS = { ru: 'Русский', en: 'English', kk: 'Қазақша', uz: "O'zbekcha", tr: 'Türkçe', es: 'Español', pt: 'Português', id: 'Bahasa Indonesia' };
+export const LANGS = { ru: 'Русский', en: 'English', uz: "O'zbekcha", tr: 'Türkçe', es: 'Español', pt: 'Português', id: 'Bahasa Indonesia' };
 function pickLang() {
   try { const saved = localStorage.getItem('ballbrawl.lang'); if (LANGS[saved]) return saved; } catch { /* no storage */ }
   const nav = String(globalThis.navigator?.language || '').toLowerCase().slice(0, 2);
-  return LANGS[nav] ? nav : /^(uk|be|ky|tg)$/.test(nav) ? 'ru' : 'en';
+  return LANGS[nav] ? nav : /^(kk|uk|be|ky|tg)$/.test(nav) ? 'ru' : 'en';
 }
 export const lang = pickLang();
 export function setLang(code) { try { localStorage.setItem('ballbrawl.lang', code); } catch { /* no storage */ } }
@@ -59,10 +58,9 @@ export const dict = {
     aimTimer: 'Прицелься · {n}', whoWins: 'КТО ПОБЕДИТ?',
     chestsTitle: 'Сундуки', chest_box: 'Сундук', chest_big: 'Большой сундук', chest_mega: 'Мега-сундук',
     chestOpen: 'Открыть', chestMore: 'Открыть ещё', chestDone: 'Готово', opTap: 'Жми на сундук!', opTapN: 'Ещё {n}!', opTapEnd: 'Жми, чтобы закончить',
-    opMore: 'Ещё наград: {n} — жми!', opCoins: 'монет', opSkin: 'Скин «{skin}»', opNew: 'НОВЫЙ ШАР', chestWins: 'Побед до нового сундука: {n}/{max}',
-    chestOdds: 'Монеты {a}–{b} · скин {s}% · новый шар {c}%', chestFair: 'Сундуки дают только за игру: их нельзя купить ни за монеты, ни за деньги.',
+    opMore: 'Ещё наград: {n} — жми!', opCoins: 'монет', opSkin: 'Скин «{skin}»', opNew: 'НОВЫЙ ШАР', 
+    chestFair: 'Сундуки дают только за игру: их нельзя купить ни за монеты, ни за деньги.',
     chestNew: '{name}!', chestNewSub: 'Он ждёт тебя в кнопке сундука рядом с «Играть».', lootSkin: 'Скин «{skin}» для: {name}',
-    resultChest: 'Сундук: {n}/{max} побед', resultChestGot: 'Ты заработал сундук!',
     giftChip: 'Подарок за аккаунт', skinGift: 'За аккаунт',
     acctTitle: 'Создай аккаунт и получи подарок', acctSub: 'Радужный скин для всех шаров. Прогресс не пропадёт, даже если сменишь телефон.',
     acctNew: 'Создать', acctIn: 'Войти', email: 'Почта', password: 'Пароль (от 6 символов)',
@@ -72,6 +70,21 @@ export const dict = {
     acctTaken: 'Эта почта уже занята. Нажми «Войти».', acctWrong: 'Неверная почта или пароль.', acctWeak: 'Пароль слишком короткий: нужно минимум 6 символов.',
     acctBadEmail: 'Проверь, правильно ли написана почта.', acctSlow: 'Слишком много попыток. Подожди минуту.', acctNeedOk: 'Поставь галочку согласия.',
     tabLeaders: 'Лидеры', duel: 'Вызов', watchShort: 'Зритель', yourSquad: 'Твой отряд · сменить',
+    tabShop: 'Магазин', tabMail: 'Сообщения', shOwned: 'Есть', shWorn: 'Надето', shWear: 'Надеть', shBuy: 'Купить?', shDeals: 'Предложения дня', shEmotes: 'Эмоции',
+    shAuras: 'Ауры', shBanners: 'Баннеры', shDecos: 'Украшения', shLooks: 'Карты арен', shAllSkins: 'Все скины', shGems: 'Гемы',
+    shGemsSoon: 'Гемы дают сундуки, Дорога славы, путь шара и 7-й день наград. Скоро их можно будет купить.', shAnimated: 'Анимация',
+    needGems: 'Не хватает гемов', needCoins: 'Не хватает монет', opGems: 'гемов', opEmote: 'НОВАЯ ЭМОЦИЯ', fragDone: 'Скин «{skin}» собран!', fragOf: '«{skin}»: {n} из {max}',
+    chestInfo: 'Монеты {a}–{b} · кусочки скинов: {f} · гемы: {g} · новый шар: {c}% · эмоция: {e}%', stashHint: 'Сундуки с Дороги славы и пути шара открываются сразу.',
+    slotEmpty: 'Побеждай — сундуки появятся здесь', slotOpen: 'Открыть!', slotWait: 'Откроется за {t}', slotLeft: 'Осталось {t}', slotBusy: 'Другой сундук уже открывается. Можно открыть этот сразу за гемы.',
+    slotNow: 'Открыть сейчас', slotAd: 'Реклама: −30 минут', resultSlot: '{name} — в слот!', resultSlotsFull: 'Слоты заняты — открой сундук, чтобы получать новые',
+    aura_fire: 'Пламя', aura_frost: 'Иней', aura_storm: 'Гроза', aura_hearts: 'Сердечки', aura_void: 'Бездна', aura_stars: 'Звёзды',
+    banner_night: 'Ночь', banner_red: 'Красный', banner_green: 'Зелёный', banner_purple: 'Фиолетовый', banner_orange: 'Оранжевый', banner_sunset: 'Закат',
+    banner_ocean: 'Океан', banner_galaxy: 'Галактика', banner_lava: 'Лава', banner_gold: 'Золото',
+    deco_none: 'Без украшения', deco_target: 'Мишень', deco_sword: 'Меч', deco_shield: 'Щит', deco_star: 'Звезда', deco_potion: 'Зелье', deco_bolt: 'Молния',
+    deco_flame: 'Огонь', deco_trophy: 'Кубок', deco_crown: 'Корона', look_candy: 'Конфетная', look_neon: 'Неон', look_ocean: 'Океан',
+    mailEmpty: 'Пока писем нет', mailClaim: 'Забрать', mailClaimed: 'Получено', mailWelcomeTitle: 'Добро пожаловать в BallBrawl!',
+    mailWelcomeBody: 'Здесь будут новости игры и подарки. Вот тебе первый — 10 гемов. Удачных боёв!',
+    settingsTitle: 'Настройки', setSound: 'Звук', setFoeEmotes: 'Эмоции соперника', setAccount: 'Аккаунт и профиль',
     tabArenas: 'Арены', tabSkins: 'Скины', arenaHere: 'Ты здесь', arenaOpen: 'Открыта', arenaLocked: 'Откроется с {n}', arenaSwipe: 'Листай, чтобы увидеть все арены',
     league_bronze: 'Бронза', league_silver: 'Серебро', league_gold: 'Золото', league_diamond: 'Алмаз', league_mythic: 'Мифик', league_legend: 'Легенда', league_master: 'Мастер',
     leagueTitle: 'Лига', leagueNext: 'До следующей лиги: {n}', leagueTop: 'Высшая лига!',
@@ -89,7 +102,6 @@ export const dict = {
     arenaN: 'Арена {n}', arenaNew: 'Новая арена: {name}!', arenaNewSub: 'Теперь твои бои проходят здесь. И меню тоже сменилось!', arenaNext: 'Следующая арена: {name} · ещё {n}', arenaLast: 'Ты на последней арене!', modeRanked: 'Рейтинговый бой', modeTraining: 'Тренировка · без сети', allTime: 'Все', thisWeek: 'Неделя', yourRank: 'Ты на {n}-м месте', loading: 'Загрузка…',
     needNet: 'Нужен интернет — таблица лидеров и перенос профиля работают только онлайн.', emptyBoard: 'Пока никого — стань первым!',
     training: 'Тренировка: нет сети, кубки не меняются', vsPlayer: 'Отряд игрока {nick} · {n} кубков', vsBots: 'Соперник подобран по твоим кубкам',
-    
     
     deleteProfile: 'Удалить профиль', deleteConfirm: 'Удалить профиль насовсем? Кубки и весь прогресс пропадут.',
     quests: { win3: 'Выиграй 3 боя', dash15: 'Сделай 15 рывков', super3: 'Используй 3 супера', kills10: 'Выбей 10 вражеских шаров', flawless1: 'Выиграй бой, не потеряв ни одного шара', challenge1: 'Вызови друга или прими вызов', matches5: 'Сыграй 5 боёв' },
@@ -173,10 +185,9 @@ export const dict = {
     aimTimer: 'Adjust your aim · {n}', whoWins: 'WHO WINS?',
     chestsTitle: 'Chests', chest_box: 'Chest', chest_big: 'Big chest', chest_mega: 'Mega chest',
     chestOpen: 'Open', chestMore: 'Open another', chestDone: 'Done', opTap: 'Tap the chest!', opTapN: '{n} more!', opTapEnd: 'Tap to finish',
-    opMore: '{n} more — tap!', opCoins: 'coins', opSkin: '"{skin}" skin', opNew: 'NEW BALL', chestWins: 'Wins to the next chest: {n}/{max}',
-    chestOdds: 'Coins {a}–{b} · skin {s}% · new ball {c}%', chestFair: 'Chests are earned only by playing: they can never be bought, with coins or with money.',
+    opMore: '{n} more — tap!', opCoins: 'coins', opSkin: '"{skin}" skin', opNew: 'NEW BALL', 
+    chestFair: 'Chests are earned only by playing: they can never be bought, with coins or with money.',
     chestNew: '{name}!', chestNewSub: 'It waits for you in the chest button next to Play.', lootSkin: '"{skin}" skin for {name}',
-    resultChest: 'Chest: {n}/{max} wins', resultChestGot: 'You earned a chest!',
     giftChip: 'Account gift', skinGift: 'Account',
     acctTitle: 'Make an account, get a gift', acctSub: 'A rainbow skin for every ball. Your progress stays safe, even on a new phone.',
     acctNew: 'Create', acctIn: 'Sign in', email: 'Email', password: 'Password (6+ characters)',
@@ -186,6 +197,21 @@ export const dict = {
     acctTaken: 'This email is taken. Tap "Sign in".', acctWrong: 'Wrong email or password.', acctWeak: 'Password too short: at least 6 characters.',
     acctBadEmail: 'Check the email address.', acctSlow: 'Too many tries. Wait a minute.', acctNeedOk: 'Tick the consent box.',
     tabLeaders: 'Leaders', duel: 'Duel', watchShort: 'Watch', yourSquad: 'Your squad · change',
+    tabShop: 'Shop', tabMail: 'Messages', shOwned: 'Owned', shWorn: 'Wearing', shWear: 'Wear', shBuy: 'Buy?', shDeals: 'Daily deals', shEmotes: 'Emotes',
+    shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Decorations', shLooks: 'Arena maps', shAllSkins: 'All skins', shGems: 'Gems',
+    shGemsSoon: 'Gems come from chests, the Glory Road, ball paths and day 7 of daily rewards. Buying them is coming soon.', shAnimated: 'Animated',
+    needGems: 'Not enough gems', needCoins: 'Not enough coins', opGems: 'gems', opEmote: 'NEW EMOTE', fragDone: '"{skin}" skin complete!', fragOf: '"{skin}": {n} of {max}',
+    chestInfo: 'Coins {a}–{b} · skin fragments: {f} · gems: {g} · new ball: {c}% · emote: {e}%', stashHint: 'Chests from the Glory Road and ball paths open right away.',
+    slotEmpty: 'Win fights and chests land here', slotOpen: 'Open!', slotWait: 'Unlocks in {t}', slotLeft: '{t} left', slotBusy: 'Another chest is unlocking. You can open this one now with gems.',
+    slotNow: 'Open now', slotAd: 'Ad: −30 minutes', resultSlot: '{name} is in a slot!', resultSlotsFull: 'Slots are full: open a chest to get new ones',
+    aura_fire: 'Flame', aura_frost: 'Frost', aura_storm: 'Storm', aura_hearts: 'Hearts', aura_void: 'Void', aura_stars: 'Stars',
+    banner_night: 'Night', banner_red: 'Red', banner_green: 'Green', banner_purple: 'Purple', banner_orange: 'Orange', banner_sunset: 'Sunset',
+    banner_ocean: 'Ocean', banner_galaxy: 'Galaxy', banner_lava: 'Lava', banner_gold: 'Gold',
+    deco_none: 'No decoration', deco_target: 'Target', deco_sword: 'Sword', deco_shield: 'Shield', deco_star: 'Star', deco_potion: 'Potion', deco_bolt: 'Bolt',
+    deco_flame: 'Flame', deco_trophy: 'Trophy', deco_crown: 'Crown', look_candy: 'Candy', look_neon: 'Neon', look_ocean: 'Ocean',
+    mailEmpty: 'No messages yet', mailClaim: 'Claim', mailClaimed: 'Claimed', mailWelcomeTitle: 'Welcome to BallBrawl!',
+    mailWelcomeBody: 'Game news and gifts will arrive here. Here is your first one: 10 gems. Good luck in battle!',
+    settingsTitle: 'Settings', setSound: 'Sound', setFoeEmotes: 'Opponent emotes', setAccount: 'Account and profile',
     tabArenas: 'Arenas', tabSkins: 'Skins', arenaHere: 'You are here', arenaOpen: 'Unlocked', arenaLocked: 'Unlocks at {n}', arenaSwipe: 'Swipe to see every arena',
     league_bronze: 'Bronze', league_silver: 'Silver', league_gold: 'Gold', league_diamond: 'Diamond', league_mythic: 'Mythic', league_legend: 'Legendary', league_master: 'Masters',
     leagueTitle: 'League', leagueNext: '{n} to the next league', leagueTop: 'Top league!',
@@ -203,7 +229,6 @@ export const dict = {
     arenaN: 'Arena {n}', arenaNew: 'New arena: {name}!', arenaNewSub: 'Your battles happen here now, and the menu changed too!', arenaNext: 'Next arena: {name} · {n} to go', arenaLast: 'You reached the final arena!', modeRanked: 'Ranked battle', modeTraining: 'Training · offline', allTime: 'All time', thisWeek: 'This week', yourRank: 'You are #{n}', loading: 'Loading…',
     needNet: 'Needs internet — leaderboards and profile transfer only work online.', emptyBoard: 'Nobody yet — be the first!',
     training: 'Training: offline, trophies don\'t change', vsPlayer: '{nick}\'s squad · {n} trophies', vsBots: 'Opponent matched to your trophies',
-    
     
     deleteProfile: 'Delete profile', deleteConfirm: 'Delete your profile forever? Trophies and all progress will be gone.',
     quests: { win3: 'Win 3 matches', dash15: 'Dash 15 times', super3: 'Use 3 supers', kills10: 'Knock out 10 enemy balls', flawless1: 'Win without losing a ball', challenge1: 'Challenge a friend or take a challenge', matches5: 'Play 5 matches' },
@@ -248,7 +273,7 @@ export const dict = {
   },
 };
 
-Object.assign(dict, { kk, uz, tr, es, pt, id });
+Object.assign(dict, { uz, tr, es, pt, id });
 
 export const t = (key, vars = {}) =>
   String(dict[lang][key] ?? dict.en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');

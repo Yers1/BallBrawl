@@ -7,10 +7,13 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin, buyBall,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, CHEST_WINS, openChest, ARENAS, arenaFor, arenaIndex,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, FRAG_NEED,
+  SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
+  SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
 } from './progress.js';
 import { THEMES } from './themes.js';
-import { setArena } from './render.js';
+import { setArena, drawEmote } from './render.js';
+import { offerReward } from './ads.js';
 import { sfx, confetti } from './sfx.js';
 
 const $ = s => document.querySelector(s);
@@ -120,10 +123,25 @@ export function leagueSvg({ id, tier }) {
 }
 export const leagueName = lg => t('league_' + lg.id) + (lg.tier ? ' ' + ['', 'I', 'II', 'III'][lg.tier] : '');
 export const titleName = id => (id.startsWith('master_') ? t('ttlMaster', { name: ballName(id.slice(7)) }) : t('ttl_' + id));
+const DECO_SVG = {
+  target: '<circle cx="20" cy="21" r="15" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><circle cx="20" cy="21" r="10" fill="#FFFFFF"/><circle cx="20" cy="21" r="5.5" fill="#FF4D5E"/><path d="M20 21L33 8" stroke="#0A0E1F" stroke-width="3" stroke-linecap="round"/><path d="M31 5l4 1-1 4-3-1z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>',
+  sword: '<path d="M30 4l6 0 0 6-17 17-6-6z" fill="#E6EDF7" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M9 21l10 10" stroke="#0A0E1F" stroke-width="7" stroke-linecap="round"/><path d="M9 21l10 10" stroke="#FFCC33" stroke-width="3.5" stroke-linecap="round"/><path d="M12 28l-6 6" stroke="#8A5A1A" stroke-width="5" stroke-linecap="round"/><circle cx="5" cy="35" r="3" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>',
+  shield: '<path d="M20 3l14 5v10c0 9-6 16-14 19C12 34 6 27 6 18V8z" fill="#3D86FF" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 8l9 3.5v7c0 6-4 11-9 13-5-2-9-7-9-13v-7z" fill="#FFCC33"/><path d="M20 13l2 4.3 4.6.6-3.4 3.2.9 4.6L20 23.4l-4.1 2.3.9-4.6-3.4-3.2 4.6-.6z" fill="#3D86FF"/>',
+  star: '<path d="M20 3l5 10.5 11.5 1.6-8.3 8 2 11.4L20 29l-10.2 5.5 2-11.4-8.3-8L15 13.5z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 15l4-1" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>',
+  potion: '<path d="M16 4h8v8l8 12c3 5 0 12-7 12H15C8 36 5 29 8 24l8-12z" fill="#7FE7FF" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M9.5 26h21c1 4-1 8-6 8H15c-5 0-7-4-5.5-8z" fill="#36D27A"/><rect x="14.5" y="2" width="11" height="5" rx="2" fill="#C98A4B" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><circle cx="16" cy="29" r="2" fill="#FFFFFF" opacity=".8"/>',
+  bolt: '<path d="M23 2L8 22h9l-3 16 18-22h-10z" fill="#FFD23F" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 8l-6 10" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".8"/>',
+  flame: '<path d="M20 2c3 7 12 11 12 22 0 8-6 13-12 13S8 32 8 24c0-6 4-9 5-14 2 3 3 5 3 8 3-4 4-9 4-16z" fill="#FF8A2B" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 20c2 3 6 5 6 10 0 3-3 5-6 5s-6-2-6-5c0-4 4-5 6-10z" fill="#FFD23F"/>',
+  trophy: '<path d="M11 5h18v9c0 6-4 10-9 10s-9-4-9-10z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 8H5v3c0 4 3 6 6 6M29 8h6v3c0 4-3 6-6 6" fill="none" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><rect x="17" y="24" width="6" height="6" fill="#E59F00" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><rect x="11" y="30" width="18" height="6" rx="2" fill="#8A5A1A" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M15 8v6" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>',
+  crown: '<path d="M5 30L3 10l9 8 8-13 8 13 9-8-2 20z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><rect x="5" y="29" width="30" height="6" rx="2" fill="#E59F00" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><circle cx="20" cy="22" r="3" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><circle cx="11" cy="24" r="2" fill="#7FE7FF"/><circle cx="29" cy="24" r="2" fill="#7FE7FF"/>',
+};
+export const decoSvg = id => (DECO_SVG[id] ? `<svg viewBox="0 0 40 40" aria-hidden="true">${DECO_SVG[id]}</svg>` : '');
+const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
+const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
+const mmss = ms => { const m = Math.ceil(ms / 60e3); return m >= 60 ? `${unit(Math.floor(m / 60), 'hour')} ${unit(m % 60, 'minute')}` : unit(m, 'minute'); };
 export const rankBadge = r => `<span class="rk-badge t-${rankTier(r)}">${r}</span>`;
 
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
-  const { net, leaderboard, deleteProfile } = online;
+  const { net, leaderboard, deleteProfile, news } = online;
   let tab = 'lobby';
   const coin = n => `<span class="amt"><i class="coin"></i>${n}</span>`;
 
@@ -179,6 +197,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#h-trophies').textContent = save.trophies;
     $('#h-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
     $('#h-league').innerHTML = leagueSvg(leagueFor(save.trophies));
+    $('.me').className = 'me bn-' + save.wear.banner;
+    $('#h-deco').innerHTML = decoSvg(save.wear.deco);
   }
 
   // ---------- trophy road (horizontal, left → right, like Brawl Stars) ----------
@@ -345,6 +365,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const b = el('button', `skin ${on ? 'on' : ''} ${ownSkin ? '' : 'locked'}`);
     b.append(icon(id, 44, style), document.createTextNode(style == null ? t('skinDefault') : skinName(style)));
     if (!ownSkin) b.append(el('span', 'price', sk.gift ? t('skinGift') : sk.path ? t('skinRankLock') : `<i class="coin"></i>${skinPrice(style)}`));
+    const fr = save.frags[`${id}:${style}`];
+    if (!ownSkin && fr) b.append(el('span', 'frag-bar', `<i style="width:${(fr / FRAG_NEED) * 100}%"></i>`), el('small', 'frag-n', `${fr}/${FRAG_NEED}`));
     b.onclick = () => {
       if (!ownSkin && sk.gift) { $('#scr-ball').hidden = true; open('profile'); return; } // the rainbow comes with an account
       if (!ownSkin && sk.path) { openBall(id); return; } // show the ball's path
@@ -509,12 +531,6 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       b.onclick = () => { save.title = x.id; persist(); sfx.click(); render(); };
       return b;
     }));
-    $('#p-langs').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {
-      const b = el('button', 'chip' + (code === lang ? ' on' : ''));
-      b.textContent = name;
-      b.onclick = () => { if (code !== lang) { setLang(code); location.reload(); } };
-      return b;
-    }));
     $('#p-online').hidden = !net.online;
     $('#p-offline').hidden = net.online;
     const s = save.stats, rate = s.matches ? Math.round((s.wins / s.matches) * 100) : 0;
@@ -536,10 +552,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   const odds = k => { // the real odds for this player: 0% once everything of that kind is collected
     const c = CHESTS[k], ballsLeft = ORDER.some(id => !save.owned.includes(id));
     const skinsLeft = save.owned.some(b => Object.keys(SKINS).some(st => !SKINS[st].gift && !hasSkin(save, b, st)));
-    return t('chestOdds', { a: c.coins[0], b: c.coins[1], s: skinsLeft ? Math.round(c.skin * 100) : 0, c: ballsLeft ? Math.round(c.ball * 100) : 0 });
+    return t('chestInfo', { a: c.coins[0], b: c.coins[1], f: skinsLeft ? `${c.stacks}×${c.frags[0]}–${c.frags[1]}` : 0, g: c.gems, c: ballsLeft ? Math.round(c.ball * 100) : 0, e: Math.round(c.emote * 100) });
   };
   function chestList() {
-    $('#ch-wins').textContent = t('chestWins', { n: save.chestWins, max: CHEST_WINS });
     $('#ch-list').replaceChildren(...KINDS.map(k => {
       const n = save.chests[k], row = el('div', 'ch-row' + (n ? '' : ' empty'));
       const txt = el('div', '', `<b></b><b class="cnt">×${n}</b><small></small>`);
@@ -562,6 +577,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   let op = null;
   const opItems = res => [
     { kind: 'coins', res },
+    ...(res.gems ? [{ kind: 'gems', res }] : []),
+    ...res.frags.map(f => ({ kind: 'frag', res, f })),
+    ...(res.emote ? [{ kind: 'emote', res }] : []),
     ...(res.skin ? [{ kind: 'skin', res }] : []),
     ...(res.ball ? [{ kind: 'ball', res }] : []),
   ];
@@ -576,8 +594,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       setTimeout(() => p.remove(), 1500);
     }
   }
-  function crack(kind) {
-    const res = openChest(save, kind, random);
+  function crack(kind, ready = null) { // a stash chest, or a slot chest already opened (`ready`)
+    const res = ready ?? openChest(save, kind, random);
     if (!res) return;
     persist(); // saved before the show, so closing the tab mid-animation loses nothing
     coinsUI();
@@ -648,9 +666,18 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   function opCard(it, small) {
     const d = el('div', 'op-card r-' + it.kind + (small ? ' small' : ''));
     const size = small ? 56 : 120;
-    if (it.kind === 'coins') {
-      d.append(el('i', 'coin'), el('b', '', `+${it.res.coins}`), el('small', '', t('opCoins')));
+    if (it.kind === 'coins' || it.kind === 'gems') {
+      d.append(el('i', it.kind === 'gems' ? 'gem' : 'coin'), el('b', '', `+${it.res[it.kind]}`), el('small', '', t(it.kind === 'gems' ? 'opGems' : 'opCoins')));
       d.firstChild.style.width = d.firstChild.style.height = size + 'px';
+    } else if (it.kind === 'frag') { // skin fragments: +n and how far along the skin is
+      const f = it.f;
+      d.append(icon(f.ball, size, f.style), el('b', '', `+${f.n}`), el('small', ''), el('span', 'frag-bar', `<i style="width:${(f.have / FRAG_NEED) * 100}%"></i>`));
+      d.children[2].textContent = f.done ? t('fragDone', { skin: skinName(f.style) }) : t('fragOf', { skin: skinName(f.style), n: f.have, max: FRAG_NEED });
+    } else if (it.kind === 'emote') {
+      const c = document.createElement('canvas');
+      drawEmote(c, it.res.emote, size);
+      d.append(el('span', 'ribbon', t('opEmote')), c, el('small', ''));
+      d.children[2].textContent = ballName(EMOTE_LIST.find(e => e.id === it.res.emote).ball);
     } else if (it.kind === 'skin') {
       const [ball, style] = it.res.skin;
       d.append(icon(ball, size, style), el('b', ''), el('small', ''));
@@ -690,6 +717,148 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#op-done').onclick = () => { $('#scr-open').hidden = true; op = null; render(); };
 
   $('#ch-close').onclick = () => { $('#scr-chest').hidden = true; render(); };
+
+  // ---------- chest slots: wins fill them; one unlocks at a time; gems open now, an ad takes 30 minutes off ----------
+  let slotOpen = -1;
+  function slots() {
+    const now = Date.now();
+    $('#l-slots').replaceChildren(...save.slots.map((sl, i) => {
+      const b = el('button', 'slot' + (sl ? ' k-' + sl.kind : ' empty'));
+      if (!sl) { b.innerHTML = '<span class="sl-empty"></span>'; b.onclick = () => toast(t('slotEmpty')); return b; }
+      const left = slotLeft(sl, now), ready = sl.at != null && left <= 0;
+      b.classList.toggle('ready', ready);
+      b.classList.toggle('busy', sl.at != null && !ready);
+      b.innerHTML = `${chestSvg(sl.kind)}<small></small>`;
+      b.querySelector('small').textContent = ready ? t('slotOpen') : sl.at != null ? mmss(left) : mmss(CHEST_TIME[sl.kind]);
+      b.onclick = () => {
+        sfx.click();
+        if (ready) return openFromSlot(i, false);
+        if (sl.at == null && !unlocking(save, Date.now())) { startUnlock(save, i, Date.now()); persist(); slots(); return; }
+        slotCard(i);
+      };
+      return b;
+    }));
+  }
+  function slotCard(i) {
+    slotOpen = i;
+    const sl = save.slots[i];
+    if (!sl) { $('#scr-slot').hidden = true; slotOpen = -1; return; }
+    const left = slotLeft(sl, Date.now()), cost = gemsToOpen(left);
+    $('#sl-art').innerHTML = chestSvg(sl.kind);
+    $('#sl-title').textContent = t('chest_' + sl.kind);
+    $('#sl-time').textContent = sl.at == null ? t('slotWait', { t: mmss(left) }) : t('slotLeft', { t: mmss(left) });
+    $('#sl-info').textContent = sl.at == null ? t('slotBusy') : '';
+    $('#sl-gems').innerHTML = `${t('slotNow')} · <i class="gem"></i>${cost}`;
+    $('#sl-gems').disabled = save.gems < cost;
+    $('#sl-gems').onclick = () => openFromSlot(i, true);
+    const box = $('#sl-ad');
+    box.replaceChildren();
+    if (sl.at != null) offerReward('chest-speedup', {
+      onAvailable: play => {
+        const b = el('button', 'btn ad wide-btn', `${t('slotAd')} <small>· ${t('adTag')}</small>`);
+        b.onclick = () => { b.disabled = true; play(); };
+        box.replaceChildren(b);
+      },
+      onReward: () => { speedUp(save, i, AD_SPEEDUP); persist(); slots(); slotCard(i); },
+      onDone: () => {},
+    });
+    $('#scr-slot').hidden = false;
+  }
+  $('#sl-close').onclick = () => { $('#scr-slot').hidden = true; slotOpen = -1; };
+  function openFromSlot(i, pay) {
+    const sl = save.slots[i];
+    if (!sl) return;
+    const res = openSlot(save, i, Date.now(), random, pay);
+    if (!res) return toast(t('needGems'));
+    $('#scr-slot').hidden = true;
+    slotOpen = -1;
+    crack(sl.kind, res);
+  }
+  setInterval(() => { // timers tick while the lobby is open
+    if ($('#scr-home').hidden || tab !== 'lobby') return;
+    slots();
+    if (slotOpen >= 0 && !$('#scr-slot').hidden) slotCard(slotOpen);
+  }, 1000);
+
+  // ---------- the shop: deals, emotes, auras, banners, decorations, arena looks, skins, gems ----------
+  let confirmKey = '';
+  function shopTile(kind, id, preview, name) {
+    const own = owns(save, kind, id), worn = save.wear[kind] === id, price = priceOf(kind, id), key = kind + ':' + id;
+    const b = el('button', 'sh-tile' + (own ? ' own' : '') + (worn ? ' on' : '') + (confirmKey === key ? ' confirm' : ''));
+    b.append(preview, el('b', ''), el('span', 'sh-price'));
+    b.children[1].textContent = name;
+    b.lastChild.innerHTML = kind === 'emote' && own ? t('shOwned') : own ? (worn ? t('shWorn') : t('shWear')) : confirmKey === key ? `${t('shBuy')} ${money(price)}` : money(price);
+    b.onclick = () => {
+      sfx.click();
+      if (own) { if (kind !== 'emote') wear(save, kind, worn && (kind === 'aura' || kind === 'look') ? null : id); persist(); render(); return; }
+      if (confirmKey !== key) { confirmKey = key; shop(); return; } // a second tap buys: no accidental purchases
+      confirmKey = '';
+      if (!buy(save, kind, id)) { toast(t(price[0] === 'gems' ? 'needGems' : 'needCoins')); shop(); return; }
+      sfx.coin(); confetti(30); persist(); coinsUI(); render();
+    };
+    return b;
+  }
+  const section = (title, kids, cls = '') => { const sec = el('section', 'sh-sec ' + cls); sec.append(el('h3', ''), el('div', 'sh-grid')); sec.firstChild.textContent = title; sec.lastChild.append(...kids); return sec; };
+  let shopAnim = 0;
+  function shop() {
+    const today = dayKey(), body = $('#sh-body'), lead = save.squad[0];
+    const top = el('div', 'sh-top');
+    top.innerHTML = `<span class="sh-bal"><i class="gem"></i>${save.gems}</span><span class="sh-bal"><i class="coin"></i>${save.coins}</span><span class="sh-ad"></span>`;
+    if ((save.adGems.day !== today || save.adGems.n < AD_GEMS_DAY)) offerReward('free-gems', {
+      onAvailable: play => {
+        const b = el('button', 'btn ad sm', `+${AD_GEMS} <i class="gem"></i> <small>· ${t('adTag')}</small>`);
+        b.onclick = () => { b.disabled = true; play(); };
+        top.querySelector('.sh-ad').replaceChildren(b);
+      },
+      onReward: () => { adGems(save, today); persist(); coinsUI(); render(); },
+      onDone: () => {},
+    });
+    const deals = dailyDeals(save, today).map(d => {
+      const b = el('button', 'sh-tile deal' + (d.sold ? ' own' : ''));
+      const prev = d.kind === 'skin' ? icon(d.ball, 64, d.style) : d.kind === 'aura' ? icon(lead, 64, save.skinOf[lead], d.id) : d.kind === 'deco' ? el('span', 'deco-prev', decoSvg(d.id)) : el('span', 'banner-prev bn-' + d.id);
+      b.append(el('span', 'sh-off', '-40%'), prev, el('b', ''), el('span', 'sh-price'));
+      b.children[2].textContent = d.kind === 'skin' ? `${skinName(d.style)} · ${ballName(d.ball)}` : t(`${d.kind}_${d.id}`);
+      b.lastChild.innerHTML = d.sold ? t('shOwned') : money(d.price);
+      b.disabled = d.sold;
+      b.onclick = () => {
+        if (!buyDeal(save, d)) return toast(t(d.price[0] === 'gems' ? 'needGems' : 'needCoins'));
+        sfx.coin(); confetti(30); persist(); coinsUI(); render();
+      };
+      return b;
+    });
+    const emoteCanvases = [];
+    const emotes = EMOTE_LIST.map(e => {
+      const c = document.createElement('canvas');
+      drawEmote(c, e.id, 64, 0.4);
+      if (e.anim) emoteCanvases.push([c, e.id]);
+      const tile = shopTile('emote', e.id, c, ''); // the picture says it all
+      tile.classList.add('t-' + e.tier);
+      if (e.anim) tile.prepend(el('span', 'sh-anim', t('shAnimated')));
+      return tile;
+    });
+    body.replaceChildren(
+      top,
+      section(t('shDeals'), deals, 'deals'),
+      section(t('shEmotes'), emotes),
+      section(t('shAuras'), Object.keys(SHOP.aura).map(id => shopTile('aura', id, icon(lead, 64, save.skinOf[lead], id), t('aura_' + id)))),
+      section(t('shBanners'), Object.keys(SHOP.banner).map(id => shopTile('banner', id, el('span', 'banner-prev bn-' + id), t('banner_' + id))), 'wide'),
+      section(t('shDecos'), Object.keys(SHOP.deco).map(id => shopTile('deco', id, el('span', 'deco-prev', decoSvg(id)), t('deco_' + id)))),
+      section(t('shLooks'), Object.keys(SHOP.look).map(id => shopTile('look', id, el('span', 'look-prev', arenaSvg(id, 'sh' + id)), t('look_' + id))), 'wide'),
+    );
+    const skinsBtn = el('button', 'btn wide-btn', t('shAllSkins'));
+    skinsBtn.onclick = () => { sfx.click(); open('skins'); };
+    const gems = el('div', 'sh-gems');
+    gems.innerHTML = '<h3></h3><p class="muted"></p>';
+    gems.querySelector('h3').textContent = t('shGems');
+    gems.querySelector('p').textContent = t('shGemsSoon');
+    body.append(skinsBtn, gems);
+    clearInterval(shopAnim); // animated emotes move in the shop too
+    shopAnim = setInterval(() => {
+      if (tab !== 'shop' || $('#scr-home').hidden) return clearInterval(shopAnim);
+      const tt = performance.now() / 1000;
+      for (const [c, id] of emoteCanvases) drawEmote(c, id, 64, tt);
+    }, 66);
+  }
 
   // ---------- account (email): progress kept forever + the rainbow skin as a gift ----------
   let acctMode = 'new', acctBusy = false;
@@ -776,7 +945,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- lobby ----------
   function lobby() {
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
-    $('#l-trio').replaceChildren(icon(l, 136, sk(l)), icon(lead, 232, sk(lead)), icon(r, 136, sk(r)));
+    $('#l-trio').replaceChildren(icon(l, 136, sk(l)), icon(lead, 232, sk(lead), save.wear.aura), icon(r, 136, sk(r)));
     const a = arenaFor(save.maxTrophies).id;
     $('#l-arena-n').textContent = t('arenaN', { n: arenaIndex(a) + 1 });
     $('#l-arena').textContent = t('arena_' + a);
@@ -795,8 +964,10 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#l-chest-art').innerHTML = chestSvg(best || 'box');
     $('#l-chest-n').hidden = !total;
     $('#l-chest-n').textContent = total;
-    $('#l-chest-wins').textContent = `${save.chestWins}/${CHEST_WINS}`;
+    $('#l-chest-wins').textContent = '';
+    $('#l-chest').hidden = !total;
     $('#l-chest').classList.toggle('has', total > 0);
+    slots();
     $('#l-gift').hidden = !net.online || !!net.email;
   }
   $('#l-chest').onclick = () => { sfx.click(); chests(); };
@@ -820,7 +991,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // The current arena paints the fight and the menus: page sky, battle floor and walls, the lobby stage.
   let shownArena = '';
   function applyArena() {
-    const a = arenaFor(save.maxTrophies).id;
+    const a = save.wear.look && owns(save, 'look', save.wear.look) ? save.wear.look : arenaFor(save.maxTrophies).id;
     if (a === shownArena) return;
     shownArena = a;
     document.documentElement.style.setProperty('--sky', THEMES[a].sky);
@@ -838,13 +1009,15 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (tab === 'profile') { profile(); account(); }
     if (tab === 'leaders') leaders();
     if (tab === 'skins') skins();
+    if (tab === 'shop') shop();
+    if (tab === 'mail') mail();
     if (tab === 'arenas') arenas();
     badges();
   }
 
   function open(next = tab) {
     tab = next;
-    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'arenas']) $('#tab-' + name).hidden = name !== tab;
+    for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'arenas', 'shop', 'mail']) $('#tab-' + name).hidden = name !== tab;
     $('#lobby').hidden = tab !== 'lobby';
     $('#sub').hidden = tab === 'lobby';
     if (tab !== 'lobby') $('#sub-title').textContent = t('tab' + tab[0].toUpperCase() + tab.slice(1));
@@ -853,5 +1026,70 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     render();
   }
 
-  return { open, render, hide: () => { $('#scr-home').hidden = true; } };
+  // ---------- settings (the overlay itself is wired in main.js) ----------
+  function settings() {
+    $('#p-langs').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {
+      const b = el('button', 'chip' + (code === lang ? ' on' : ''));
+      b.textContent = name;
+      b.onclick = () => { if (code !== lang) { setLang(code); location.reload(); } };
+      return b;
+    }));
+  }
+
+  // ---------- inbox: news and gifts from the team (server), plus a welcome letter ----------
+  let letters = null, lettersAt = 0;
+  const pickText = o => (o && typeof o === 'object' ? String(o[lang] ?? o.en ?? o.ru ?? Object.values(o)[0] ?? '') : '');
+  const giftOf = g => ({ coins: Math.min(1000, Math.max(0, Math.floor(Number(g?.coins) || 0))), gems: Math.min(100, Math.max(0, Math.floor(Number(g?.gems) || 0))) });
+  async function loadMail() {
+    const welcome = { id: 0, at: null, title: t('mailWelcomeTitle'), body: t('mailWelcomeBody'), gift: { coins: 0, gems: 10 } };
+    let list = [];
+    if (net.online && Date.now() - lettersAt > 60e3) {
+      try {
+        const rows = await news();
+        list = (Array.isArray(rows) ? rows : []).filter(r => Number.isInteger(r?.id) && r.id > 0).map(r => ({ id: r.id, at: r.at, title: pickText(r.title), body: pickText(r.body), gift: r.gift ? giftOf(r.gift) : null }));
+        lettersAt = Date.now();
+        letters = [...list, welcome];
+      } catch { /* offline: keep what we had */ }
+    }
+    if (!letters) letters = [welcome];
+    mailBadge();
+    if (tab === 'mail') mail();
+  }
+  function mailBadge() {
+    const unread = (letters ?? []).filter(m => !save.mailRead.includes(m.id) || (m.gift && !save.mailClaimed.includes(m.id))).length;
+    $('#l-mail .badge').hidden = !unread;
+  }
+  function mail() {
+    const list = letters ?? [];
+    $('#mail-list').replaceChildren(...(list.length ? list.map(m => {
+      const card = el('div', 'letter' + (save.mailRead.includes(m.id) ? '' : ' new'));
+      card.innerHTML = '<b></b><small></small><p></p>';
+      card.querySelector('b').textContent = m.title;
+      card.querySelector('small').textContent = m.at ? new Date(m.at).toLocaleDateString(lang) : '';
+      card.querySelector('p').textContent = m.body;
+      const g = m.gift;
+      if (g && (g.coins || g.gems)) {
+        const took = save.mailClaimed.includes(m.id);
+        const b = el('button', 'btn sm ' + (took ? 'ghost' : 'primary'), took ? t('mailClaimed')
+          : `${t('mailClaim')} ${g.coins ? `<i class="coin"></i>${g.coins}` : ''} ${g.gems ? `<i class="gem"></i>${g.gems}` : ''}`);
+        b.disabled = took;
+        b.onclick = () => {
+          if (save.mailClaimed.includes(m.id)) return;
+          save.mailClaimed.push(m.id);
+          save.coins += g.coins;
+          save.gems += g.gems;
+          sfx.coin(); confetti(30); persist(); coinsUI(); mail(); mailBadge();
+        };
+        card.append(b);
+      }
+      return card;
+    }) : [el('p', 'muted center', t('mailEmpty'))]));
+    for (const m of list) if (!save.mailRead.includes(m.id)) save.mailRead.push(m.id);
+    persist();
+    mailBadge();
+  }
+  $('#l-mail').onclick = () => { sfx.click(); open('mail'); loadMail(); };
+  setTimeout(loadMail, 1500); // after connecting
+
+  return { open, render, settings, hide: () => { $('#scr-home').hidden = true; } };
 }

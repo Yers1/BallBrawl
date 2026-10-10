@@ -2,7 +2,7 @@
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
 import { W, H, SUDDEN, canSuper } from './sim.js';
 import { BALLS, TRAIN, LEECH, POISON, trainCars } from './balls.js';
-import { SKINS } from './progress.js';
+import { SKINS, EMOTE_LIST } from './progress.js';
 import { THEMES } from './themes.js';
 
 export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
@@ -76,72 +76,163 @@ function dmgFloat(w, id, amount, color, sign = '-') {
 
 const ring = (x, y, r, grow, life, rgb, width) => fx.rings.push({ x, y, r, grow, life, rgb, width, age: 0 });
 
-// ---------- emotes: preset stickers only (no free text, kid-safe), popping in a bubble over that side's ball ----------
-export const EMOTES = ['laugh', 'cool', 'wow', 'angry', 'cry', 'gg'];
-let autoSides = [1]; // which sides react to kills by themselves (the computer; both when you're only watching)
-export const setAutoEmote = sides => { autoSides = sides; };
-export function emote(side, kind) {
-  const cur = fx.emotes[side];
-  if (!EMOTES.includes(kind) || (cur && cur.age < 1.3)) return false; // no spam: one at a time
-  fx.emotes[side] = { kind, age: 0 };
-  return true;
+// ---------- auras (shop cosmetics), drawn behind your balls ----------
+let auraOf = {};
+export const setAuras = map => { auraOf = map || {}; };
+const AURA_RGB = { fire: '255,138,43', frost: '127,231,255', storm: '255,214,10', hearts: '255,92,138', void: '150,70,230', stars: '255,204,51' };
+function sparkle(ctx, x, y, s, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s, y); ctx.quadraticCurveTo(x, y, x, y - s);
+  ctx.fill();
 }
-const FACE = { laugh: '#FFCC33', cool: '#FFCC33', wow: '#FFCC33', angry: '#FF6B4A', cry: '#7FC8FF' };
-function emoteFace(ctx, kind, s) { // drawn around (0,0), radius s
+function drawAura(ctx, kind, x, y, r, t) {
+  const rgb = AURA_RGB[kind];
+  if (!rgb) return;
   ctx.save();
-  ctx.scale(s / 17, s / 17);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  if (kind === 'gg') {
-    ctx.font = `italic 900 22px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.strokeText('GG', 0, 1);
-    ctx.fillStyle = '#FFCC33'; ctx.fillText('GG', 0, 1);
-    ctx.restore();
-    return;
-  }
-  ctx.fillStyle = FACE[kind];
-  ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
-  ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.beginPath(); ctx.ellipse(-6, -8, 6, 3.4, -0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = INK; ctx.strokeStyle = INK; ctx.lineWidth = 2.4;
-  const dot = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
-  const arc = (x, y, r, a, b) => { ctx.beginPath(); ctx.arc(x, y, r, a, b); ctx.stroke(); };
-  if (kind === 'laugh') {
-    arc(-6, -1, 3.6, Math.PI * 1.15, Math.PI * 1.85); arc(6, -1, 3.6, Math.PI * 1.15, Math.PI * 1.85);
-    ctx.beginPath(); ctx.moveTo(-8, 3); ctx.quadraticCurveTo(0, 17, 8, 3); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#FF4D5E'; ctx.beginPath(); ctx.ellipse(0, 9, 3.4, 2, 0, 0, Math.PI * 2); ctx.fill();
-  } else if (kind === 'cool') {
-    ctx.beginPath(); ctx.roundRect(-13, -7, 11, 7, 3); ctx.roundRect(2, -7, 11, 7, 3); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(3, -5); ctx.stroke();
-    arc(2, 4, 6, Math.PI * 0.2, Math.PI * 0.75);
-  } else if (kind === 'wow') {
-    ctx.fillStyle = '#FFFFFF';
-    for (const x of [-6, 6]) { ctx.beginPath(); ctx.arc(x, -4, 4.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-    ctx.fillStyle = INK; dot(-6, -3.5, 2); dot(6, -3.5, 2);
-    ctx.beginPath(); ctx.ellipse(0, 8, 3.6, 4.6, 0, 0, Math.PI * 2); ctx.fill();
-  } else if (kind === 'angry') {
-    ctx.beginPath(); ctx.moveTo(-12, -9); ctx.lineTo(-3, -5); ctx.moveTo(12, -9); ctx.lineTo(3, -5); ctx.stroke();
-    dot(-6, -1, 2.2); dot(6, -1, 2.2);
-    arc(0, 13, 6.5, Math.PI * 1.2, Math.PI * 1.8);
-  } else if (kind === 'cry') {
-    arc(-6, -4, 3.6, Math.PI * 0.15, Math.PI * 0.85); arc(6, -4, 3.6, Math.PI * 0.15, Math.PI * 0.85);
-    ctx.fillStyle = '#2E8FD0';
-    for (const x of [-8, 8]) { ctx.beginPath(); ctx.ellipse(x, 5, 2.4, 4, 0, 0, Math.PI * 2); ctx.fill(); }
-    ctx.fillStyle = INK;
-    arc(0, 12, 5, Math.PI * 1.2, Math.PI * 1.8);
+  const g = ctx.createRadialGradient(x, y, r * 0.8, x, y, r * 1.6);
+  g.addColorStop(0, `rgba(${rgb},0.6)`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r * 1.6, 0, Math.PI * 2); ctx.fill();
+  if (kind === 'fire') {
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + t * 0.9, L = r * (0.3 + 0.25 * (0.5 + 0.5 * Math.sin(t * 9 + i * 1.7)));
+      const bx = x + Math.cos(a) * r * 0.85, by = y + Math.sin(a) * r * 0.85, px = Math.cos(a + 1.57) * r * 0.22, py = Math.sin(a + 1.57) * r * 0.22;
+      ctx.fillStyle = i % 2 ? '#FF8A2B' : '#FFD23F';
+      ctx.beginPath(); ctx.moveTo(bx + px, by + py); ctx.lineTo(x + Math.cos(a) * (r + L), y + Math.sin(a) * (r + L) - L * 0.35); ctx.lineTo(bx - px, by - py); ctx.fill();
+    }
+  } else if (kind === 'frost' || kind === 'stars') {
+    for (let i = 0; i < 6; i++) {
+      const a = t * 0.8 + (i * Math.PI) / 3, d = r * (1.3 + 0.08 * Math.sin(t * 3 + i));
+      sparkle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.13 + 0.04 * Math.sin(t * 5 + i)), kind === 'frost' ? (i % 2 ? '#FFFFFF' : '#BFF3FF') : (i % 2 ? '#FFE38A' : '#FFCC33'));
+    }
+  } else if (kind === 'storm') {
+    let seed = Math.floor(t * 14) + 1;
+    const rr = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < 3; i++) {
+      const a0 = rr() * Math.PI * 2;
+      ctx.beginPath();
+      for (let k = 0; k <= 5; k++) { const a = a0 + k * 0.22, d = r * (1.12 + rr() * 0.3); k ? ctx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d) : ctx.moveTo(x + Math.cos(a) * d, y + Math.sin(a) * d); }
+      ctx.strokeStyle = '#FFD60A'; ctx.lineWidth = r * 0.12; ctx.stroke();
+      ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = r * 0.04; ctx.stroke();
+    }
+  } else if (kind === 'hearts') {
+    for (let i = 0; i < 5; i++) {
+      const a = t * 0.7 + (i * Math.PI * 2) / 5, d = r * 1.38, hx = x + Math.cos(a) * d, hy = y + Math.sin(a) * d + Math.sin(t * 4 + i) * r * 0.06, s = r * 0.15;
+      ctx.fillStyle = '#FF5C8A';
+      ctx.beginPath(); ctx.moveTo(hx, hy + s);
+      ctx.bezierCurveTo(hx - s * 1.5, hy - s * 0.1, hx - s * 0.7, hy - s * 1.2, hx, hy - s * 0.35);
+      ctx.bezierCurveTo(hx + s * 0.7, hy - s * 1.2, hx + s * 1.5, hy - s * 0.1, hx, hy + s);
+      ctx.fill();
+    }
+  } else if (kind === 'void') {
+    ctx.lineCap = 'round';
+    for (const [col, w, off] of [['#5E22A8', 0.2, 0], ['#C890FF', 0.08, 0.6]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = r * w;
+      for (const k of [0, Math.PI]) { ctx.beginPath(); ctx.arc(x, y, r * 1.25, t * 2 + k + off, t * 2 + k + off + 1.9); ctx.stroke(); }
+    }
   }
   ctx.restore();
 }
-export function drawEmote(canvas, kind, css = 40) { // the emote buttons
+
+// ---------- emotes: one of our balls pulling a face, in a bubble over that side's ball (presets only: kid-safe) ----------
+const EMOTE_BY_ID = Object.fromEntries(EMOTE_LIST.map(e => [e.id, e]));
+let autoSides = [1]; // which sides react to kills by themselves (the computer; both when you're only watching)
+export const setAutoEmote = sides => { autoSides = sides; };
+let foeEmotes = true;
+export const setFoeEmotes = on => { foeEmotes = on; };
+export function emote(side, id) {
+  const cur = fx.emotes[side];
+  if (!EMOTE_BY_ID[id] || (cur && cur.age < 1.3) || (side === 1 && !foeEmotes)) return false; // no spam: one at a time
+  fx.emotes[side] = { id, age: 0 };
+  return true;
+}
+const pickMood = moods => { const l = EMOTE_LIST.filter(e => moods.includes(e.mood)); return l[Math.floor(Math.random() * l.length)].id; };
+export const moodOf = id => EMOTE_BY_ID[id]?.mood;
+export { pickMood };
+// The face, drawn in a 20-unit-radius space; `a` is the animation clock (fixed for still emotes).
+function face(ctx, mood, a, anim) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 2.2;
+  const arc = (x, y, r, s0, s1) => { ctx.beginPath(); ctx.arc(x, y, r, s0, s1); ctx.stroke(); };
+  const eye = (x, y, r = 4.4, look = 0) => {
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 1.15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, y + look, r * 0.5, 0, Math.PI * 2); ctx.fill();
+  };
+  const heart = (x, y, s, c = '#FF3B5C') => {
+    ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x, y + s * 0.9);
+    ctx.bezierCurveTo(x - s * 1.4, y - s * 0.1, x - s * 0.7, y - s * 1.1, x, y - s * 0.35);
+    ctx.bezierCurveTo(x + s * 0.7, y - s * 1.1, x + s * 1.4, y - s * 0.1, x, y + s * 0.9);
+    ctx.fill(); ctx.lineWidth = 1.4; ctx.stroke(); ctx.lineWidth = 2.2;
+  };
+  if (mood === 'gg') {
+    ctx.font = `italic 900 17px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5; ctx.strokeText('GG', 0, 1); ctx.fillStyle = '#FFCC33'; ctx.fillText('GG', 0, 1);
+    return;
+  }
+  if (mood === 'laugh') {
+    arc(-7, -2, 3.6, Math.PI * 1.15, Math.PI * 1.85); arc(7, -2, 3.6, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.beginPath(); ctx.moveTo(-9, 3); ctx.quadraticCurveTo(0, 17, 9, 3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#FF4D5E'; ctx.beginPath(); ctx.ellipse(0, 9.5, 3.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    if (anim) { ctx.fillStyle = '#7FD3FF'; for (const x of [-12, 12]) { const k = (a * 1.6) % 1; ctx.beginPath(); ctx.ellipse(x + Math.sign(x) * k * 5, -1 + k * 8, 1.8, 2.6, 0, 0, Math.PI * 2); ctx.fill(); } }
+  } else if (mood === 'angry') {
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, -10); ctx.lineTo(-3, -6); ctx.moveTo(12, -10); ctx.lineTo(3, -6); ctx.stroke(); ctx.lineWidth = 2.2;
+    eye(-6.5, -1.5, 3.4, 1); eye(6.5, -1.5, 3.4, 1);
+    arc(0, 14, 7, Math.PI * 1.2, Math.PI * 1.8);
+    if (anim) { ctx.fillStyle = 'rgba(255,255,255,0.85)'; for (const x of [-15, 15]) { const k = (a * 1.4 + (x > 0 ? 0.5 : 0)) % 1; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.arc(x, -16 - k * 10, 3 + k * 3, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; }
+  } else if (mood === 'cry') {
+    arc(-7, -4, 3.6, Math.PI * 0.15, Math.PI * 0.85); arc(7, -4, 3.6, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.fillStyle = '#4FB6FF';
+    for (const x of [-8, 8]) { ctx.beginPath(); ctx.moveTo(x - 2, 0); ctx.lineTo(x + 2, 0); ctx.lineTo(x + 2.4, 14); ctx.lineTo(x - 2.4, 14); ctx.closePath(); ctx.fill(); }
+    if (anim) for (const x of [-8, 8]) { const k = (a * 1.8 + (x > 0 ? 0.4 : 0)) % 1; ctx.beginPath(); ctx.ellipse(x, 14 + k * 10, 2.2, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = INK; arc(0, 13, 5, Math.PI * 1.2, Math.PI * 1.8);
+  } else if (mood === 'wow') {
+    const s0 = anim ? 1 + 0.12 * Math.sin(a * 10) : 1;
+    eye(-7, -3, 5.4 * s0); eye(7, -3, 5.4 * s0);
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(0, 9, 3.6, 4.8, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (mood === 'love') {
+    const b = anim ? 1 + 0.15 * Math.sin(a * 9) : 1;
+    heart(-7, -3, 4.2 * b); heart(7, -3, 4.2 * b);
+    arc(0, 3, 7, Math.PI * 0.2, Math.PI * 0.8);
+    if (anim) for (let i = 0; i < 3; i++) { const k = (a * 0.7 + i / 3) % 1; ctx.globalAlpha = 1 - k; heart(-14 + i * 14, -14 - k * 14, 2.6); } ctx.globalAlpha = 1;
+  } else if (mood === 'cool') {
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(-14, -8, 12, 8, 3); ctx.roundRect(2, -8, 12, 8, 3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-3, -6); ctx.lineTo(3, -6); ctx.stroke();
+    if (anim) { const k = (a * 0.8) % 1; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-14 + k * 28, -7.5); ctx.lineTo(-17 + k * 28, -0.5); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2; }
+    else { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-11, -6.5); ctx.lineTo(-8, -6.5); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2.2; }
+    arc(3, 5, 6, Math.PI * 0.2, Math.PI * 0.7);
+  } else if (mood === 'sleepy') {
+    ctx.beginPath(); ctx.moveTo(-11, -2); ctx.lineTo(-3, -2); ctx.moveTo(3, -2); ctx.lineTo(11, -2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 8, 2.4, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.font = `900 9px ${FONT}`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.fillStyle = '#FFFFFF';
+    const k = (a * 0.6) % 1;
+    ctx.strokeText('Z', 13 + k * 4, -12 - k * 6); ctx.fillText('Z', 13 + k * 4, -12 - k * 6);
+  }
+}
+const art = (id) => ({ id: -1, side: 0, kind: EMOTE_BY_ID[id].ball, skin: null, x: 0, y: 0, r: 20, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0, poisonUntil: 0 });
+// The emote picture: the ball (with its own decorations) and the face. `t` animates the animated ones.
+function emoteArt(ctx, id, R, t) {
+  const em = EMOTE_BY_ID[id];
+  if (!em) return;
+  const a = em.anim ? t : 0.35;
+  ctx.save();
+  ctx.scale(R / 20, R / 20);
+  if (em.anim && em.mood === 'laugh') ctx.translate(0, -Math.abs(Math.sin(a * 7)) * 3);
+  if (em.anim && em.mood === 'angry') ctx.translate(Math.sin(a * 45) * 1.2, 0);
+  drawBall(ctx, art(id), 0, 0, { rim: false });
+  face(ctx, em.mood, a, em.anim);
+  ctx.restore();
+}
+export function drawEmote(canvas, id, css = 40, t = 0) { // the emote buttons and shop tiles
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = canvas.height = Math.round(css * dpr);
-  canvas.style.width = canvas.style.height = css + 'px';
+  if (canvas.width !== Math.round(css * dpr)) { canvas.width = canvas.height = Math.round(css * dpr); canvas.style.width = canvas.style.height = css + 'px'; }
   const c = canvas.getContext('2d');
-  c.setTransform(dpr, 0, 0, dpr, css / 2 * dpr, css / 2 * dpr);
-  emoteFace(c, kind, css * 0.42);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.clearRect(0, 0, canvas.width, canvas.height);
+  c.setTransform(dpr, 0, 0, dpr, (css / 2) * dpr, (css / 2 + css * 0.04) * dpr);
+  emoteArt(c, id, css * 0.36, t);
 }
 function drawEmotes(ctx, w, dt) {
   for (const side of [0, 1]) {
@@ -159,12 +250,12 @@ function drawEmotes(ctx, w, dt) {
     ctx.translate(x, y + Math.sin(p * 5) * 1.5);
     ctx.scale(pop, pop);
     const tail = () => { ctx.beginPath(); ctx.moveTo(-8, 18 * dir); ctx.lineTo(Math.max(-20, Math.min(20, e.x - x)) * 0.3, 32 * dir); ctx.lineTo(8, 18 * dir); ctx.closePath(); };
-    const box = () => { ctx.beginPath(); ctx.roundRect(-25, -23, 50, 46, 14); };
+    const box = () => { ctx.beginPath(); ctx.roundRect(-26, -25, 52, 50, 14); };
     ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.lineJoin = 'round';
     box(); ctx.stroke(); tail(); ctx.stroke();
     ctx.fillStyle = side === 0 ? '#E8F8FF' : '#FFECEE';
     box(); ctx.fill(); tail(); ctx.fill();
-    emoteFace(ctx, em.kind, 17);
+    emoteArt(ctx, em.id, 16, p);
     ctx.restore();
   }
 }
@@ -182,9 +273,9 @@ function absorb(w, now) {
       burst(ev.x, ev.y, 12, '#ff9f1c', 220);
       fx.shake = Math.max(fx.shake, 3);
     } else if (ev.type === 'death') {
-      const pick = a => a[Math.floor(Math.random() * a.length)], killer = 1 - ev.side;
-      if (!ev.mini && autoSides.includes(killer) && Math.random() < 0.35) emote(killer, pick(['laugh', 'cool', 'wow']));
-      else if (!ev.mini && autoSides.includes(ev.side) && Math.random() < 0.25) setTimeout(() => emote(ev.side, pick(['cry', 'angry'])), 500);
+      const killer = 1 - ev.side;
+      if (!ev.mini && autoSides.includes(killer) && Math.random() < 0.35) emote(killer, pickMood(['laugh', 'cool', 'love']));
+      else if (!ev.mini && autoSides.includes(ev.side) && Math.random() < 0.25) setTimeout(() => emote(ev.side, pickMood(['cry', 'angry'])), 500);
       burst(ev.x, ev.y, 30, BALLS[ev.kind].color, 280);
       burst(ev.x, ev.y, 10, '#ffffff', 160);
       ring(ev.x, ev.y, ev.r, 2.6, 0.45, '255,255,255', 5);
@@ -228,7 +319,7 @@ export function setArena(id) {
   THEME = THEMES[id] || THEMES.night;
   let seed = 7;
   const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const n = { ice: 12, grass: 34, cracks: 9, stars: 70, tiles: 0, grid: 0 }[THEME.pattern] ?? 0;
+  const n = { ice: 12, grass: 34, cracks: 9, stars: 70, tiles: 0, grid: 0, dots: 0, neon: 0, waves: 0 }[THEME.pattern] ?? 0;
   DECOR = Array.from({ length: n }, () => ({ x: r() * W, y: r() * H, a: r() * Math.PI, s: r(), k: Array.from({ length: 4 }, () => r() * 2 - 1) }));
 }
 function floorPattern(ctx, now) {
@@ -266,6 +357,27 @@ function floorPattern(ctx, now) {
       ctx.beginPath(); ctx.moveTo(d.x, d.y);
       let x = d.x, y = d.y;
       for (const k of d.k) { x += Math.cos(d.a + k) * 26; y += Math.sin(d.a + k) * 26; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+  } else if (p === 'dots') { // candy sprinkles
+    const cols = ['#FF4D8D', '#7FE7FF', '#FFD23F', '#A6FF4D'];
+    for (let y = 20, row = 0; y < H; y += 40, row++) for (let x = row % 2 ? 40 : 20, i = row; x < W; x += 40, i++) {
+      ctx.fillStyle = cols[i % 4]; ctx.save(); ctx.translate(x, y); ctx.rotate(i * 0.9); ctx.beginPath(); ctx.roundRect(-6, -2, 12, 4, 2); ctx.fill(); ctx.restore();
+    }
+  } else if (p === 'neon') { // glowing grid
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 8;
+    for (const [col, off] of [['#00F0FF', 0], ['#FF2BD6', 25]]) {
+      ctx.strokeStyle = col; ctx.shadowColor = col; ctx.globalAlpha = 0.35 + 0.15 * Math.sin(now * 2 + off);
+      ctx.beginPath();
+      for (let i = off + 25; i < W; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.moveTo(0, i); ctx.lineTo(W, i); }
+      ctx.stroke();
+    }
+  } else if (p === 'waves') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let y = 30; y < H; y += 46) {
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 10) { const yy = y + Math.sin(x / 22 + now * 1.2 + y) * 5; x ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); }
       ctx.stroke();
     }
   } else if (p === 'stars') {
@@ -1010,9 +1122,11 @@ function hpText(ctx, e) {
 }
 
 // A glossy ball: soft floor shadow, shaded body, specular highlight, a thin glowing rim in the team colour.
-export function drawBall(ctx, e, now, t, { rim = true } = {}) {
+export function drawBall(ctx, e, now, t, { rim = true, aura = null } = {}) {
   const sk = e.skin && SKINS[e.skin], { x, y, r } = e, bubble = e.kind === 'cell' && e.mini && e.hp <= 2;
   const color = bubble ? '#7FD9D1' : sk ? sk.color : BALLS[e.kind].color;
+  const au = aura ?? (e.id >= 0 ? auraOf[e.side] : null);
+  if (au) drawAura(ctx, au, x, y, r, now || 0.4);
   ctx.fillStyle = 'rgba(8,16,32,0.42)';
   ctx.beginPath(); ctx.ellipse(x + r * 0.16, y + r * 0.3, r * 0.98, r * 0.86, 0, 0, Math.PI * 2); ctx.fill();
   if (e.kind === 'spider') legs(ctx, e, t);
@@ -1226,7 +1340,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
 }
 
 // Static card icon: the same ball art without HP or team rim.
-export function drawIcon(canvas, kind, css = 56, skin = null) {
+export function drawIcon(canvas, kind, css = 56, skin = null, aura = null) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = canvas.height = Math.round(css * dpr);
   canvas.style.width = canvas.style.height = css + 'px';
@@ -1234,5 +1348,5 @@ export function drawIcon(canvas, kind, css = 56, skin = null) {
   const k = canvas.width / 64;
   c.setTransform(k, 0, 0, k, 0, 0);
   const r = kind === 'hedgehog' ? 18 : 21; // leave room for spikes
-  drawBall(c, { id: -1, side: 0, kind, skin, x: 32, y: 34, r, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0, poisonUntil: 0 }, 0, 0, { rim: false });
+  drawBall(c, { id: -1, side: 0, kind, skin, x: 32, y: 34, r: aura ? r * 0.85 : r, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0, poisonUntil: 0 }, 0.4, 0, { rim: false, aura });
 }

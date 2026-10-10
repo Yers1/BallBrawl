@@ -2,7 +2,7 @@
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, EMOTES, emote, drawEmote, setAutoEmote } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -11,8 +11,8 @@ import { randomNick, nickText } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
-  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss, winTowardChest, CHEST_WINS,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery,
+  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss, winChest,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns,
 } from './progress.js';
 import { createHome } from './meta.js';
 import * as online from './net.js';
@@ -25,7 +25,7 @@ const el = (tag, cls = '', html) => {
   if (html != null) n.innerHTML = html;
   return n;
 };
-const icon = (kind, size, skin = null) => { const c = document.createElement('canvas'); drawIcon(c, kind, size, skin); return c; };
+const icon = (kind, size, skin = null, aura = null) => { const c = document.createElement('canvas'); drawIcon(c, kind, size, skin, aura); return c; };
 const STEP = 1 / 60, AIM_TIME = 8; // seconds to aim before the round fires itself
 
 // ---------- save (localStorage is user-editable: migrate() validates everything) ----------
@@ -88,7 +88,7 @@ function banner(text, stay = false, tone = '', html = false) {
   b.className = `banner ${stay ? 'stay' : 'show'} ${tone}`;
 }
 
-const coinsUI = () => { $('#coins').textContent = save.coins; };
+const coinsUI = () => { $('#coins').textContent = save.coins; $('#gems').textContent = save.gems; };
 
 // Round-start cards in the arena's top corners: who fights whom and what each ball does (hidden once the balls fly).
 let cardsHide = 0;
@@ -128,6 +128,7 @@ function demo() {
   S.ais = [createAI(0, 12, Math.floor(r() * 1e9)), createAI(1, 12, Math.floor(r() * 1e9))];
   S.demo = true;
   S.demoEnd = 0;
+  setAuras({});
   resetFx();
 }
 
@@ -278,6 +279,7 @@ const enemySquad = () => (S.opponent ? S.opponent.squad : enemySquadFor(save.tro
 
 async function startMatch() {
   setAutoEmote([1]);
+  setAuras({ 0: save.wear.aura });
   if (S.mode !== 'squad') return;
   cancelReward();
   S.mode = 'starting';
@@ -473,7 +475,7 @@ function finishMatch(r) {
     }
   }
   save.coins += S.earned;
-  S.chestDrop = won ? winTowardChest(save) : null; // every CHEST_WINS wins drop a chest
+  S.chestDrop = won ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   save.matches++;
   track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, ...S.ms });
@@ -549,7 +551,7 @@ function showResult() {
   $('#r-coins').textContent = '+' + S.earned;
   $('#r-trophies').hidden = !!c;
   $('#r-chest').hidden = S.chestDrop == null;
-  if (S.chestDrop != null) $('#r-chest').textContent = S.chestDrop ? t('resultChestGot') : t('resultChest', { n: save.chestWins, max: CHEST_WINS });
+  if (S.chestDrop != null) $('#r-chest').textContent = S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull');
   $('#r-reward').hidden = true;
   const ups = S.ups ?? [];
   $('#r-rank').hidden = !ups.length;
@@ -644,6 +646,7 @@ function startWatch() {
   S.watchEndAt = 0;
   S.mode = 'watch';
   setAutoEmote([0, 1]);
+  setAuras({});
   const w = S.world, [a, b] = w.ents;
   S.watchAims = [aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand)];
   S.launchAt = performance.now() / 1000 + (RECORD != null ? 2.5 : 1.4);
@@ -719,27 +722,26 @@ function frame(ms) {
 document.documentElement.lang = lang;
 if (lang !== 'ru') document.title = 'BallBrawl — ball battle';
 
-// Emotes: a tray of preset stickers; the computer sometimes answers.
-const REPLY = { laugh: ['laugh', 'cool'], cool: ['wow', 'cool'], wow: ['laugh', 'wow'], angry: ['laugh', 'cool'], cry: ['laugh', 'gg'], gg: ['gg'] };
-$('#emote-tray').append(...EMOTES.map(kind => {
-  const b = el('button', '');
-  b.setAttribute('aria-label', kind);
-  const c = document.createElement('canvas');
-  drawEmote(c, kind, 44);
-  b.append(c);
-  b.onclick = e => {
-    e.stopPropagation();
-    $('#emote-tray').hidden = true;
-    if (!emote(0, kind)) return;
-    sfx.click();
-    if (S.mode !== 'watch' && Math.random() < 0.55) {
-      const r = REPLY[kind];
-      setTimeout(() => emote(1, r[Math.floor(Math.random() * r.length)]), 700 + Math.random() * 800);
-    }
-  };
-  return b;
-}));
-$('#emote-btn').onclick = e => { e.stopPropagation(); sfx.click(); $('#emote-tray').hidden = !$('#emote-tray').hidden; };
+// Emotes: the tray holds the emotes you own; the computer sometimes answers in kind.
+const REPLY = { laugh: ['laugh', 'cool'], cool: ['wow', 'cool'], wow: ['laugh', 'wow'], angry: ['laugh', 'cool'], cry: ['laugh', 'gg'], gg: ['gg'], love: ['love', 'laugh'], sleepy: ['angry', 'laugh'] };
+function emoteTray() {
+  $('#emote-tray').replaceChildren(...EMOTE_LIST.filter(e => owns(save, 'emote', e.id)).map(e => {
+    const b = el('button', '');
+    b.setAttribute('aria-label', e.id);
+    const c = document.createElement('canvas');
+    drawEmote(c, e.id, 48);
+    b.append(c);
+    b.onclick = ev => {
+      ev.stopPropagation();
+      $('#emote-tray').hidden = true;
+      if (!emote(0, e.id)) return;
+      sfx.click();
+      if (S.mode !== 'watch' && Math.random() < 0.55) setTimeout(() => emote(1, pickMood(REPLY[e.mood])), 700 + Math.random() * 800);
+    };
+    return b;
+  }));
+}
+$('#emote-btn').onclick = e => { e.stopPropagation(); sfx.click(); if ($('#emote-tray').hidden) emoteTray(); $('#emote-tray').hidden = !$('#emote-tray').hidden; };
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#emote-tray, #emote-btn')) $('#emote-tray').hidden = true; });
 for (const n of document.querySelectorAll('[data-t]')) n.textContent = t(n.dataset.t);
 $('#s-back').onclick = () => goHome();
@@ -753,9 +755,20 @@ $('#w-cancel').onclick = () => goHome('lobby');
 $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
-const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/>';
-const muteUI = () => { $('#mute').innerHTML = SPEAKER + (save.muted ? '<path d="M16 9l5 6M21 9l-5 6"/></svg>' : '<path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg>'); };
-$('#mute').onclick = () => { save.muted = !save.muted; setMuted(save.muted); persist(); muteUI(); };
+// Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
+const muteUI = () => {
+  $('#set-sound').classList.toggle('on', !save.muted);
+  $('#set-sound').setAttribute('aria-checked', String(!save.muted));
+  $('#set-emotes').classList.toggle('on', save.foeEmotes);
+  $('#set-emotes').setAttribute('aria-checked', String(save.foeEmotes));
+};
+$('#set-sound').onclick = () => { save.muted = !save.muted; setMuted(save.muted); persist(); muteUI(); };
+$('#set-emotes').onclick = () => { save.foeEmotes = !save.foeEmotes; setFoeEmotes(save.foeEmotes); persist(); muteUI(); sfx.click(); };
+$('#gear').onclick = () => { sfx.click(); home.settings(); muteUI(); $('#scr-settings').hidden = false; };
+$('#set-close').onclick = () => { $('#scr-settings').hidden = true; };
+$('#set-account').onclick = () => { $('#scr-settings').hidden = true; if (S.mode === 'home') home.open('profile'); };
+$('#set-version').textContent = 'BallBrawl · v1.6';
+setFoeEmotes(save.foeEmotes);
 addEventListener('resize', layout);
 initAds();
 initAudio(save.muted);

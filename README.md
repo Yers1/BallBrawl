@@ -8,6 +8,9 @@ A browser game where balls with superpowers fight in an arena. You build a squad
 **Glory Road** from the main menu: wins earn trophies, and the road (to 3000 trophies) unlocks balls, skins, coins and chests. Rewards are kept forever, even if your trophies drop. **Chests** are earned only, every 3 wins and on the road. They are never sold, and the chest screen shows the real odds for the player. There are skins (cosmetic only), 3 daily quests, a 7-day login reward and achievements.
 **Brawl Stars style progression:** every ball has its own path with ranks 1–10 (coins, chests, the Gold skin at rank 7, a Master title at rank 10). Leagues from Bronze I to Masters by trophies, titles under your nickname, the Silver skin for coins.
 **Emotes** in battle (six preset stickers, the computer answers). **8 languages:** Russian, English, Kazakh, Uzbek, Turkish, Spanish, Portuguese, Indonesian, with a picker in the profile.
+**Shop and gems:** auras, banners and decorations for your name card, 15 character emotes (some animated), arena maps, daily deals and skins. Gems come from chests, the Glory Road, ball paths, day 7 and rewarded ads; buying gems with money is not built yet.
+**Chests:** wins put chests into 4 slots in a fixed order; each unlocks on a timer (gems or an ad skip it). Chests give coins, skin fragments (10 make a skin), gems, sometimes an emote or a new ball, with the odds shown.
+**Inbox and settings:** messages and gifts from the team (posted with SQL, see below), sound, opponent emotes and language in settings.
 **Email account** (optional): turns the anonymous player into an account that can sign in on another device, and gives the Rainbow skin as a thank-you.
 **Challenge a friend by link:** the squad, seed, nickname and level live right in the link, no server needed. Your friend plays with the same squad and can send back a reply challenge with their result.
 Nicknames are built only from preset words ("Fast Hedgehog 482"), never free text. The game is made for kids, so ads run in child-safe mode (non-personalized). Works offline (service worker).
@@ -79,6 +82,10 @@ Project `ballbrawl` (ref `zowdpibgfnpqcvwgtryv`, Frankfurt). The game signs in *
 - **Changing the schema:** add a new file to `supabase/migrations/`, then run the command below (password from `.env.local`).
   ```bash
   npx supabase db push
+  ```
+- **Post a message to every player's inbox** (with an optional gift):
+  ```bash
+  npx supabase db query --linked "insert into bb_news (title, body, gift) values ('{\"ru\":\"Обновление!\",\"en\":\"Update!\"}', '{\"ru\":\"Новые эмоции.\",\"en\":\"New emotes.\"}', '{\"gems\":5}')"
   ```
 - **Live server check:** creates temporary players and cleans them up afterwards.
   ```bash

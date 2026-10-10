@@ -26,8 +26,9 @@
   <header class="bar">
     <div class="brand">Ball<b>Brawl</b></div>
     <div class="row">
-      <button id="mute" class="icon-btn" aria-label="sound"></button>
+      <button id="gear" class="icon-btn" aria-label="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6a8 8 0 0 1 2 1.1l2.5-.9 1.7 2.9-2 1.8a8 8 0 0 1 0 2.3l2 1.8-1.7 2.9-2.5-.9a8 8 0 0 1-2 1.1l-.5 2.6h-3.4l-.5-2.6a8 8 0 0 1-2-1.1l-2.5.9-1.7-2.9 2-1.8a8 8 0 0 1 0-2.3l-2-1.8 1.7-2.9 2.5.9a8 8 0 0 1 2-1.1z" fill="#C9D4E6" stroke="#0A0E1F" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="#1E2742" stroke="#0A0E1F" stroke-width="1.6"/></svg></button>
       <div class="pill" title="coins"><i class="coin"></i><span id="coins">0</span></div>
+      <div class="pill" title="gems"><i class="gem"></i><span id="gems">0</span></div>
     </div>
   </header>
 
@@ -45,7 +46,7 @@
     </div>
     <div id="controls" class="controls" hidden>
       <div id="dash-pips" class="pips" aria-label="dash charges"></div>
-      <button id="emote-btn" class="emote-btn" aria-label="emotes"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="#FFCC33" stroke="#0F1F38" stroke-width="2.4"/><ellipse cx="11.5" cy="10" rx="3.5" ry="2" fill="#FFFFFF" opacity=".5"/><circle cx="11.5" cy="14" r="2" fill="#0F1F38"/><circle cx="20.5" cy="14" r="2" fill="#0F1F38"/><path d="M10 19q6 6.5 12 0" fill="none" stroke="#0F1F38" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+      <button id="emote-btn" class="emote-btn" aria-label="emotes"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12 5h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-1v4l-4.5-4H12a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z" fill="#D7E0F5" stroke="#0F1F38" stroke-width="2.2" stroke-linejoin="round"/><path d="M5 11h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-7.5L7 29v-4H5a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3z" fill="#FFFFFF" stroke="#0F1F38" stroke-width="2.2" stroke-linejoin="round"/><path d="M6.5 16h9M6.5 20h11" stroke="#0F1F38" stroke-width="2.2" stroke-linecap="round"/></svg></button>
       <button id="super-btn" class="super-btn" disabled><span data-t="super"></span></button>
       <div id="emote-tray" class="emote-tray" hidden></div>
     </div>
@@ -70,7 +71,9 @@
               <span class="trophies"><i class="trophy"></i><span id="h-trophies">0</span></span>
             </div>
             <span id="h-league" class="league-ic"></span>
+            <span id="h-deco" class="me-deco"></span>
           </div>
+          <button id="l-mail" class="mail-btn" aria-label="messages"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="19" rx="3" fill="#FFFFFF" stroke="#0F1F38" stroke-width="2.2"/><path d="M4 9l12 9 12-9" fill="none" stroke="#0F1F38" stroke-width="2.2" stroke-linejoin="round"/><path d="M3.5 25l9-8M28.5 25l-9-8" stroke="#0F1F38" stroke-width="1.6"/><rect x="3" y="7" width="26" height="4" rx="2" fill="#FF4D5E" opacity=".9"/></svg><i class="badge" hidden></i></button>
           <button id="l-gift" class="gift-chip" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="15" rx="2" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2.4" stroke-linejoin="round"/><rect x="3" y="9" width="26" height="6" rx="2" fill="#FF6B7A" stroke="#0F1F38" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 9h4v19h-4z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M16 9c-2-5-8-6-8-2 0 2 4 2 8 2zM16 9c2-5 8-6 8-2 0 2-4 2-8 2z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></svg><span data-t="giftChip"></span></button>
         </div>
         <div class="hero-wrap">
@@ -89,8 +92,9 @@
           <span id="l-next" class="rb-next"></span>
           <i class="badge" hidden></i>
         </button>
+        <div id="l-slots" class="slots"></div>
         <div class="play-line">
-          <button id="l-chest" class="chest-btn" aria-label="chests"><span id="l-chest-art" class="chest-art"></span><b id="l-chest-n" class="chest-n" hidden></b><small id="l-chest-wins"></small></button>
+          <button id="l-chest" class="chest-btn" aria-label="chests" hidden><span id="l-chest-art" class="chest-art"></span><b id="l-chest-n" class="chest-n" hidden></b><small id="l-chest-wins"></small></button>
           <button id="h-play" class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l11 11M20 4L9 15" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round"/><path d="M6.5 13.5l4 4M17.5 13.5l-4 4M5 19l2.5-2.5M19 19l-2.5-2.5" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round"/></svg><span class="pl-txt"><small id="l-mode"></small><b data-t="play"></b></span></button>
         </div>
         <nav class="dock">
@@ -99,7 +103,7 @@
           <button class="sbtn c-leaders" data-tab="leaders"><span class="ic"><svg viewBox="0 0 32 32"><path d="M4.5 11.5l6 5L16 7.5l5.5 9 6-5-2.6 13.5H7.1z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><rect x="7" y="22.5" width="18" height="4.5" rx="1.2" fill="#F0A800" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="18.2" r="2.2" fill="#FF4D5E" stroke="#0F1F38" stroke-width="1.5"/><circle cx="4.5" cy="10.5" r="2.1" fill="#FFCC33" stroke="#0F1F38" stroke-width="1.6"/><circle cx="16" cy="6" r="2.1" fill="#FFCC33" stroke="#0F1F38" stroke-width="1.6"/><circle cx="27.5" cy="10.5" r="2.1" fill="#FFCC33" stroke="#0F1F38" stroke-width="1.6"/></svg></span><span data-t="tabLeaders"></span><i class="badge" hidden></i></button>
           <button class="sbtn c-profile" data-tab="profile"><span class="ic"><svg viewBox="0 0 32 32"><defs><radialGradient id="ic-head" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#C9D4E6"/><stop offset="1" stop-color="#7D8CA6"/></radialGradient></defs><path d="M4.5 29c.7-6.4 5.2-10 11.5-10s10.8 3.6 11.5 10z" fill="#4CC9F0" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="11" r="7" fill="url(#ic-head)" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><ellipse cx="13.2" cy="8" rx="2.4" ry="1.4" fill="#fff" opacity=".8"/></svg></span><span data-t="tabProfile"></span><i class="badge" hidden></i></button>
           <button class="sbtn c-friend" id="l-challenge"><span class="ic"><svg viewBox="0 0 32 32"><g transform="rotate(-42 16 16)"><path d="M14.6 20V6.5L16 3l1.4 3.5V20z" fill="#E6EDF7" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><rect x="10.5" y="19" width="11" height="3.2" rx="1.4" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><rect x="14.7" y="22.2" width="2.6" height="5" fill="#8A5A1A" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="28.6" r="1.9" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></g><g transform="rotate(42 16 16)"><path d="M14.6 20V6.5L16 3l1.4 3.5V20z" fill="#E6EDF7" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><rect x="10.5" y="19" width="11" height="3.2" rx="1.4" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><rect x="14.7" y="22.2" width="2.6" height="5" fill="#8A5A1A" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="28.6" r="1.9" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></g></svg></span><span data-t="duel"></span></button>
-          <button class="sbtn c-skins" data-tab="skins"><span class="ic"><svg viewBox="0 0 32 32"><path d="M19.5 3.5l9 9-9 9-9-9z" fill="#C890FF" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M21.5 7.5l3 3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".7"/><path d="M10.5 12.5l9 9-2.6 2.6c-1.6 1.6-4 1.6-5.6 0l-3.4-3.4c-1.6-1.6-1.6-4 0-5.6z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M8 21.5c-2.2 2.2-3 5-4.5 7 2.4-.4 5.4-1.6 7.6-3.6" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></svg></span><span data-t="tabSkins"></span><i class="badge" hidden></i></button>
+          <button class="sbtn c-shop" data-tab="shop"><span class="ic"><svg viewBox="0 0 32 32"><path d="M4 12l2-7h20l2 7z" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M4 12c0 2.5 2 4 4 4s4-1.5 4-4c0 2.5 2 4 4 4s4-1.5 4-4c0 2.5 2 4 4 4s4-1.5 4-4" fill="#FFFFFF" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M6 16v11h20V16" fill="#C9D4E6" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><rect x="13" y="19" width="6" height="8" fill="#8A5A1A" stroke="#0F1F38" stroke-width="2"/><path d="M11 5l-1 7M16 5v7M21 5l1 7" stroke="#0F1F38" stroke-width="1.6"/></svg></span><span data-t="tabShop"></span><i class="badge" hidden></i></button>
         </nav>
       </div>
       <div id="sub" class="sub" hidden>
@@ -120,6 +124,12 @@
           <div id="tab-skins" class="tab" hidden>
             <p class="muted" data-t="skinsHint"></p>
             <div id="sk-list" class="sk-list"></div>
+          </div>
+          <div id="tab-mail" class="tab" hidden>
+            <div id="mail-list" class="mail-list"></div>
+          </div>
+          <div id="tab-shop" class="tab" hidden>
+            <div id="sh-body" class="sh-body"></div>
           </div>
           <div id="tab-arenas" class="tab" hidden>
             <p class="muted center" data-t="arenaSwipe"></p>
@@ -173,8 +183,7 @@
             <h3 data-t="titlesTitle"></h3>
             <p class="muted" data-t="titlesHint"></p>
             <div id="p-titles" class="chip-row"></div>
-            <h3 data-t="langTitle"></h3>
-            <div id="p-langs" class="chip-row"></div>
+
             <div id="p-online">
               <button class="btn ghost danger wide-btn" id="p-delete" data-t="deleteProfile"></button>
             </div>
@@ -214,10 +223,36 @@
   <section id="scr-chest" class="overlay" hidden>
     <div class="card result chests">
       <h2 data-t="chestsTitle"></h2>
-      <p id="ch-wins" class="muted"></p>
+      <p class="muted" data-t="stashHint"></p>
       <div id="ch-list" class="ch-list"></div>
       <p class="muted small" data-t="chestFair"></p>
       <button class="btn ghost wide-btn" id="ch-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-settings" class="overlay" hidden>
+    <div class="card result settings">
+      <h2 data-t="settingsTitle"></h2>
+      <div class="set-row"><span data-t="setSound"></span><button id="set-sound" class="toggle" role="switch"></button></div>
+      <div class="set-row"><span data-t="setFoeEmotes"></span><button id="set-emotes" class="toggle" role="switch"></button></div>
+      <h3 data-t="langTitle"></h3>
+      <div id="p-langs" class="chip-row"></div>
+      <button class="btn wide-btn" id="set-account" data-t="setAccount"></button>
+      <p class="center"><a href="privacy.html" data-t="privacy"></a></p>
+      <p id="set-version" class="muted small center"></p>
+      <button class="btn ghost wide-btn" id="set-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-slot" class="overlay" hidden>
+    <div class="card result slot-card">
+      <div id="sl-art" class="sl-art"></div>
+      <h2 id="sl-title"></h2>
+      <p id="sl-time" class="sl-time"></p>
+      <p id="sl-info" class="muted small"></p>
+      <button class="btn primary big wide-btn" id="sl-gems"></button>
+      <div id="sl-ad"></div>
+      <button class="btn ghost wide-btn" id="sl-close" data-t="close"></button>
     </div>
   </section>
 

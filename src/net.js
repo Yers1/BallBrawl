@@ -107,6 +107,7 @@ export const findOpponent = () => rpc('find_opponent');
 export const startMatch = opponentId => rpc('start_match', { p_opponent: opponentId ?? null });
 export const finishMatch = ({ match, result, flawless }) => rpc('finish_match', { p_match: match, p_result: result, p_flawless: flawless });
 export const leaderboard = week => rpc('leaderboard', { p_week: week });
+export const news = () => rpc('news');
 export const logEvent = type => (net.online ? rpc('log_event', { p_type: type }).catch(() => {}) : null);
 export async function deleteProfile() {
   await rpc('delete_profile');

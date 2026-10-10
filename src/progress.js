@@ -43,7 +43,7 @@ export const arenaIndex = id => Math.max(0, ARENAS.findIndex(a => a.id === id));
 // bought or dropped), rank 10 gives the "Master" title. No stat boosts: ranks are pride and rewards only.
 export const RANKS = [0, 20, 50, 90, 140, 200, 280, 380, 500, 650]; // points needed for rank 1..10
 export const BALL_PATH = {
-  2: { coins: 25 }, 3: { chest: 'box' }, 4: { coins: 50 }, 5: { chest: 'big' }, 6: { coins: 80 },
+  2: { coins: 25 }, 3: { chest: 'box' }, 4: { coins: 50 }, 5: { chest: 'big' }, 6: { gems: 10 },
   7: { skin: 'gold' }, 8: { coins: 120 }, 9: { chest: 'mega' }, 10: { title: true, coins: 200 },
 };
 export const ballRank = pts => RANKS.reduce((r, at, i) => (pts >= at ? i + 1 : r), 1);
@@ -57,6 +57,7 @@ export function gainMastery(s, squad, won) {
     for (let rank = before + 1; rank <= ballRank(s.mastery[id]); rank++) {
       const r = BALL_PATH[rank] ?? {};
       s.coins += r.coins ?? 0;
+      s.gems += r.gems ?? 0;
       if (r.chest) { s.chests[r.chest]++; s.chestsGot[r.chest]++; }
       ups.push({ id, rank, ...r });
     }
@@ -96,11 +97,16 @@ export function freshSave() {
     nick: null, muted: false, avatar: 'basic',
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
-    chests: { box: 0, big: 0, mega: 0 }, chestWins: 0, // chests waiting to be opened; wins toward the next one
+    chests: { box: 0, big: 0, mega: 0 }, // stash: chests from the road and ball paths, opened right away
     chestsGot: { box: 0, big: 0, mega: 0 }, chestsOpened: { box: 0, big: 0, mega: 0 }, // ever earned / ever opened: only grow, so merges can't revive opened chests
     accountGift: false, // made an email account: the rainbow skin is theirs on every ball
     arenaSeen: 'night', // the newest arena the player has been welcomed to (the unlock celebration shows once)
     mastery: {}, title: 'rookie', // ball rank points per ball; the title picked in the profile
+    gems: 0, frags: {}, // gems; skin fragments by 'ball:style'
+    slots: [null, null, null, null], cycle: 0, slotsOpened: [], // the 4 chest slots, the chest order, opened slot chest ids
+    own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
+    deals: [], adGems: { day: null, n: 0 },
+    mailRead: [], mailClaimed: [], foeEmotes: true, // inbox ids read / gifts taken; show the opponent's emotes
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
     // cloud bookkeeping
@@ -135,9 +141,30 @@ export function migrate(raw) {
     s.chestsOpened[k] = int(r.chestsOpened?.[k]) ?? 0;
     s.chestsGot[k] = Math.max(int(r.chestsGot?.[k]) ?? 0, s.chests[k] + s.chestsOpened[k]);
   }
-  s.chestWins = int(r.chestWins, 0, CHEST_WINS - 1) ?? 0;
   if (ARENAS.some(a => a.id === r.arenaSeen)) s.arenaSeen = r.arenaSeen;
   if (TITLES.some(x => x.id === r.title)) s.title = r.title;
+  s.gems = int(r.gems, 0, 1e6) ?? 0;
+  for (const [k, v] of Object.entries(r.frags || {})) {
+    const [b, st] = String(k).split(':'), n = int(v, 1, FRAG_NEED - 1);
+    if (BALLS[b] && SKINS[st] && !SKINS[st].gift && !SKINS[st].path && n && !s.skins.includes(k)) s.frags[k] = n;
+  }
+  s.cycle = int(r.cycle) ?? 0;
+  if (Array.isArray(r.slots)) s.slots = [0, 1, 2, 3].map(i => {
+    const x = r.slots[i];
+    return x && CHESTS[x.kind] && Number.isInteger(x.id) ? { id: x.id, kind: x.kind, at: Number.isFinite(x.at) ? x.at : null } : null;
+  });
+  s.slotsOpened = list(r.slotsOpened, Number.isInteger).slice(-40);
+  for (const k of Object.keys(SHOP)) {
+    s.own[k] = list(r.own?.[k], id => !!SHOP[k][id]);
+    const w = r.wear?.[k];
+    if (w === null && (k === 'aura' || k === 'look')) s.wear[k] = null;
+    else if (owns(s, k, w)) s.wear[k] = w;
+  }
+  s.deals = list(r.deals, d => typeof d === 'string').slice(-12);
+  s.mailRead = list(r.mailRead, Number.isInteger).slice(-60);
+  s.mailClaimed = list(r.mailClaimed, Number.isInteger).slice(-60);
+  s.foeEmotes = r.foeEmotes !== false;
+  if (r.adGems && typeof r.adGems.day === 'string') s.adGems = { day: r.adGems.day, n: int(r.adGems.n, 0, 99) ?? 0 };
   if (r.quests && typeof r.quests.day === 'string' && Array.isArray(r.quests.list)) {
     s.quests = { day: r.quests.day, list: r.quests.list.filter(q => QUESTS.some(d => d.id === q?.id)).map(q => ({ id: q.id, progress: int(q.progress) ?? 0, claimed: q.claimed === true })) };
   }
@@ -156,25 +183,25 @@ export function migrate(raw) {
 // Claims are keyed by `at`, so a node's position must never move once it has shipped (a moved node pays twice).
 export const PATH = [
   { at: 5, chest: 'box' }, { at: 10, ball: 'leech' }, { at: 20, coins: 30 }, { at: 30, ball: 'cell' }, { at: 40, chest: 'box' },
-  { at: 45, skin: ['basic', 'gold'] }, { at: 60, ball: 'spider' }, { at: 70, chest: 'box' }, { at: 80, coins: 50 },
+  { at: 45, skin: ['basic', 'silver'] }, { at: 60, ball: 'spider' }, { at: 70, chest: 'box' }, { at: 80, coins: 50 }, { at: 90, gems: 10 },
   { at: 100, ball: 'ninja' }, { at: 115, chest: 'big' }, { at: 125, skin: ['leech', 'neon'] }, { at: 150, ball: 'train' },
-  { at: 175, coins: 70 }, { at: 190, chest: 'box' }, { at: 200, ball: 'magnet' }, { at: 240, skin: ['cell', 'candy'] },
+  { at: 175, coins: 70 }, { at: 190, chest: 'box' }, { at: 200, ball: 'magnet' }, { at: 230, gems: 15 }, { at: 240, skin: ['cell', 'candy'] },
   { at: 260, chest: 'big' }, { at: 280, ball: 'bomb' }, { at: 320, coins: 90 }, { at: 340, chest: 'box' },
-  { at: 360, ball: 'turtle' }, { at: 400, skin: ['ninja', 'galaxy'] }, { at: 420, chest: 'big' }, { at: 440, ball: 'lightning' },
+  { at: 360, ball: 'turtle' }, { at: 400, skin: ['ninja', 'galaxy'] }, { at: 420, chest: 'big' }, { at: 440, ball: 'lightning' }, { at: 470, gems: 20 },
   { at: 480, coins: 110 }, { at: 500, chest: 'mega' }, { at: 520, ball: 'hedgehog' }, { at: 560, skin: ['train', 'lava'] },
-  { at: 580, chest: 'big' }, { at: 600, ball: 'ice' }, { at: 650, coins: 130 }, { at: 660, ball: 'poison' },
-  { at: 690, chest: 'box' }, { at: 700, skin: ['spider', 'gold'] }, { at: 720, ball: 'chain' }, { at: 740, chest: 'big' },
+  { at: 580, chest: 'big' }, { at: 600, ball: 'ice' }, { at: 630, gems: 20 }, { at: 650, coins: 130 }, { at: 660, ball: 'poison' },
+  { at: 690, chest: 'box' }, { at: 700, skin: ['spider', 'mint'] }, { at: 720, ball: 'chain' }, { at: 740, chest: 'big' },
   { at: 750, coins: 150 }, { at: 780, ball: 'forge' }, { at: 800, skin: ['magnet', 'neon'] }, { at: 825, chest: 'big' },
-  { at: 850, coins: 170 }, { at: 875, chest: 'box' }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 925, chest: 'big' },
-  { at: 950, coins: 200 }, { at: 975, chest: 'box' }, { at: 1000, skin: ['lightning', 'gold'] }, { at: 1025, chest: 'mega' },
+  { at: 850, coins: 170 }, { at: 860, gems: 25 }, { at: 875, chest: 'box' }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 925, chest: 'big' },
+  { at: 950, coins: 200 }, { at: 975, chest: 'box' }, { at: 1000, skin: ['lightning', 'candy'] }, { at: 1025, chest: 'mega' },
   { at: 1050, skin: ['poison', 'lava'] }, { at: 1075, chest: 'box' }, { at: 1100, skin: ['chain', 'neon'] }, { at: 1125, chest: 'big' },
-  { at: 1150, skin: ['forge', 'gold'] }, { at: 1200, coins: 150 }, { at: 1250, chest: 'big' }, { at: 1300, skin: ['basic', 'galaxy'] },
+  { at: 1150, skin: ['forge', 'mint'] }, { at: 1200, coins: 150 }, { at: 1250, chest: 'big' }, { at: 1300, skin: ['basic', 'galaxy'] },
   { at: 1350, coins: 160 }, { at: 1400, chest: 'big' }, { at: 1450, skin: ['leech', 'lava'] }, { at: 1500, chest: 'mega' },
   { at: 1550, coins: 170 }, { at: 1600, skin: ['cell', 'neon'] }, { at: 1650, chest: 'big' }, { at: 1700, coins: 180 },
-  { at: 1750, skin: ['spider', 'candy'] }, { at: 1800, chest: 'big' }, { at: 1850, coins: 190 }, { at: 1900, skin: ['ninja', 'gold'] },
+  { at: 1750, skin: ['spider', 'candy'] }, { at: 1800, chest: 'big' }, { at: 1850, coins: 190 }, { at: 1900, skin: ['ninja', 'lava'] },
   { at: 2000, chest: 'mega' }, { at: 2050, coins: 200 }, { at: 2100, skin: ['train', 'mint'] }, { at: 2150, chest: 'big' },
   { at: 2200, coins: 210 }, { at: 2250, skin: ['magnet', 'lava'] }, { at: 2300, chest: 'big' }, { at: 2350, coins: 220 },
-  { at: 2400, skin: ['bomb', 'galaxy'] }, { at: 2500, chest: 'mega' }, { at: 2550, coins: 230 }, { at: 2600, skin: ['turtle', 'gold'] },
+  { at: 2400, skin: ['bomb', 'galaxy'] }, { at: 2500, chest: 'mega' }, { at: 2550, coins: 230 }, { at: 2600, skin: ['turtle', 'mint'] },
   { at: 2650, chest: 'big' }, { at: 2700, coins: 240 }, { at: 2750, skin: ['hedgehog', 'neon'] }, { at: 2800, chest: 'big' },
   { at: 2850, coins: 250 }, { at: 2900, skin: ['ice', 'candy'] }, { at: 3000, chest: 'mega' },
 ];
@@ -206,6 +233,7 @@ export function claim(s, node) {
     s.coins += 60;
     return { skin: node.skin, coins: 60 };
   }
+  if (node.gems) { s.gems += node.gems; return { gems: node.gems }; }
   s.coins += node.coins;
   return { coins: node.coins };
 }
@@ -239,35 +267,162 @@ export function equipSkin(s, ball, style) {
 }
 
 // ---------- chests ----------
-// Earned only: every CHEST_WINS wins, Glory Road nodes. Never sold. Odds are shown on the chest screen.
-export const CHEST_WINS = 3;
+// Earned only, never sold, odds shown on the chest screen. A chest gives coins, skin fragments (10 make a skin),
+// sometimes gems and a new ball. Wins put chests into 4 slots in a fixed, published order (no random drops);
+// a slot chest takes time to unlock (one at a time) and can be opened at once for gems or sped up with an ad.
+// Chests from the Glory Road and ball paths are opened right away (save.chests).
+export const FRAG_NEED = 10;
 export const CHESTS = {
-  box: { coins: [25, 45], skin: 0.2, ball: 0.06 },
-  big: { coins: [70, 110], skin: 0.45, ball: 0.18 },
-  mega: { coins: [180, 260], skin: 1, ball: 0.4 },
+  box: { coins: [25, 45], stacks: 2, frags: [2, 4], gems: 0, ball: 0.04, emote: 0.08, tiers: ['common', 'rare'] },
+  big: { coins: [70, 110], stacks: 3, frags: [3, 5], gems: 2, ball: 0.12, emote: 0.2, tiers: ['common', 'rare', 'epic'] },
+  mega: { coins: [180, 260], stacks: 4, frags: [4, 6], gems: 5, ball: 0.35, skin: true, emote: 0.45, tiers: ['common', 'rare', 'epic', 'legend'] },
 };
-// A win moves the chest meter; every CHEST_WINS wins drop a chest. Returns true when one dropped.
-export function winTowardChest(s) {
-  s.chestWins++;
-  if (s.chestWins < CHEST_WINS) return false;
-  s.chestWins = 0;
-  s.chests.box++;
-  s.chestsGot.box++;
-  return true;
+const skinPool = s => s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !SKINS[st].path && !hasSkin(s, b, st)).map(st => `${b}:${st}`));
+// What one chest of `kind` gives; `rand` is injected so tests are repeatable.
+export function rollChest(s, kind, rand) {
+  const c = CHESTS[kind], pickR = a => a[Math.floor(rand() * a.length)];
+  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), gems: c.gems, frags: [], ball: null, skin: null, emote: null };
+  const emotes = EMOTE_LIST.filter(e => c.tiers.includes(e.tier) && !s.own.emote.includes(e.id));
+  if (emotes.length && rand() < c.emote) { out.emote = pickR(emotes).id; s.own.emote.push(out.emote); }
+  const balls = ORDER.filter(id => !s.owned.includes(id));
+  if (balls.length && rand() < c.ball) { out.ball = pickR(balls); s.owned.push(out.ball); }
+  if (c.skin) { const pool = skinPool(s); if (pool.length) { out.skin = pickR(pool).split(':'); s.skins.push(out.skin.join(':')); delete s.frags[out.skin.join(':')]; } }
+  for (let i = 0; i < c.stacks; i++) { // half the time the stack goes to the skin you're closest to finishing
+    const pool = skinPool(s).filter(k => !out.frags.some(f => f.key === k));
+    if (!pool.length) { out.coins += 10 * c.frags[1]; continue; } // nothing left to collect: coins instead
+    const best = [...pool].sort((a, b) => (s.frags[b] ?? 0) - (s.frags[a] ?? 0))[0];
+    const key = (s.frags[best] ?? 0) > 0 && rand() < 0.5 ? best : pickR(pool);
+    const n = c.frags[0] + Math.floor(rand() * (c.frags[1] - c.frags[0] + 1)), have = Math.min(FRAG_NEED, (s.frags[key] ?? 0) + n);
+    const done = have >= FRAG_NEED;
+    if (done) { s.skins.push(key); delete s.frags[key]; } else s.frags[key] = have;
+    out.frags.push({ key, ball: key.split(':')[0], style: key.split(':')[1], n, have, done });
+  }
+  s.coins += out.coins;
+  s.gems += out.gems;
+  return out;
 }
-// Opens one chest of `kind`; `rand` is injected so tests are repeatable. Returns what fell out, or null.
+// Opens one chest from the stash (Glory Road, ball paths).
 export function openChest(s, kind, rand) {
-  const c = CHESTS[kind];
-  if (!c || !(s.chests[kind] > 0)) return null;
+  if (!CHESTS[kind] || !(s.chests[kind] > 0)) return null;
   s.chests[kind]--;
   s.chestsOpened[kind]++;
-  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), ball: null, skin: null };
-  const balls = ORDER.filter(id => !s.owned.includes(id));
-  if (balls.length && rand() < c.ball) { out.ball = balls[Math.floor(rand() * balls.length)]; s.owned.push(out.ball); }
-  const skins = s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !SKINS[st].path && !hasSkin(s, b, st)).map(st => [b, st]));
-  if (skins.length && rand() < c.skin) { out.skin = skins[Math.floor(rand() * skins.length)]; s.skins.push(out.skin.join(':')); }
-  s.coins += out.coins;
-  return out;
+  return rollChest(s, kind, rand);
+}
+
+export const SLOTS = 4;
+export const CHEST_TIME = { box: 15 * 60e3, big: 60 * 60e3, mega: 3 * 3600e3 }; // ms to unlock
+export const CHEST_CYCLE = ['box', 'box', 'big', 'box', 'box', 'big', 'box', 'box', 'box', 'big', 'box', 'mega']; // repeats
+export const AD_SPEEDUP = 30 * 60e3; // one rewarded ad takes 30 minutes off
+export const gemsToOpen = ms => Math.max(1, Math.ceil(ms / (6 * 60e3))); // 1 gem per 6 minutes left
+// A win puts the next chest of the cycle into a free slot. Full slots: no chest (open one first).
+export function winChest(s) {
+  const i = s.slots.findIndex(x => !x);
+  if (i < 0) return null;
+  const kind = CHEST_CYCLE[s.cycle % CHEST_CYCLE.length];
+  s.slots[i] = { id: ++s.cycle, kind, at: null }; // at = when it finishes unlocking (ms), null = not started
+  return kind;
+}
+export const slotLeft = (slot, now) => (!slot ? null : slot.at == null ? CHEST_TIME[slot.kind] : Math.max(0, slot.at - now));
+export const unlocking = (s, now) => s.slots.some(x => x && x.at != null && x.at > now);
+export function startUnlock(s, i, now) {
+  const slot = s.slots[i];
+  if (!slot || slot.at != null || unlocking(s, now)) return false;
+  slot.at = now + CHEST_TIME[slot.kind];
+  return true;
+}
+export function speedUp(s, i, ms) {
+  const slot = s.slots[i];
+  if (!slot || slot.at == null) return false;
+  slot.at -= ms;
+  return true;
+}
+// Opens a slot chest: free when ready, or for gems before that.
+export function openSlot(s, i, now, rand, pay = false) {
+  const slot = s.slots[i];
+  if (!slot) return null;
+  const left = slotLeft(slot, now);
+  if (left > 0) {
+    if (!pay || s.gems < gemsToOpen(left)) return null;
+    s.gems -= gemsToOpen(left);
+  }
+  s.slots[i] = null;
+  s.slotsOpened = [...s.slotsOpened, slot.id].slice(-40);
+  return rollChest(s, slot.kind, rand);
+}
+
+// ---------- emotes: one of our balls pulling a face. Free ones to start; the rest from the shop or chests ----------
+const E = (ball, mood, tier) => ({ id: `${ball}_${mood}`, ball, mood, tier, anim: tier === 'epic' || tier === 'legend' });
+export const EMOTE_LIST = [
+  E('basic', 'laugh', 'free'), E('basic', 'angry', 'free'), E('basic', 'cry', 'free'), E('basic', 'gg', 'free'),
+  E('leech', 'laugh', 'common'), E('cell', 'wow', 'common'), E('turtle', 'sleepy', 'common'),
+  E('ninja', 'cool', 'rare'), E('magnet', 'love', 'rare'), E('ice', 'cry', 'rare'), E('spider', 'angry', 'rare'),
+  E('train', 'laugh', 'epic'), E('bomb', 'angry', 'epic'), E('lightning', 'love', 'legend'), E('forge', 'cool', 'legend'),
+];
+const EMOTE_PRICE = { free: {}, common: { coins: 150 }, rare: { gems: 20 }, epic: { gems: 50 }, legend: { gems: 100 } };
+
+// ---------- the shop: auras, banners, decorations, arena looks, emotes (cosmetics only) ----------
+// Prices in coins or gems. Gems come from playing (chests, the road, ball paths, day 7, ads).
+export const SHOP = {
+  aura: { fire: { gems: 40 }, frost: { gems: 40 }, storm: { gems: 60 }, hearts: { gems: 60 }, void: { gems: 80 }, stars: { gems: 100 } },
+  banner: {
+    night: {}, red: { coins: 300 }, green: { coins: 300 }, purple: { coins: 300 }, orange: { coins: 300 },
+    sunset: { gems: 30 }, ocean: { gems: 30 }, galaxy: { gems: 50 }, lava: { gems: 50 }, gold: { gems: 80 },
+  },
+  deco: {
+    none: {}, target: { coins: 400 }, sword: { coins: 400 }, shield: { coins: 500 }, star: { gems: 25 },
+    potion: { gems: 25 }, bolt: { gems: 30 }, flame: { gems: 40 }, trophy: { gems: 40 }, crown: { gems: 60 },
+  },
+  look: { candy: { gems: 80 }, neon: { gems: 80 }, ocean: { gems: 80 } },
+  emote: Object.fromEntries(EMOTE_LIST.map(e => [e.id, EMOTE_PRICE[e.tier]])),
+};
+const free = (kind, id) => !SHOP[kind]?.[id]?.coins && !SHOP[kind]?.[id]?.gems;
+export const owns = (s, kind, id) => !!SHOP[kind]?.[id] && (free(kind, id) || s.own[kind].includes(id));
+export const priceOf = (kind, id) => { const it = SHOP[kind]?.[id] ?? {}; return it.gems ? ['gems', it.gems] : ['coins', it.coins ?? 0]; };
+export function buy(s, kind, id, price = priceOf(kind, id)) {
+  const [cur, n] = price;
+  if (!SHOP[kind]?.[id] || owns(s, kind, id) || s[cur] < n) return false;
+  s[cur] -= n;
+  s.own[kind].push(id);
+  s.wear[kind] = id;
+  return true;
+}
+export function wear(s, kind, id) {
+  if (id == null && (kind === 'aura' || kind === 'look')) s.wear[kind] = null;
+  else if (owns(s, kind, id)) s.wear[kind] = id;
+}
+// Three deals a day, the same for everyone: a skin for coins and two cosmetics, all 40% off.
+export function dailyDeals(s, today) {
+  let h = hash(today);
+  const next = n => { h = (Math.imul(h, 1103515245) + 12345) >>> 0; return h % n; };
+  const deals = [];
+  const pool = skinPool(s);
+  if (pool.length) { const k = pool[next(pool.length)], [ball, style] = k.split(':'); deals.push({ kind: 'skin', ball, style, price: ['coins', Math.round(skinPrice(style) * 0.6)] }); }
+  for (const kind of ['aura', 'deco', 'banner']) {
+    const ids = Object.keys(SHOP[kind]).filter(id => !free(kind, id) && !owns(s, kind, id));
+    if (ids.length && deals.length < 3) { const id = ids[next(ids.length)], [cur, n] = priceOf(kind, id); deals.push({ kind, id, price: [cur, Math.max(1, Math.round(n * 0.6))] }); }
+  }
+  return deals.map((d, i) => ({ ...d, key: `${today}:${i}`, sold: s.deals.includes(`${today}:${i}`) }));
+}
+export function buyDeal(s, deal) {
+  if (deal.sold || s.deals.includes(deal.key)) return false;
+  const [cur, n] = deal.price;
+  if (s[cur] < n) return false;
+  if (deal.kind === 'skin') {
+    if (!s.owned.includes(deal.ball) || hasSkin(s, deal.ball, deal.style)) return false;
+    s[cur] -= n;
+    s.skins.push(`${deal.ball}:${deal.style}`);
+    s.skinOf[deal.ball] = deal.style;
+  } else if (!buy(s, deal.kind, deal.id, deal.price)) return false;
+  s.deals = [...s.deals, deal.key].slice(-12);
+  return true;
+}
+export const AD_GEMS = 2, AD_GEMS_DAY = 5; // free gems for a rewarded ad, a few times a day
+export function adGems(s, today) {
+  if (s.adGems.day !== today) s.adGems = { day: today, n: 0 };
+  if (s.adGems.n >= AD_GEMS_DAY) return 0;
+  s.adGems.n++;
+  s.gems += AD_GEMS;
+  return AD_GEMS;
 }
 
 // ---------- days ----------
@@ -276,7 +431,7 @@ export function prevDay(key) {
   const [y, m, d] = key.split('-').map(Number);
   return dayKey(new Date(y, m - 1, d - 1));
 }
-const hash = str => [...str].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+function hash(str) { return [...str].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7); }
 
 // ---------- daily quests ----------
 export const QUESTS = [
@@ -315,7 +470,7 @@ export function claimQuest(s, id) {
 
 // ---------- 7-day reward ----------
 export const DAILY = [20, 30, 40, 50, 60, 80]; // day 7 = a skin, shown in advance
-const STYLE_ORDER = ['gold', 'neon', 'candy', 'galaxy', 'lava', 'mint'];
+const STYLE_ORDER = ['silver', 'neon', 'candy', 'galaxy', 'lava', 'mint'];
 export function nextDailySkin(s) {
   for (const style of STYLE_ORDER) for (const ball of s.owned) if (!hasSkin(s, ball, style)) return [ball, style];
   return null; // owns them all → 200 coins instead
@@ -331,9 +486,10 @@ export function claimDaily(s, today) {
   if (!st.canClaim) return null;
   s.daily = { last: today, streak: (s.daily.last === prevDay(today) ? s.daily.streak : 0) + 1 };
   if (st.day < 6) { s.coins += DAILY[st.day]; return { coins: DAILY[st.day] }; }
-  if (!st.skin) { s.coins += 200; return { coins: 200 }; }
+  if (!st.skin) { s.coins += 200; s.gems += 10; return { coins: 200, gems: 10 }; }
   s.skins.push(st.skin.join(':'));
-  return { skin: st.skin };
+  s.gems += 10;
+  return { skin: st.skin, gems: 10 };
 }
 
 // ---------- achievements ----------
@@ -383,9 +539,23 @@ export function mergeSave(local, cloudRaw, server) {
   s.matches = Math.max(s.matches, cloud.matches);
   for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);
   for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;
-  // the win meter belongs to whichever copy has dropped more win chests (the other one is older)
-  const dw = cloud.chestsGot.box - s.chestsGot.box;
-  s.chestWins = dw > 0 ? cloud.chestWins : dw < 0 ? s.chestWins : Math.max(s.chestWins, cloud.chestWins);
+  s.gems = Math.max(s.gems, cloud.gems); // like coins (earned-only gems; paid gems would have to live on the server)
+  for (const [k, v] of Object.entries(cloud.frags)) if (!s.skins.includes(k)) s.frags[k] = Math.max(s.frags[k] ?? 0, v);
+  for (const k of Object.keys(s.frags)) if (s.skins.includes(k)) delete s.frags[k];
+  // slot chests: union by id, minus any opened on either copy
+  s.cycle = Math.max(s.cycle, cloud.cycle);
+  s.slotsOpened = [...new Set([...s.slotsOpened, ...cloud.slotsOpened])].slice(-40);
+  const live = new Map();
+  for (const x of [...s.slots, ...cloud.slots]) if (x && !s.slotsOpened.includes(x.id)) {
+    const had = live.get(x.id);
+    live.set(x.id, had && had.at != null && (x.at == null || had.at < x.at) ? had : x);
+  }
+  const kept = [...live.values()].sort((a, b) => a.id - b.id).slice(0, SLOTS);
+  s.slots = [0, 1, 2, 3].map(i => kept[i] ?? null);
+  for (const k of Object.keys(SHOP)) s.own[k] = union(s.own[k], cloud.own[k]);
+  s.deals = union(s.deals, cloud.deals).slice(-12);
+  s.mailRead = union(s.mailRead, cloud.mailRead).slice(-60);
+  s.mailClaimed = union(s.mailClaimed, cloud.mailClaimed).slice(-60);
   for (const k of Object.keys(CHESTS)) {
     s.chestsGot[k] = Math.max(s.chestsGot[k], cloud.chestsGot[k]);
     s.chestsOpened[k] = Math.max(s.chestsOpened[k], cloud.chestsOpened[k]);
