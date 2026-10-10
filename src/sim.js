@@ -30,8 +30,8 @@ const TURN = 0.275; // rad/s a ball curves toward its nearest enemy (halved agai
 export const DASH = { charges: 2, regen: 2.5, time: 0.35, mul: 2.2, dmg: 1.3 };
 // Football (a test mode): 2 vs 2, a light ball, goals in the middle of the bottom wall (yours) and the top (theirs).
 // Nobody takes damage; a dash is a hard kick. First to 3, or the most after 90 s (a tie plays on to a golden goal).
-export const FOOT = { goal: 130, r: 13, friction: 0.5, kick: 1.45, max: 950, win: 3, time: 90, reset: 1.3, turn: 4 };
-const FOOT_SPAWN = [[150, 290], [250, 350]]; // the forward, nearer the ball, and the one who stays back
+export const FOOT = { goal: 130, r: 10, player: 20, friction: 0.5, kick: 1.45, max: 950, win: 3, time: 90, reset: 1.3, turn: 4 }; // player: a smaller ball, so the pitch feels big
+const FOOT_SPAWN = [[160, 285], [240, 355]]; // the forward, nearer the ball, and the one who stays back
 export const METER = { full: 100, dealt: 0.9, taken: 0.6 };
 
 export function rng(seed) { // mulberry32
@@ -57,7 +57,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
     team.forEach((sp, i) => {
       const [x, y] = football ? (side ? [W - FOOT_SPAWN[i][0], H - FOOT_SPAWN[i][1]] : FOOT_SPAWN[i]) : spawnAt(side, team.length, i), base = BALLS[sp.id];
       const e = spawnBall(w, side, sp.id, {
-        x, y, r: sp.r ?? R, hpMul: (side ? hpMulB : 1) * (sp.hpMul ?? 1),
+        x, y, r: sp.r ?? (football ? FOOT.player : R), hpMul: (side ? hpMulB : 1) * (sp.hpMul ?? 1),
         dmg: sp.dmgMul ? (base.dmg ?? DMG) * sp.dmgMul : undefined, speed: sp.speedMul ? (base.speed ?? SPEED) * sp.speedMul : undefined,
       });
       if (sp.hp != null) e.hp = Math.min(sp.hp, e.maxHp);
