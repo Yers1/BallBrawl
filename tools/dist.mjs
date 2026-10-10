@@ -1,6 +1,6 @@
 // Copy only the public site into dist/ for upload (never tests, tools, supabase/, or .env.local).
 // Run: node tools/dist.mjs
-import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 const OUT = 'dist';
 rmSync(OUT, { recursive: true, force: true });
@@ -20,4 +20,6 @@ writeFileSync(`${OUT}/_headers`, `/*
 /src/*
   Cache-Control: no-cache
 `);
+// Vercel: the same headers (vercel.json at the root also tells a Git build to run this script and serve dist/)
+writeFileSync(`${OUT}/vercel.json`, JSON.stringify({ headers: JSON.parse(readFileSync('vercel.json', 'utf8')).headers }, null, 2));
 console.log('dist ready:', readdirSync(OUT).join(' '));

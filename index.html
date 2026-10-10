@@ -504,6 +504,13 @@
 
   <div id="toast" class="toast" hidden></div>
 
+  <script>
+    // Vercel Web Analytics: page views without cookies or personal data, only where Vercel serves the site
+    if (/\.vercel\.app$/.test(location.hostname)) {
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+      const s = document.createElement('script'); s.defer = true; s.src = '/_vercel/insights/script.js'; document.head.append(s);
+    }
+  </script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
