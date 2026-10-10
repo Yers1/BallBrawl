@@ -5,7 +5,7 @@ import { SUPABASE_URL, SUPABASE_ANON } from './config.js';
 import { mergeSave } from './progress.js';
 
 let sb = null;
-export const net = { online: false, code: null };
+export const net = { online: false, code: null, email: null }; // email = signed in with an account, not anonymous
 
 const timeout = (p, ms = 6000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), ms))]);
 async function rpc(name, args = {}) {
@@ -24,11 +24,13 @@ export async function connect(save) {
   try {
     const { createClient } = await timeout(import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'), 10000);
     sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'ballbrawl.auth' } });
-    const { data: { session } } = await timeout(sb.auth.getSession());
+    let { data: { session } } = await timeout(sb.auth.getSession());
     if (!session) {
-      const { error } = await timeout(sb.auth.signInAnonymously());
+      const { data, error } = await timeout(sb.auth.signInAnonymously());
       if (error) throw error;
+      session = data.session;
     }
+    net.email = session?.user && !session.user.is_anonymous ? session.user.email ?? null : null;
     const p = await rpc('ensure_profile', {
       p_nick: save.nick, p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar,
       p_local_trophies: save.profileId ? 0 : save.trophies, // offline trophies are imported only once
@@ -37,6 +39,7 @@ export async function connect(save) {
     const merged = mergeSave(moved ? { ...save, ...freshCounters() } : save, p.save || {}, p);
     merged.profileId = p.id;
     merged.nick = save.nick;
+    merged.accountGift ||= !!net.email;
     net.code = p.code;
     net.online = true;
     if (merged.pendingFinish) { // a ranked result that never reached the server (closed tab, lost signal)
@@ -65,6 +68,34 @@ export function queueSync(save) {
       p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar, p_nick: save.nick,
     }).then(r => { net.code = r.code; }).catch(() => {});
   }, 2500);
+}
+
+// Send the save right now (before signing in or out), instead of waiting for the debounce.
+export async function flushSync(save) {
+  if (!net.online) return;
+  clearTimeout(syncTimer);
+  const { profileId, pendingFinish, ...blob } = save;
+  await rpc('sync_save', {
+    p_save: blob, p_save_at: new Date(save.savedAt || Date.now()).toISOString(),
+    p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar, p_nick: save.nick,
+  });
+}
+
+// Email accounts. Turning this device's anonymous player into an account keeps the same profile (same user id);
+// no email is sent, so there is no confirmation step. Signing in elsewhere loads that account's profile on reload.
+export async function linkAccount(email, password) {
+  if (!sb) throw new Error('offline');
+  const { data, error } = await timeout(sb.auth.updateUser({ email, password }), 10000);
+  if (error) throw error;
+  net.email = data.user?.email ?? email;
+}
+export async function signInAccount(email, password) {
+  if (!sb) throw new Error('offline');
+  const { error } = await timeout(sb.auth.signInWithPassword({ email, password }), 10000);
+  if (error) throw error;
+}
+export async function signOutAccount() {
+  await sb?.auth.signOut().catch(() => {});
 }
 
 export const findOpponent = () => rpc('find_opponent');

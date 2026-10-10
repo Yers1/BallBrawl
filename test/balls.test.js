@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, step, hurt, DMG } from '../src/sim.js';
-import { BALLS, ORDER, CELL, WEB, NINJA, TRAIN, LEECH } from '../src/balls.js';
+import { BALLS, ORDER, CELL, WEB, NINJA, TRAIN, LEECH, trainCars } from '../src/balls.js';
 
 const DT = 1 / 60;
 const HEAD_ON = Math.round(DMG * 1.5); // full-ram contact damage
@@ -88,20 +88,21 @@ test('ninja throws faster when hurt', () => {
   assert.ok(foe.hp <= foe.maxHp - 3 * NINJA.dmg, `hp ${foe.hp}`);
 });
 
-test('train lays rails behind it; a foe on the rails is hit, its owner never is', () => {
+test('train lays a track; a train rides it and runs over a foe on it once — never its owner', () => {
   const [w, train, foe] = duel({ id: 'train' }, { id: 'basic' });
-  place(train, 60, 200, 300, 0); // drives right along y = 200
-  place(foe, 350, 350);
-  run(w, 0.6);
-  const z = w.zones.find(z => z.kind === 'track');
-  assert.ok(z && z.pts.length > 5, 'rails laid');
-  assert.equal(foe.hp, foe.maxHp, 'nothing happens off the rails');
-  place(foe, 100, 200); // steps onto the rails behind the train
-  step(w, DT);
-  assert.equal(foe.hp, foe.maxHp - TRAIN.dmg);
-  run(w, TRAIN.every);
-  assert.equal(foe.hp, foe.maxHp - 2 * TRAIN.dmg, 'hit again after the cooldown');
-  assert.equal(train.hp, train.maxHp);
-  run(w, 1);
+  place(train, 40, 380, 300, -300); // a long diagonal run lays plenty of track
+  place(foe, 380, 40);
+  let z;
+  for (let i = 0; i < 200 && !(z?.trains.length); i++) { step(w, DT); z = w.zones.find(z => z.kind === 'track'); }
+  assert.ok(z.trains.length, 'a train set off');
+  const tr = z.trains[0], spot = trainCars(tr, w.t + 0.05)[0] ?? tr.path.pts[1];
+  place(foe, spot.x, spot.y); // stand right where the locomotive is about to be
+  const hp = foe.hp;
+  run(w, 0.4);
+  assert.equal(foe.hp, hp - TRAIN.dmg, 'hit once by this train');
+  assert.equal(tr.hit[train.id], undefined, 'the train never runs over its own ball');
+  assert.equal(tr.hit[foe.id], true);
+  run(w, 2.5);
+  assert.ok(!z.trains.includes(tr), 'the train leaves when it reaches the end');
   assert.ok(z.pts[0].t >= w.t - TRAIN.life - DT, 'old rails fade');
 });

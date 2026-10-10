@@ -135,10 +135,10 @@ test('train super: an express runs the rails and on through the foe ahead', () =
   w.sides[0].meter = METER.full;
   act(w, 0, { type: 'super' });
   const z = w.zones.find(z => z.kind === 'track');
-  assert.ok(z.express, 'express launched');
-  run(w, 0.5);
+  assert.ok(z.trains.some(tr => tr.express), 'express launched');
+  run(w, 1.2);
   assert.ok(foe.hp <= foe.maxHp - TRAIN.superDmg, `hp ${foe.hp}`);
-  assert.equal(z.express, null, 'the express has passed');
+  assert.ok(!z.trains.some(tr => tr.express), 'the express has passed');
 });
 
 // ---------- replay + AI ----------

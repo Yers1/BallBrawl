@@ -1,7 +1,7 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
-import { W, H, SUDDEN, METER } from './sim.js';
-import { BALLS, TRAIN, LEECH, POISON, trackPoint } from './balls.js';
+import { W, H, SUDDEN, canSuper } from './sim.js';
+import { BALLS, TRAIN, LEECH, POISON, trainCars } from './balls.js';
 import { SKINS } from './progress.js';
 
 export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
@@ -153,73 +153,80 @@ function web(ctx, z, t) {
   ctx.restore();
 }
 
-// Rails the train has laid: sleepers and two glowing steel rails, fading as they age; the freshest stretch is still setting.
-function track(ctx, z, t) {
-  if (z.old && z.old.length > 1) { // sleepers from expired rails stay on the floor for the round: flat, harmless, a record of the run
-    ctx.strokeStyle = '#B5702F';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'butt';
-    ctx.beginPath();
-    for (let i = 1; i < z.old.length; i += 2) {
-      const a = z.old[i - 1], b = z.old[i], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, nx = (-dy / l) * 12, ny = (dx / l) * 12;
-      ctx.moveTo(b.x + nx, b.y + ny); ctx.lineTo(b.x - nx, b.y - ny);
-    }
-    ctx.stroke();
-  }
-  const pts = z.pts;
+// Rails: wooden sleepers across the path and two steel rails; the expired part stays as faded sleepers.
+function rails(ctx, pts, alpha, steel) {
   if (pts.length < 2) return;
   ctx.save();
-  ctx.lineCap = 'round';
+  ctx.globalAlpha = alpha;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
   for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1], b = pts[i];
-    const alpha = Math.min(1, (TRAIN.life - (t - b.t)) / 0.8) * (b.t > t - TRAIN.warm ? 0.35 : 1);
-    if (alpha <= 0) continue;
-    ctx.globalAlpha = alpha;
-    const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, nx = (-dy / l) * 7, ny = (dx / l) * 7;
-    ctx.strokeStyle = '#5A3A1E';
-    ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(b.x + nx * 1.7, b.y + ny * 1.7); ctx.lineTo(b.x - nx * 1.7, b.y - ny * 1.7); ctx.stroke();
-    ctx.strokeStyle = '#FFB347';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.moveTo(a.x + nx, a.y + ny); ctx.lineTo(b.x + nx, b.y + ny);
-    ctx.moveTo(a.x - nx, a.y - ny); ctx.lineTo(b.x - nx, b.y - ny);
-    ctx.stroke();
+    const a = pts[i - 1], b = pts[i], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    ctx.moveTo(mx + nx * 13, my + ny * 13); ctx.lineTo(mx - nx * 13, my - ny * 13);
+  }
+  ctx.strokeStyle = '#3B2414'; ctx.lineWidth = 7; ctx.stroke();
+  ctx.strokeStyle = '#9A6436'; ctx.lineWidth = 4.5; ctx.stroke();
+  if (steel) {
+    for (const off of [-7, 7]) {
+      ctx.beginPath();
+      pts.forEach((p, i) => {
+        const q = pts[Math.min(pts.length - 1, i + 1)], o = pts[Math.max(0, i - 1)], dx = q.x - o.x, dy = q.y - o.y, l = Math.hypot(dx, dy) || 1;
+        const x = p.x - (dy / l) * off, y = p.y + (dx / l) * off;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#2A3142'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.strokeStyle = '#D9DEE8'; ctx.lineWidth = 2; ctx.stroke();
+    }
   }
   ctx.restore();
 }
+function track(ctx, z, t) {
+  rails(ctx, z.old, 0.5, false);
+  rails(ctx, z.pts, 1, true);
+}
 
-// The express: a locomotive with two wagons racing along the super's route, sparks flying off its wheels.
-function express(ctx, x, t) {
-  const k = ((t - x.go) * TRAIN.express) / x.len, d = 40 / x.len;
-  const car = (p, w, h, color, loco) => {
-    const q = trackPoint(x.pts, p);
+// A train: a locomotive with a cab, chimney and headlight, then cars with lit windows, all following the track.
+function trainDraw(ctx, tr, t) {
+  const cars = trainCars(tr, t);
+  for (const pass of [0, 1]) for (const c of [...cars].reverse()) { // shadows first, then bodies back to front
     ctx.save();
-    ctx.translate(q.x, q.y);
-    ctx.rotate(q.a);
-    ctx.fillStyle = 'rgba(8,16,32,0.45)';
-    ctx.beginPath(); ctx.roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 6); ctx.fill();
-    ctx.fillStyle = color;
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.a);
+    const L = 30, Wd = 21;
+    if (!pass) { ctx.fillStyle = 'rgba(8,16,32,0.45)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 3, -Wd / 2 + 5, L, Wd, 5); ctx.fill(); ctx.restore(); continue; }
     ctx.strokeStyle = INK;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, loco ? [6, 13, 13, 6] : 6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#FFE08A';
-    for (let i = -1; i <= 1; i++) ctx.fillRect(i * 12 - 4, -h / 2 + 5, 8, 8);
-    if (loco) {
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    if (c.i === 0) { // locomotive
+      ctx.fillStyle = tr.express ? '#F2B632' : '#D9452B';
+      ctx.beginPath(); ctx.roundRect(-L / 2, -Wd / 2, L, Wd, [4, 9, 9, 4]); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#2A2A38';
-      ctx.fillRect(w / 2 - 18, -h / 2 - 7, 9, 9);
-      ctx.fillStyle = '#FFF6C2';
-      ctx.shadowColor = '#FFE08A';
-      ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.arc(w / 2 + 1, 0, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(-L / 2 + 2, -Wd / 2 + 3, 11, Wd - 6, 3); ctx.fill();
+      ctx.fillStyle = '#FFE08A';
+      ctx.fillRect(-L / 2 + 5, -3, 5, 6);
+      ctx.fillStyle = '#1A1A22';
+      ctx.beginPath(); ctx.arc(L / 2 - 9, 0, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#8E95A8';
+      ctx.beginPath(); ctx.moveTo(L / 2, -Wd / 2 + 2); ctx.lineTo(L / 2 + 6, 0); ctx.lineTo(L / 2, Wd / 2 - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const g = ctx.createRadialGradient(L / 2 + 6, 0, 1, L / 2 + 6, 0, 26);
+      g.addColorStop(0, 'rgba(255,240,180,0.55)');
+      g.addColorStop(1, 'rgba(255,240,180,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(L / 2 + 4, 0); ctx.lineTo(L / 2 + 34, -14); ctx.lineTo(L / 2 + 34, 14); ctx.closePath(); ctx.fill();
+    } else { // a car
+      ctx.fillStyle = tr.express ? (c.i % 2 ? '#7A4FE0' : '#5B3BB0') : c.i % 2 ? '#2E6BE0' : '#2E8A5A';
+      ctx.beginPath(); ctx.roundRect(-L / 2 + 1, -Wd / 2, L - 2, Wd, 4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.fillRect(-L / 2 + 3, -Wd / 2 + 2, L - 6, 3);
+      ctx.fillStyle = '#FFE08A';
+      for (const wx of [-8, 0, 8]) ctx.fillRect(wx - 2.5, -4, 5, 8);
     }
     ctx.restore();
-    return q;
-  };
-  car(k - 2 * d, 34, 22, '#B8702A', false);
-  car(k - d, 34, 22, '#B8702A', false);
-  const q = car(k, 46, 26, '#E09A2B', true);
-  if (Math.random() < 0.8) fx.parts.push({ x: q.x, y: q.y + 8, vx: rnd(-90, 90), vy: rnd(10, 90), life: 0.3, age: 0, color: '#FFB347', size: rnd(2, 4) });
+  }
+  const head = cars.find(c => c.i === 0);
+  if (head && Math.random() < 0.5) fx.parts.push({ x: head.x + Math.cos(head.a) * 6, y: head.y + Math.sin(head.a) * 6, vx: rnd(-20, 20), vy: -40 + rnd(-10, 10), life: rnd(0.5, 0.9), age: 0, color: 'rgba(235,240,250,0.8)', size: rnd(4, 6), round: true, grow: 2, drag: 1.5 });
 }
 
 // A poison spike on the wall: a two-tone pyramid pointing into the arena, each tilted a little differently.
@@ -236,23 +243,49 @@ function spike(ctx, z) {
   ctx.beginPath(); ctx.moveTo(x + tx * bw, y + ty * bw); ctx.lineTo(ax, ay); ctx.lineTo(x - tx * bw, y - ty * bw); ctx.stroke();
 }
 
-// A chain ring: translucent crimson disc, bright glowing links alternating with dark ones; grows out of the ball, fades to a ghost.
+// Chain links: flat oval links alternating with edge-on ones, like a real chain. Built as two paths
+// (a dark underlay, then the bright steel with one shared glow) so a ring costs two strokes, not twenty.
+function linkPath(ctx, pts, len, thick) {
+  for (const [i, p] of pts.entries()) {
+    const ca = Math.cos(p.a), sa = Math.sin(p.a);
+    if (i % 2 === 0) { // flat link: a hollow oval along the chain
+      ctx.moveTo(p.x + ca * len * 0.62, p.y + sa * len * 0.62);
+      ctx.ellipse(p.x, p.y, len * 0.62, thick, p.a, 0, Math.PI * 2);
+    } else { // edge-on link: a short bar
+      ctx.moveTo(p.x - ca * len * 0.55, p.y - sa * len * 0.55);
+      ctx.lineTo(p.x + ca * len * 0.55, p.y + sa * len * 0.55);
+    }
+  }
+}
+function chainStroke(ctx, pts, len, thick, width, glow) {
+  ctx.lineCap = 'round';
+  ctx.beginPath(); linkPath(ctx, pts, len, thick);
+  ctx.strokeStyle = '#2A060E'; ctx.lineWidth = width + 3; ctx.stroke();
+  ctx.save();
+  if (glow) { ctx.shadowColor = '#FF3B5C'; ctx.shadowBlur = glow; }
+  ctx.beginPath(); linkPath(ctx, pts, len, thick);
+  ctx.strokeStyle = '#FFD6DE'; ctx.lineWidth = width; ctx.stroke();
+  ctx.restore();
+  ctx.beginPath(); linkPath(ctx, pts, len, thick);
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = Math.max(1, width * 0.35); ctx.stroke();
+}
+
+// A Shackles trap: a ring of glowing chain links that grows out of the drop point and fades to a ghost.
 function ringZone(ctx, z, t) {
   const grow = Math.min(1, (t - z.born) / 0.25), fade = Math.min(1, (z.until - t) / 0.8), r = z.r * (0.3 + 0.7 * grow);
-  const n = 12, seg = (Math.PI * 2) / n, spin = t * 0.6;
-  const links = (from, to) => { ctx.beginPath(); for (let i = 0; i < n; i++) { const a0 = spin + i * seg + from * seg; ctx.moveTo(z.x + Math.cos(a0) * r, z.y + Math.sin(a0) * r); ctx.arc(z.x, z.y, r, a0, spin + i * seg + to * seg); } ctx.stroke(); };
+  const n = 2 * Math.max(6, Math.round((Math.PI * r) / 11)), spin = t * 0.5, len = (2 * Math.PI * r) / n;
+  const pts = Array.from({ length: n }, (_, i) => {
+    const a = spin + (i / n) * Math.PI * 2;
+    return { x: z.x + Math.cos(a) * r, y: z.y + Math.sin(a) * r, a: a + Math.PI / 2 };
+  });
   ctx.save();
   ctx.globalAlpha = Math.max(0, fade);
-  ctx.fillStyle = 'rgba(200,30,60,0.18)';
+  const g = ctx.createRadialGradient(z.x, z.y, r * 0.2, z.x, z.y, r);
+  g.addColorStop(0, 'rgba(197,49,58,0.04)');
+  g.addColorStop(1, 'rgba(197,49,58,0.28)');
+  ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(z.x, z.y, r, 0, Math.PI * 2); ctx.fill();
-  ctx.lineCap = 'butt';
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = '#7A0F22';
-  links(0.5, 1);
-  ctx.strokeStyle = '#FF9EB0';
-  ctx.shadowColor = '#FF2D55';
-  ctx.shadowBlur = 12;
-  links(0, 0.5);
+  chainStroke(ctx, pts, len, len * 0.3, 2.6, 10);
   ctx.restore();
 }
 
@@ -555,19 +588,29 @@ function deco(ctx, e, t) {
       const a = face + sg, bx = x + C(a) * r * 0.82, by = y + S(a) * r * 0.82, px = -S(a), py = C(a);
       ctx.beginPath(); ctx.moveTo(bx + px * r * 0.14, by + py * r * 0.14); ctx.lineTo(bx - px * r * 0.14, by - py * r * 0.14); ctx.lineTo(bx + C(a) * r * 0.42, by + S(a) * r * 0.42); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
-  } else if (e.kind === 'chain') { // a neon chain slashed across the ball
+  } else if (e.kind === 'chain') { // shackled: two steel chains cross over the ball, a padlock where they meet
     ctx.save();
-    ctx.beginPath(); ctx.arc(x, y, r * 0.98, 0, P * 2); ctx.clip();
-    ctx.lineCap = 'butt';
-    ctx.lineWidth = r * 0.16;
-    ctx.strokeStyle = '#7A0F22';
-    ctx.beginPath(); ctx.moveTo(x - r, y - r * 0.9); ctx.lineTo(x + r, y + r * 0.9); ctx.moveTo(x - r, y + r * 0.9); ctx.lineTo(x + r, y - r * 0.9); ctx.stroke();
-    ctx.setLineDash([r * 0.22, r * 0.18]);
-    ctx.strokeStyle = '#FFB3C6';
-    ctx.shadowColor = '#FF2D55';
-    ctx.shadowBlur = r * 0.3;
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.99, 0, P * 2); ctx.clip();
+    const len = r * 0.34;
+    for (const d of [0.75, -0.75]) {
+      const n = 8, pts = Array.from({ length: n }, (_, i) => {
+        const k = (i / (n - 1)) * 2 - 1;
+        return { x: x + C(d) * r * 1.1 * k, y: y + S(d) * r * 1.1 * k, a: d };
+      });
+      chainStroke(ctx, pts, len, len * 0.32, Math.max(1.4, r * 0.07), 0);
+    }
     ctx.restore();
+    const lw = Math.max(1.2, r * 0.05);
+    ctx.lineWidth = r * 0.09;
+    ctx.strokeStyle = '#C9D2E0';
+    ctx.beginPath(); ctx.arc(x, y - r * 0.12, r * 0.17, P, 0); ctx.stroke(); // the shackle
+    ctx.fillStyle = '#F2B632';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.roundRect(x - r * 0.26, y - r * 0.14, r * 0.52, r * 0.42, r * 0.08); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(x, y + r * 0.03, r * 0.06, 0, P * 2); ctx.fill();
+    ctx.fillRect(x - r * 0.025, y + r * 0.04, r * 0.05, r * 0.13);
   } else if (e.kind === 'forge') { // a hammer decal that turns with the ball
     const hx = C(head), hy = S(head);
     ctx.strokeStyle = '#7A4A1E';
@@ -704,6 +747,26 @@ function pattern(ctx, e, sk, t) {
     for (let k = 0; k < 7; k++) {
       const a = k * 2.399, d = r * 0.7 * Math.sqrt((k + 0.5) / 7);
       ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.12, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (sk.pattern === 'rainbow') { // the account gift: a turning hue wheel with sparkles
+    const g = ctx.createConicGradient ? ctx.createConicGradient(t * 1.2, x, y) : ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, `hsl(${i * 60}, 95%, 62%)`);
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.globalAlpha = 1;
+    const sh = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+    sh.addColorStop(0, 'rgba(255,255,255,0.45)');
+    sh.addColorStop(0.6, 'rgba(255,255,255,0)');
+    sh.addColorStop(1, 'rgba(10,15,28,0.35)');
+    ctx.fillStyle = sh;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.fillStyle = '#ffffff';
+    for (let k = 0; k < 4; k++) {
+      const a = k * 1.9 + t * 0.8, d = r * (0.35 + 0.15 * k), s2 = r * (0.06 + 0.04 * Math.max(0, Math.sin(t * 4 + k * 2)));
+      const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d;
+      ctx.beginPath(); ctx.moveTo(px, py - s2 * 2); ctx.lineTo(px + s2 * 0.5, py); ctx.lineTo(px, py + s2 * 2); ctx.lineTo(px - s2 * 0.5, py); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(px - s2 * 2, py); ctx.lineTo(px, py + s2 * 0.5); ctx.lineTo(px + s2 * 2, py); ctx.lineTo(px, py - s2 * 0.5); ctx.closePath(); ctx.fill();
     }
   }
   ctx.restore();
@@ -907,7 +970,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
-  for (const z of w.zones) if (z.kind === 'track' && z.express) express(ctx, z.express, w.t);
+  for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t);
   for (const e of w.ents) {
     if (!e.dead && e.kind === 'train' && (e.vx || e.vy) && Math.random() < 0.3) puff(e);
     const frozen = !e.dead && e.chillUntil > w.t && e.chillSlow <= 0.1; // thawing out: the ice block shatters
@@ -915,7 +978,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
     fx.frozen[e.id] = frozen;
   }
   for (const s of [0, 1]) { // golden halo: this side's super is ready
-    const lead = w.sides[s].meter >= METER.full && w.ents.find(e => e.side === s && !e.dead);
+    const lead = canSuper(w, s) && w.ents.find(e => e.side === s && !e.dead);
     if (!lead) continue;
     ctx.save();
     ctx.strokeStyle = `rgba(255,204,51,${0.7 + 0.3 * Math.sin(now * 10)})`;

@@ -1,5 +1,5 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
-import { createWorld, launch, step, act, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
+import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
 import { draw, drawIcon, fitCanvas, resetFx, M } from './render.js';
@@ -11,7 +11,7 @@ import { randomNick, nickText } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
-  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss,
+  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, buyBall, trophyLoss, winTowardChest, CHEST_WINS,
   claimable, pathNodes, track, dayKey, refreshQuests,
 } from './progress.js';
 import { createHome } from './meta.js';
@@ -400,9 +400,10 @@ function controls() {
     p.classList.toggle('on', i < s.dashes);
     p.style.setProperty('--p', i === s.dashes ? s.regen / DASH.regen : 0);
   });
+  const can = canSuper(S.world, 0);
   btn.style.setProperty('--p', k);
-  btn.disabled = S.mode !== 'fight' || k < 1;
-  btn.classList.toggle('ready', k >= 1);
+  btn.disabled = S.mode !== 'fight' || !can;
+  btn.classList.toggle('ready', can);
 }
 
 let hintText = null;
@@ -410,7 +411,7 @@ function hints() {
   const tutorial = save.matches < 2;
   let txt = '';
   if (S.mode === 'aim') txt = t('aimHint');
-  else if (S.mode === 'fight' && tutorial) txt = S.world.sides[0].meter >= METER.full ? t('superHint') : S.dashed ? '' : t('dashHint');
+  else if (S.mode === 'fight' && tutorial) txt = canSuper(S.world, 0) ? t('superHint') : S.dashed ? '' : t('dashHint');
   if (txt === hintText) return;
   hintText = txt;
   const h = $('#hint');
@@ -476,6 +477,7 @@ function finishMatch(r) {
     }
   }
   save.coins += S.earned;
+  S.chestDrop = won ? winTowardChest(save) : null; // every CHEST_WINS wins drop a chest
   save.matches++;
   track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, ...S.ms });
   S.ms = { dashes: 0, supers: 0, kills: 0 };
@@ -549,6 +551,8 @@ function showResult() {
   box.replaceChildren();
   $('#r-coins').textContent = '+' + S.earned;
   $('#r-trophies').hidden = !!c;
+  $('#r-chest').hidden = S.chestDrop == null;
+  if (S.chestDrop != null) $('#r-chest').textContent = S.chestDrop ? t('resultChestGot') : t('resultChest', { n: save.chestWins, max: CHEST_WINS });
   $('#r-reward').hidden = true;
   if (c) { // challenge result: no ads, the main action is "challenge them back"
     const name = nickText(c.nick, lang);
@@ -664,6 +668,7 @@ function feel(w, now) {
     if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
     if (ev.type === 'dash') { sfx.dash(); if (mine && ev.side === 0) S.ms.dashes++; }
+    if (ev.type === 'train') sfx.train();
     if (ev.type === 'death') {
       sfx.death();
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.12);

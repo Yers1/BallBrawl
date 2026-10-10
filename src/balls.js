@@ -7,7 +7,13 @@ export const LEECH = { stick: 2, cooldown: 4, drain: 4, overheal: 1.3 };
 export const CELL = { r: 20, hp: 24, dmg: 6, speed: 320 };
 export const WEB = { r: 70, life: 5, max: 3, slow: 0.4, dps: 8 };
 export const NINJA = { first: 0.8, base: 0.4, scale: 1.2, speed: 500, dmg: 6 };
-export const TRAIN = { life: 3, gap: 10, warm: 0.3, dmg: 4, every: 0.5, halfWidth: 11, boostMul: 1.25, boostDmg: 1.15, express: 900, superDmg: 28 };
+// The train lays a track behind it; every few seconds a real train (locomotive + cars) rides that track
+// from its far end up to the ball, hitting and knocking aside every foe it touches (once per train).
+export const TRAIN = {
+  life: 3, gap: 10, warm: 0.3, halfWidth: 13, boostMul: 1.25, boostDmg: 1.15,
+  first: 1.4, every: 2.6, minLen: 150, speed: 560, cars: 5, spacing: 32, dmg: 13,
+  express: 820, expressCars: 9, superDmg: 26,
+};
 export const MAGNET = { first: 1.5, every: 4.5, speed: 650, dmg: 3, pull: 800, grip: 0.5, slam: 8, superSlam: 14 };
 export const BOMB = { cooldown: 2.2, blastR: 75, blast: 7, r: 70, dmg: 18, superCount: 4, superStep: 0.2 };
 export const TURTLE = { first: 1.5, every: 6, shield: 1.5, mul: 0.7, reflect: 0.3, superShield: 2, superHeal: 10 };
@@ -47,20 +53,45 @@ export const onTrack = (z, e, warm, t) =>
   z.pts.some((p, i) => i > 0 && z.pts[i].t <= t - warm && segDist(e.x, e.y, z.pts[i - 1], p) < TRAIN.halfWidth + e.r * 0.6);
 const trackOf = (w, me) => {
   let z = w.zones.find(z => z.kind === 'track' && z.owner === me);
-  if (!z) w.zones.push(z = { kind: 'track', owner: me, side: me.side, pts: [], born: w.t, until: Infinity, cd: {}, express: null });
+  if (!z) w.zones.push(z = { kind: 'track', owner: me, side: me.side, pts: [], old: [], born: w.t, until: Infinity, trains: [] });
   return z;
 };
-// A point `k` (0..1) of the way along a polyline, plus the heading there — shared with the renderer for the express.
-export function trackPoint(pts, k) {
-  const len = pts.map((p, i) => (i ? Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0));
-  const total = len.reduce((s, l) => s + l, 0);
-  let d = Math.max(0, Math.min(1, k)) * total;
-  for (let i = 1; i < pts.length; i++) {
-    if (d > len[i] && i < pts.length - 1) { d -= len[i]; continue; }
-    const a = pts[i - 1], b = pts[i], u = len[i] ? d / len[i] : 0;
-    return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, a: Math.atan2(b.y - a.y, b.x - a.x) };
+// A polyline with cumulative lengths, and the point (plus heading) `d` units along it.
+export function pathOf(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  return { pts, cum, len: cum[cum.length - 1] };
+}
+export function pathAt(p, d) {
+  const n = p.pts.length;
+  if (n < 2) return { x: p.pts[0]?.x ?? 0, y: p.pts[0]?.y ?? 0, a: 0 };
+  d = Math.max(0, Math.min(p.len, d));
+  let i = 1;
+  while (i < n - 1 && p.cum[i] < d) i++;
+  const a = p.pts[i - 1], b = p.pts[i], seg = p.cum[i] - p.cum[i - 1] || 1, u = (d - p.cum[i - 1]) / seg;
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, a: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+// Where each car of a train is at time t (cars not yet on the track, or already past its end, are left out).
+export function trainCars(tr, t) {
+  const head = (t - tr.go) * tr.speed, out = [];
+  for (let i = 0; i < tr.cars; i++) {
+    const d = head - i * TRAIN.spacing;
+    if (d >= 0 && d <= tr.path.len) out.push({ ...pathAt(tr.path, d), i });
   }
-  return { x: pts[0].x, y: pts[0].y, a: 0 };
+  return out;
+}
+function sendTrain(w, me, z, express) {
+  const pts = [...z.pts.map(p => ({ x: p.x, y: p.y })), { x: me.x, y: me.y }];
+  if (express) { // the express carries on past the ball, straight to the wall
+    const m = Math.hypot(me.vx, me.vy) || 1, ux = me.vx / m, uy = me.vy / m;
+    const reach = Math.min(ux > 0 ? (W - me.r - me.x) / ux : ux < 0 ? (me.r - me.x) / ux : 1e9, uy > 0 ? (W - me.r - me.y) / uy : uy < 0 ? (me.r - me.y) / uy : 1e9);
+    pts.push({ x: me.x + ux * reach, y: me.y + uy * reach });
+  }
+  z.trains.push({
+    path: pathOf(pts), go: w.t, express, hit: {},
+    speed: express ? TRAIN.express : TRAIN.speed, cars: express ? TRAIN.expressCars : TRAIN.cars, dmg: express ? TRAIN.superDmg : TRAIN.dmg,
+  });
+  w.events.push({ type: 'train', x: pts[0].x, y: pts[0].y, express });
 }
 
 function throwStar(w, me, a, kind = 'star', dmg = NINJA.dmg) {
@@ -156,6 +187,7 @@ export const BALLS = {
     onDeath(w, me) {
       if (!me.mini && !me.split) splitOff(w, me);
     },
+    canSuper: (w, me) => !me.mini, // only the whole cell can split; its fragments have no super
     onSuper(w, me) { // split early — but never more than 2 minis alive at once
       const alive = w.ents.filter(e => e.side === me.side && e.mini && !e.dead).length;
       if (alive === 0) splitOff(w, me, SUPER.cellMiniHp);
@@ -206,32 +238,33 @@ export const BALLS = {
 
   train: {
     hp: 100, color: '#e09a2b', price: 250,
-    onTick(w, me) { // lay rails behind; foes standing on them get hit again and again; on its own rails it picks up speed
+    onTick(w, me) {
       const z = trackOf(w, me), last = z.pts[z.pts.length - 1];
       if (!last || Math.hypot(me.x - last.x, me.y - last.y) >= TRAIN.gap) z.pts.push({ x: me.x, y: me.y, t: w.t });
-      z.old ??= []; // expired rails stay on the floor for the whole round (drawn only, never hurt)
       while (z.pts.length > 1 && z.pts[0].t < w.t - TRAIN.life) { z.old.push(z.pts.shift()); if (z.old.length > 900) z.old.shift(); }
-      if ((!me.boost || me.boost.until <= w.t || me.boost.rails) && onTrack(z, me, TRAIN.warm, w.t)) {
+      if ((!me.boost || me.boost.until <= w.t || me.boost.rails) && onTrack(z, me, TRAIN.warm, w.t)) { // speeds up on its own rails
         me.boost = { until: w.t + 0.1, mul: TRAIN.boostMul, dmg: TRAIN.boostDmg, rails: true };
       }
-      for (const f of foes(w, me)) {
-        if ((z.cd[f.id] ?? 0) <= w.t && onTrack(z, f, TRAIN.warm, w.t)) { z.cd[f.id] = w.t + TRAIN.every; hurt(w, f, TRAIN.dmg); }
+      me.cd.train ??= TRAIN.first;
+      if (w.t >= me.cd.train) {
+        if (pathOf(z.pts).len >= TRAIN.minLen) { sendTrain(w, me, z, false); me.cd.train = w.t + TRAIN.every; }
+        else me.cd.train = w.t + 0.5; // not enough track yet
       }
-      const x = z.express;
-      if (!x) return;
-      const k = ((w.t - x.go) * TRAIN.express) / x.len, head = trackPoint(x.pts, k);
-      for (const f of foes(w, me)) {
-        if (!x.hit.includes(f) && Math.hypot(f.x - head.x, f.y - head.y) < TRAIN.halfWidth + f.r + 8) { x.hit.push(f); hurt(w, f, TRAIN.superDmg); }
+      for (const tr of z.trains) {
+        for (const car of trainCars(tr, w.t)) {
+          for (const f of foes(w, me)) {
+            if (tr.hit[f.id] || Math.hypot(f.x - car.x, f.y - car.y) >= TRAIN.halfWidth + f.r) continue;
+            tr.hit[f.id] = true;
+            const nx = -Math.sin(car.a), ny = Math.cos(car.a), side = (f.x - car.x) * nx + (f.y - car.y) * ny >= 0 ? 1 : -1;
+            if (!f.latch && !f.yank) { f.vx = nx * side * f.speed; f.vy = ny * side * f.speed; } // run over: knocked off the track
+            w.events.push({ type: 'clash', x: f.x, y: f.y });
+            hurt(w, f, tr.dmg);
+          }
+        }
       }
-      if (k >= 1) z.express = null;
+      z.trains = z.trains.filter(tr => (w.t - tr.go) * tr.speed - (tr.cars - 1) * TRAIN.spacing <= tr.path.len);
     },
-    onSuper(w, me) { // an express races along the laid rails, then straight on past the train to the wall
-      const z = trackOf(w, me), m = Math.hypot(me.vx, me.vy) || 1, ux = me.vx / m, uy = me.vy / m;
-      const reach = Math.min(ux > 0 ? (W - me.r - me.x) / ux : ux < 0 ? (me.r - me.x) / ux : 1e9, uy > 0 ? (W - me.r - me.y) / uy : uy < 0 ? (me.r - me.y) / uy : 1e9);
-      const pts = [...z.pts.map(p => ({ x: p.x, y: p.y })), { x: me.x, y: me.y }, { x: me.x + ux * reach, y: me.y + uy * reach }];
-      const len = pts.reduce((s, p, i) => s + (i ? Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0), 0) || 1;
-      z.express = { go: w.t, pts, len, hit: [] };
-    },
+    onSuper(w, me) { sendTrain(w, me, trackOf(w, me), true); },
   },
 
   magnet: {
@@ -391,7 +424,7 @@ Object.assign(BALLS, {
     },
   },
   chain: { // modelled on Shackles Ball: neon chain rings that hold a foe and tick
-    hp: 100, color: '#e84c9a', price: 650,
+    hp: 100, color: '#c5313a', price: 650,
     onTick(w, me, dt) {
       me.cd.ring ??= CHAIN.first;
       if (w.t >= me.cd.ring) { // a trap where the nearest foe is about to be

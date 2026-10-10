@@ -59,12 +59,15 @@
   <section id="scr-home" class="page" hidden>
     <div class="page-in">
       <div id="lobby" class="lobby">
-        <div class="me">
-          <span id="h-avatar" class="avatar"></span>
-          <div class="me-txt">
-            <b id="h-nick"></b>
-            <span class="trophies"><i class="trophy"></i><span id="h-trophies">0</span></span>
+        <div class="lobby-top">
+          <div class="me">
+            <span id="h-avatar" class="avatar"></span>
+            <div class="me-txt">
+              <b id="h-nick"></b>
+              <span class="trophies"><i class="trophy"></i><span id="h-trophies">0</span></span>
+            </div>
           </div>
+          <button id="l-gift" class="gift-chip" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="13" width="22" height="15" rx="2" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2.4" stroke-linejoin="round"/><rect x="3" y="9" width="26" height="6" rx="2" fill="#FF6B7A" stroke="#0F1F38" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 9h4v19h-4z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M16 9c-2-5-8-6-8-2 0 2 4 2 8 2zM16 9c2-5 8-6 8-2 0 2-4 2-8 2z" fill="#FFCC33" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/></svg><span data-t="giftChip"></span></button>
         </div>
         <div class="lobby-mid">
           <div class="side">
@@ -91,7 +94,10 @@
         </button>
         <div class="play-row">
           <span id="l-mode" class="mode-chip"></span>
-          <button id="h-play" class="btn primary big play" data-t="play"></button>
+          <div class="play-line">
+            <button id="l-chest" class="chest-btn" aria-label="chests"><span id="l-chest-art" class="chest-art"></span><b id="l-chest-n" class="chest-n" hidden></b><small id="l-chest-wins"></small></button>
+            <button id="h-play" class="btn primary big play" data-t="play"></button>
+          </div>
         </div>
       </div>
       <div id="sub" class="sub" hidden>
@@ -126,6 +132,24 @@
             <div id="l-list" class="llist"></div>
           </div>
           <div id="tab-profile" class="tab" hidden>
+            <div id="p-account" class="acct" hidden>
+              <div id="acct-pitch" class="acct-pitch">
+                <span id="acct-art"></span>
+                <div><b data-t="acctTitle"></b><small data-t="acctSub"></small></div>
+              </div>
+              <form id="acct-form" class="acct-form" novalidate>
+                <div class="seg"><button type="button" id="acct-tab-new" class="on" data-t="acctNew"></button><button type="button" id="acct-tab-in" data-t="acctIn"></button></div>
+                <label class="fld"><span data-t="email"></span><input id="acct-email" type="email" inputmode="email" autocomplete="email" maxlength="120" spellcheck="false" autocapitalize="off"></label>
+                <label class="fld"><span data-t="password"></span><input id="acct-pass" type="password" autocomplete="new-password" minlength="6" maxlength="72"></label>
+                <label class="chk" id="acct-ok-row"><input id="acct-ok" type="checkbox"><span data-t="acctConsent"></span></label>
+                <button type="submit" class="btn primary wide-btn" id="acct-go"></button>
+                <p id="acct-msg" class="acct-msg" role="alert" hidden></p>
+              </form>
+              <div id="acct-done" class="acct-done" hidden>
+                <p><span data-t="acctWho"></span> <b id="acct-who"></b></p>
+                <button type="button" class="btn ghost wide-btn" id="acct-out" data-t="acctOut"></button>
+              </div>
+            </div>
             <div class="nick-row big-nick">
               <span id="p-nick" class="nick"></span>
               <button id="p-renick" class="icon-btn sm" aria-label="new nickname"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5M4 4v3.5h3.5M4 13a8 8 0 0 0 14.5 4.5M20 20v-3.5h-3.5"/></svg></button>
@@ -171,7 +195,34 @@
       <div id="rw-icon" class="ball-hero pop"></div>
       <h2 id="rw-text"></h2>
       <p id="rw-sub" class="muted"></p>
+      <button class="btn primary big wide-btn" id="rw-open" data-t="chestOpen" hidden></button>
       <button class="btn primary big wide-btn" id="rw-ok" data-t="cool"></button>
+    </div>
+  </section>
+
+  <section id="scr-chest" class="overlay" hidden>
+    <div class="card result chests">
+      <h2 data-t="chestsTitle"></h2>
+      <p id="ch-wins" class="muted"></p>
+      <div id="ch-list" class="ch-list"></div>
+      <p class="muted small" data-t="chestFair"></p>
+      <button class="btn ghost wide-btn" id="ch-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-open" class="opener" hidden>
+    <div class="op-rays"></div>
+    <div id="op-flash" class="op-flash"></div>
+    <h2 id="op-title" class="op-title"></h2>
+    <div class="op-stage">
+      <div id="op-chest" class="op-chest"></div>
+      <div id="op-item" class="op-item" hidden></div>
+      <div id="op-sum" class="op-sum" hidden></div>
+    </div>
+    <p id="op-hint" class="op-hint"></p>
+    <div id="op-btns" class="op-btns" hidden>
+      <button class="btn primary big" id="op-again"></button>
+      <button class="btn" id="op-done" data-t="chestDone"></button>
     </div>
   </section>
 
@@ -206,6 +257,7 @@
       <h2 id="r-title"></h2>
       <p id="r-sub" class="muted"></p>
       <div id="r-trophies" class="trophy-line" hidden></div>
+      <p id="r-chest" class="chest-line" hidden></p>
       <div class="coins-big"><i class="coin"></i><span id="r-coins"></span></div>
       <p id="r-reward" class="reply-note" hidden></p>
       <div id="r-ads" class="col"></div>

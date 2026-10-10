@@ -1,4 +1,4 @@
-// Home: the lobby (main menu) and the pages it opens — trophy road, balls with skins, quests, leaders, profile.
+// Home: the lobby (main menu) and the pages it opens — Glory Road, chests, balls with skins, quests, leaders, profile.
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
 import { t, lang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
@@ -6,12 +6,50 @@ import { nickText, randomNick, validNick } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, SKIN_PRICE, hasSkin, buySkin, equipSkin, buyBall,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, CHEST_WINS, openChest,
 } from './progress.js';
 import { sfx, confetti } from './sfx.js';
 
 const $ = s => document.querySelector(s);
-const STEP = 128, PAD = 64; // trophy road: px between reward cards, and where 0 trophies sits
+const STEP = 128, PAD = 64; // Glory Road: px between reward cards, and where 0 trophies sits
+const KINDS = ['box', 'big', 'mega'];
+const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32; // chests: not predictable from the page
+
+// A chest drawn as inline SVG: planks, metal bands with rivets, corner caps and a lock. The lid is its own
+// <g class="lid"> so the opening scene can blow it off. Box: wood and steel; big: blue and gold; mega: purple, gold and a gem.
+const CHEST_COLORS = {
+  box: { base: '#C98A4B', dark: '#8E5524', trim: '#D9DEE8', trimDark: '#8E95A8' },
+  big: { base: '#3D86FF', dark: '#1E4FB0', trim: '#FFCC33', trimDark: '#C78C00' },
+  mega: { base: '#A85CFF', dark: '#5E22A8', trim: '#FFCC33', trimDark: '#C78C00' },
+};
+export function chestSvg(kind) {
+  const c = CHEST_COLORS[kind] ?? CHEST_COLORS.box, o = 'stroke="#0F1F38" stroke-width="4" stroke-linejoin="round"';
+  const rivets = (xs, ys) => xs.flatMap(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="2.2" fill="${c.trimDark}"/>`)).join('');
+  const gem = kind === 'mega'
+    ? '<path d="M60 64 l6 6 -6 8 -6 -8z" fill="#FF4D5E" stroke="#0F1F38" stroke-width="2" stroke-linejoin="round"/><path d="M58 67 l2 -2 2 2" fill="none" stroke="#FFB3BA" stroke-width="1.5"/>'
+    : '<circle cx="60" cy="68" r="3.4" fill="#0F1F38"/><path d="M58.6 69 h2.8 l1 7 h-4.8z" fill="#0F1F38"/>';
+  return `<svg viewBox="0 0 120 108" aria-hidden="true" class="chest-svg">
+<ellipse cx="60" cy="102" rx="50" ry="6" fill="rgba(8,16,32,0.35)"/>
+<g class="body">
+<rect x="10" y="50" width="100" height="48" rx="8" fill="${c.dark}" ${o}/>
+<path d="M14 64 H106 M14 80 H106" stroke="rgba(0,0,0,0.22)" stroke-width="3"/>
+<rect x="12" y="52" width="96" height="6" rx="3" fill="${c.base}"/>
+<rect x="24" y="50" width="13" height="48" fill="${c.trim}" ${o}/>
+<rect x="83" y="50" width="13" height="48" fill="${c.trim}" ${o}/>
+${rivets([30.5, 89.5], [58, 72, 88])}
+<path d="M10 84 V90 a8 8 0 0 0 8 8 H26 Z M110 84 V90 a8 8 0 0 1 -8 8 H94 Z" fill="${c.trim}" ${o}/>
+<rect x="49" y="56" width="22" height="26" rx="5" fill="${c.trim}" ${o}/>
+${gem}
+</g>
+<g class="lid">
+<path d="M8 54 V36 Q8 12 34 12 H86 Q112 12 112 36 V54 Z" fill="${c.base}" ${o}/>
+<path d="M18 22 Q30 17 46 17 H76" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="4" stroke-linecap="round"/>
+<path d="M24 54 V14 H37 V54 Z M83 54 V14 H96 V54 Z" fill="${c.trim}" ${o}/>
+${rivets([30.5, 89.5], [24, 38])}
+<rect x="8" y="48" width="104" height="8" rx="3" fill="${c.dark}" ${o}/>
+</g>
+</svg>`;
+}
 
 export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, onWatch, onChallenge, online }) {
   const { net, leaderboard, redeemCode, deleteProfile } = online;
@@ -26,7 +64,17 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     void hero.offsetWidth;
     hero.className = 'ball-hero pop';
     let text = '', sub = '';
-    if (res.ball) {
+    $('#rw-open').hidden = !res.chest;
+    if (res.chest) { // a chest from the road: it waits in the chest button, or can be opened right here
+      hero.innerHTML = chestSvg(res.chest);
+      text = t('chestNew', { name: t('chest_' + res.chest) });
+      sub = t('chestNewSub');
+      $('#rw-open').onclick = () => { $('#scr-reward').hidden = true; chests(res.chest); };
+    } else if (res.gift) {
+      hero.replaceChildren(icon(save.squad[0], 110, 'rainbow'));
+      text = t('acctDoneTitle');
+      sub = t('acctDoneSub');
+    } else if (res.ball) {
       hero.replaceChildren(icon(res.ball, 96, save.skinOf[res.ball]));
       text = t('newBall', { name: ballName(res.ball) });
       if (res.coins) { sub = `${t('alreadyHad')} ${t('gotCoins', { n: res.coins })}`; }
@@ -42,7 +90,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#rw-sub').textContent = sub;
     $('#scr-reward').hidden = false;
     sfx.coin();
-    if (res.ball || res.skin) confetti();
+    if (res.ball || res.skin || res.chest || res.gift) confetti();
     persist();
     coinsUI();
     render();
@@ -57,10 +105,11 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   }
 
   // ---------- trophy road (horizontal, left → right, like Brawl Stars) ----------
-  const rewardName = n => (n.ball ? ballName(n.ball) : n.skin ? skinName(n.skin[1]) : `+${n.coins}`);
+  const rewardName = n => (n.ball ? ballName(n.ball) : n.skin ? skinName(n.skin[1]) : n.chest ? t('chest_' + n.chest) : `+${n.coins}`);
   const rewardIcon = (n, size) => {
     if (n.ball) return icon(n.ball, size);
     if (n.skin) return icon(n.skin[0], size, n.skin[1]);
+    if (n.chest) return el('span', 'chest-ico', chestSvg(n.chest));
     return el('i', 'coin big-coin');
   };
 
@@ -94,7 +143,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     inner.append(...tick(PAD, 0, 'done'));
     nodes.forEach((n, i) => {
       const state = save.claimed.includes(n.at) ? 'done' : ready.has(n.at) ? 'ready' : 'locked';
-      const card = el('button', `rcard ${state} ${n.ball ? 'is-ball' : n.skin ? 'is-skin' : 'is-coins'}`);
+      const card = el('button', `rcard ${state} ${n.ball ? 'is-ball' : n.skin ? 'is-skin' : n.chest ? 'is-chest' : 'is-coins'}`);
       card.style.left = `${x(i)}px`;
       card.append(rewardIcon(n, 54), el('span', 'rlabel'));
       card.lastChild.textContent = rewardName(n);
@@ -161,7 +210,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       all2.onclick = () => {
         const got = ready.map(n => claim(save, n));
         const coins = got.reduce((s, r) => s + (r?.coins || 0), 0);
-        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || { coins });
+        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || got.find(r => r?.chest) || { coins });
         if (got.length > 1) $('#rw-sub').textContent = t('andMore', { n: got.length - 1 });
       };
       hero.append(all2);
@@ -202,11 +251,12 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#ball-skins').hidden = !own;
     if (own) {
       const opt = (style, label) => {
-        const ownSkin = style == null || hasSkin(save, id, style), on = (save.skinOf[id] ?? null) === style;
+        const ownSkin = style == null || hasSkin(save, id, style), on = (save.skinOf[id] ?? null) === style, gift = SKINS[style]?.gift;
         const b = el('button', `skin ${on ? 'on' : ''} ${ownSkin ? '' : 'locked'}`);
         b.append(icon(id, 44, style), document.createTextNode(label));
-        if (!ownSkin) b.append(el('span', 'price', `<i class="coin"></i>${SKIN_PRICE}`));
+        if (!ownSkin) b.append(el('span', 'price', gift ? t('skinGift') : `<i class="coin"></i>${SKIN_PRICE}`));
         b.onclick = () => {
+          if (!ownSkin && gift) { $('#scr-ball').hidden = true; open('profile'); return; } // the rainbow comes with an account
           if (ownSkin) equipSkin(save, id, style);
           else if (!buySkin(save, id, style)) return;
           else sfx.coin();
@@ -335,6 +385,193 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       location.reload();
     } catch { toast(t('needNet')); }
   };
+  // ---------- chests ----------
+  const odds = k => t('chestOdds', { a: CHESTS[k].coins[0], b: CHESTS[k].coins[1], s: Math.round(CHESTS[k].skin * 100), c: Math.round(CHESTS[k].ball * 100) });
+  function chestList() {
+    $('#ch-wins').textContent = t('chestWins', { n: save.chestWins, max: CHEST_WINS });
+    $('#ch-list').replaceChildren(...KINDS.map(k => {
+      const n = save.chests[k], row = el('div', 'ch-row' + (n ? '' : ' empty'));
+      const txt = el('div', '', `<b></b><b class="cnt">×${n}</b><small></small>`);
+      txt.querySelector('b').textContent = t('chest_' + k);
+      txt.querySelector('small').textContent = odds(k);
+      const go = el('button', 'btn sm primary', t('chestOpen'));
+      go.disabled = !n;
+      go.onclick = () => crack(k);
+      row.append(el('span', '', chestSvg(k)), txt, go);
+      return row;
+    }));
+  }
+  function chests(kind = null) { // the chest list (what you have, what can drop); with a kind, straight to opening one
+    if (kind) return crack(kind);
+    chestList();
+    $('#scr-chest').hidden = false;
+  }
+  // The opening scene, Brawl-Stars style: the chest drops in, three taps shake it open, the lid blows off,
+  // then the loot comes out one card at a time, and a summary at the end. The chest is opened (and saved) first.
+  let op = null;
+  const opItems = res => [
+    { kind: 'coins', res },
+    ...(res.skin ? [{ kind: 'skin', res }] : []),
+    ...(res.ball ? [{ kind: 'ball', res }] : []),
+  ];
+  const restart = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
+  function crack(kind) {
+    const res = openChest(save, kind, random);
+    if (!res) return;
+    persist(); // saved before the show, so closing the tab mid-animation loses nothing
+    coinsUI();
+    op = { kind, res, taps: 0, items: opItems(res), idx: -1, phase: 'drop' };
+    $('#scr-chest').hidden = true;
+    $('#scr-open').hidden = false;
+    $('#scr-open').className = 'opener k-' + kind;
+    $('#op-title').textContent = t('chest_' + kind);
+    $('#op-chest').innerHTML = chestSvg(kind);
+    $('#op-chest').className = 'op-chest drop';
+    $('#op-item').hidden = true;
+    $('#op-sum').hidden = true;
+    $('#op-btns').hidden = true;
+    $('#op-hint').textContent = t('opTap');
+    $('#op-hint').hidden = false;
+    sfx.click();
+    setTimeout(() => { if (op) op.phase = 'tap'; }, 650);
+  }
+  function opNext() {
+    op.idx++;
+    const it = op.items[op.idx], card = $('#op-item');
+    if (!it) { // all shown: the summary
+      op.phase = 'sum';
+      card.hidden = true;
+      $('#op-chest').hidden = true;
+      $('#op-hint').hidden = true;
+      $('#op-sum').replaceChildren(...op.items.map(x => opCard(x, true)));
+      $('#op-sum').hidden = false;
+      const left = KINDS.find(k => save.chests[k] > 0);
+      $('#op-again').hidden = !left;
+      $('#op-again').textContent = left ? `${t('chestMore')} · ${t('chest_' + (save.chests[op.kind] > 0 ? op.kind : left))}` : '';
+      $('#op-again').onclick = () => crack(save.chests[op.kind] > 0 ? op.kind : left);
+      $('#op-btns').hidden = false;
+      render();
+      return;
+    }
+    card.replaceChildren(...opCard(it, false).childNodes);
+    card.className = 'op-item r-' + it.kind;
+    card.hidden = false;
+    restart(card, 'show');
+    const rest = op.items.length - op.idx - 1;
+    $('#op-hint').textContent = rest ? t('opMore', { n: rest }) : t('opTapEnd');
+    sfx.coin();
+    if (it.kind !== 'coins') confetti(50);
+  }
+  function opCard(it, small) {
+    const d = el('div', 'op-card r-' + it.kind + (small ? ' small' : ''));
+    const size = small ? 56 : 120;
+    if (it.kind === 'coins') {
+      d.append(el('i', 'coin'), el('b', '', `+${it.res.coins}`), el('small', '', t('opCoins')));
+      d.firstChild.style.width = d.firstChild.style.height = size + 'px';
+    } else if (it.kind === 'skin') {
+      const [ball, style] = it.res.skin;
+      d.append(icon(ball, size, style), el('b', ''), el('small', ''));
+      d.children[1].textContent = t('opSkin', { skin: skinName(style) });
+      d.children[2].textContent = ballName(ball);
+    } else {
+      d.append(el('span', 'ribbon', t('opNew')), icon(it.res.ball, size), el('b', ''), el('small', ''));
+      d.children[2].textContent = ballName(it.res.ball);
+      d.children[3].textContent = ballAbout(it.res.ball);
+    }
+    return d;
+  }
+  $('#scr-open').onclick = e => {
+    if (!op || e.target.closest('#op-btns')) return;
+    if (op.phase === 'tap') {
+      op.taps++;
+      const chest = $('#op-chest');
+      restart(chest, 'hit');
+      chest.style.setProperty('--k', op.taps);
+      sfx.wall();
+      if (op.taps < 3) { $('#op-hint').textContent = t('opTapN', { n: 3 - op.taps }); return; }
+      op.phase = 'opening';
+      chest.classList.add('open');
+      restart($('#op-flash'), 'go');
+      sfx.super();
+      confetti(40);
+      $('#op-hint').textContent = '';
+      setTimeout(() => { if (op) { op.phase = 'items'; opNext(); } }, 700);
+    } else if (op.phase === 'items') opNext();
+  };
+  $('#op-done').onclick = () => { $('#scr-open').hidden = true; op = null; render(); };
+
+  $('#ch-close').onclick = () => { $('#scr-chest').hidden = true; render(); };
+
+  // ---------- account (email): progress kept forever + the rainbow skin as a gift ----------
+  let acctMode = 'new', acctBusy = false;
+  const acctErr = e => {
+    const c = e?.code || e?.message || '';
+    if (/email_exists|user_already_exists|identity_already_exists|already registered/i.test(c)) return t('acctTaken');
+    if (/invalid_credentials|invalid login/i.test(c)) return t('acctWrong');
+    if (/weak_password|at least/i.test(c)) return t('acctWeak');
+    if (/email_address_invalid|invalid.*email|validation_failed/i.test(c)) return t('acctBadEmail');
+    if (/rate|too many/i.test(c)) return t('acctSlow');
+    return t('needNet');
+  };
+  function account() {
+    const box = $('#p-account');
+    box.hidden = !net.online;
+    if (!net.online) return;
+    $('#acct-art').replaceChildren(icon(save.squad[0], 64, 'rainbow'));
+    $('#acct-form').hidden = !!net.email;
+    $('#acct-pitch').hidden = !!net.email;
+    $('#acct-done').hidden = !net.email;
+    $('#acct-who').textContent = net.email || '';
+    $('#acct-tab-new').classList.toggle('on', acctMode === 'new');
+    $('#acct-tab-in').classList.toggle('on', acctMode === 'in');
+    $('#acct-ok-row').hidden = acctMode !== 'new';
+    $('#acct-go').textContent = t(acctMode === 'new' ? 'acctCreate' : 'acctLogin');
+    $('#acct-pass').autocomplete = acctMode === 'new' ? 'new-password' : 'current-password';
+  }
+  const acctSay = msg => { const m = $('#acct-msg'); m.textContent = msg; m.hidden = !msg; };
+  $('#acct-tab-new').onclick = () => { acctMode = 'new'; acctSay(''); account(); };
+  $('#acct-tab-in').onclick = () => { acctMode = 'in'; acctSay(''); account(); };
+  $('#acct-form').onsubmit = async e => {
+    e.preventDefault();
+    if (acctBusy) return;
+    const email = $('#acct-email').value.trim(), pass = $('#acct-pass').value;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return acctSay(t('acctBadEmail'));
+    if (pass.length < 6) return acctSay(t('acctWeak'));
+    if (acctMode === 'new' && !$('#acct-ok').checked) return acctSay(t('acctNeedOk'));
+    acctBusy = true;
+    $('#acct-go').disabled = true;
+    acctSay('');
+    try {
+      if (acctMode === 'new') {
+        await online.linkAccount(email, pass);
+        save.accountGift = true;
+        equipSkin(save, save.squad[0], 'rainbow'); // show the gift off straight away
+        persist();
+        $('#acct-pass').value = '';
+        render();
+        reward({ gift: true });
+      } else {
+        await online.signInAccount(email, pass);
+        // no upload here: this device's save would overwrite the account's. The reload merges both instead.
+        toast(t('acctWelcome'));
+        setTimeout(() => location.reload(), 700); // the account's profile and cloud save load on the reload
+      }
+    } catch (err) {
+      acctSay(acctErr(err));
+    } finally {
+      acctBusy = false;
+      $('#acct-go').disabled = false;
+    }
+  };
+  $('#acct-out').onclick = async () => {
+    if (!confirm(t('acctOutConfirm'))) return;
+    await online.flushSync(save).catch(() => {});
+    await online.signOutAccount();
+    try { localStorage.removeItem('ballbrawl.v1'); } catch { /* blocked storage */ }
+    location.reload();
+  };
+  $('#l-gift').onclick = () => { sfx.click(); open('profile'); };
+
   // ---------- lobby ----------
   function lobby() {
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
@@ -346,7 +583,15 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#l-next').replaceChildren(...(next ? [rewardIcon(next, 40)] : []));
     $('#l-mode').textContent = net.online ? t('modeRanked') : t('modeTraining');
     $('#l-mode').classList.toggle('live', net.online);
+    const total = KINDS.reduce((n, k) => n + save.chests[k], 0), best = [...KINDS].reverse().find(k => save.chests[k] > 0);
+    $('#l-chest-art').innerHTML = chestSvg(best || 'box');
+    $('#l-chest-n').hidden = !total;
+    $('#l-chest-n').textContent = total;
+    $('#l-chest-wins').textContent = `${save.chestWins}/${CHEST_WINS}`;
+    $('#l-chest').classList.toggle('has', total > 0);
+    $('#l-gift').hidden = !net.online || !!net.email;
   }
+  $('#l-chest').onclick = () => { sfx.click(); chests(); };
   $('#l-squad').onclick = onPlay;
   $('#l-challenge').onclick = onChallenge;
   $('#l-watch').onclick = onWatch;
@@ -359,7 +604,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const questReady = dailyState(save, dayKey()).canClaim
       || save.quests.list.some(q => !q.claimed && q.progress >= questDef(q.id).goal)
       || ACHIEVEMENTS.some(a => !save.achieved.includes(a.id) && achievementValue(save, a) >= a.goal);
-    const dots = { path: claimable(save).length > 0, quests: questReady };
+    const dots = { path: claimable(save).length > 0, quests: questReady, profile: net.online && !net.email };
     for (const b of document.querySelectorAll('[data-tab]')) b.querySelector('.badge').hidden = !dots[b.dataset.tab];
   }
   for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sfx.click(); open(b.dataset.tab); };
@@ -370,7 +615,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     if (tab === 'path') { pathHero(); road(); }
     if (tab === 'balls') balls();
     if (tab === 'quests') quests();
-    if (tab === 'profile') profile();
+    if (tab === 'profile') { profile(); account(); }
     if (tab === 'leaders') leaders();
     badges();
   }

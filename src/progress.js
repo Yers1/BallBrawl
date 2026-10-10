@@ -1,6 +1,7 @@
 // Meta progression, pure functions over the save object (no DOM, so it runs under node --test):
-// trophies, the trophy road, skins, daily quests, the 7-day reward, achievements, save migration.
-// Halal rule: every reward is fixed and shown in advance — no random boxes anywhere.
+// trophies, the Glory Road, chests, skins, daily quests, the 7-day reward, achievements, save migration.
+// Halal rule: nothing is ever staked. Road rewards are fixed and shown in advance; chests are only earned by
+// playing (never sold for coins or money) and their odds are shown, so opening one risks nothing.
 import { ORDER, BALLS } from './balls.js';
 import { LEVELS } from './match.js';
 import { validNick } from './nick.js';
@@ -35,6 +36,8 @@ export function freshSave() {
     nick: null, muted: false, avatar: 'basic',
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
+    chests: { box: 0, big: 0, mega: 0 }, chestWins: 0, // chests waiting to be opened; wins toward the next one
+    accountGift: false, // made an email account: the rainbow skin is theirs on every ball
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
     stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
     // cloud bookkeeping
@@ -60,8 +63,11 @@ export function migrate(raw) {
   s.created = list(r.created, Number.isInteger).slice(-100);
   s.answered = list(r.answered, Number.isInteger).slice(-100);
   s.claimed = list(r.claimed, Number.isInteger);
-  s.skins = list(r.skins, k => typeof k === 'string' && /^[a-z]+:[a-z]+$/.test(k) && BALLS[k.split(':')[0]] && SKINS[k.split(':')[1]]);
-  for (const [b, st] of Object.entries(r.skinOf || {})) if (s.skins.includes(`${b}:${st}`)) s.skinOf[b] = st;
+  s.accountGift = r.accountGift === true;
+  s.skins = list(r.skins, k => typeof k === 'string' && /^[a-z]+:[a-z]+$/.test(k) && BALLS[k.split(':')[0]] && SKINS[k.split(':')[1]] && !SKINS[k.split(':')[1]].gift);
+  for (const [b, st] of Object.entries(r.skinOf || {})) if (hasSkin(s, b, st)) s.skinOf[b] = st;
+  for (const k of Object.keys(CHESTS)) s.chests[k] = int(r.chests?.[k], 0, 999) ?? 0;
+  s.chestWins = int(r.chestWins, 0, CHEST_WINS - 1) ?? 0;
   if (r.quests && typeof r.quests.day === 'string' && Array.isArray(r.quests.list)) {
     s.quests = { day: r.quests.day, list: r.quests.list.filter(q => QUESTS.some(d => d.id === q?.id)).map(q => ({ id: q.id, progress: int(q.progress) ?? 0, claimed: q.claimed === true })) };
   }
@@ -77,22 +83,36 @@ export function migrate(raw) {
   return s;
 }
 
-// ---------- trophy road ----------
+// ---------- Glory Road ----------
+// Claims are keyed by `at`, so a node's position must never move once it has shipped (a moved node pays twice).
 export const PATH = [
-  { at: 10, ball: 'leech' }, { at: 20, coins: 30 }, { at: 30, ball: 'cell' }, { at: 45, skin: ['basic', 'gold'] },
-  { at: 60, ball: 'spider' }, { at: 80, coins: 50 }, { at: 100, ball: 'ninja' }, { at: 125, skin: ['leech', 'neon'] },
-  { at: 150, ball: 'train' }, { at: 175, coins: 70 }, { at: 200, ball: 'magnet' }, { at: 240, skin: ['cell', 'candy'] },
-  { at: 280, ball: 'bomb' }, { at: 320, coins: 90 }, { at: 360, ball: 'turtle' }, { at: 400, skin: ['ninja', 'galaxy'] },
-  { at: 440, ball: 'lightning' }, { at: 480, coins: 110 }, { at: 520, ball: 'hedgehog' }, { at: 560, skin: ['train', 'lava'] },
-  { at: 600, ball: 'ice' }, { at: 650, coins: 130 }, { at: 660, ball: 'poison' }, { at: 700, skin: ['spider', 'gold'] },
-  { at: 720, ball: 'chain' }, { at: 750, coins: 150 }, { at: 780, ball: 'forge' }, { at: 800, skin: ['magnet', 'neon'] },
-  { at: 850, coins: 170 }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 950, coins: 200 }, { at: 1000, skin: ['lightning', 'gold'] },
-  { at: 1050, skin: ['poison', 'lava'] }, { at: 1100, skin: ['chain', 'neon'] }, { at: 1150, skin: ['forge', 'gold'] },
+  { at: 5, chest: 'box' }, { at: 10, ball: 'leech' }, { at: 20, coins: 30 }, { at: 30, ball: 'cell' }, { at: 40, chest: 'box' },
+  { at: 45, skin: ['basic', 'gold'] }, { at: 60, ball: 'spider' }, { at: 70, chest: 'box' }, { at: 80, coins: 50 },
+  { at: 100, ball: 'ninja' }, { at: 115, chest: 'big' }, { at: 125, skin: ['leech', 'neon'] }, { at: 150, ball: 'train' },
+  { at: 175, coins: 70 }, { at: 190, chest: 'box' }, { at: 200, ball: 'magnet' }, { at: 240, skin: ['cell', 'candy'] },
+  { at: 260, chest: 'big' }, { at: 280, ball: 'bomb' }, { at: 320, coins: 90 }, { at: 340, chest: 'box' },
+  { at: 360, ball: 'turtle' }, { at: 400, skin: ['ninja', 'galaxy'] }, { at: 420, chest: 'big' }, { at: 440, ball: 'lightning' },
+  { at: 480, coins: 110 }, { at: 500, chest: 'mega' }, { at: 520, ball: 'hedgehog' }, { at: 560, skin: ['train', 'lava'] },
+  { at: 580, chest: 'big' }, { at: 600, ball: 'ice' }, { at: 650, coins: 130 }, { at: 660, ball: 'poison' },
+  { at: 690, chest: 'box' }, { at: 700, skin: ['spider', 'gold'] }, { at: 720, ball: 'chain' }, { at: 740, chest: 'big' },
+  { at: 750, coins: 150 }, { at: 780, ball: 'forge' }, { at: 800, skin: ['magnet', 'neon'] }, { at: 825, chest: 'big' },
+  { at: 850, coins: 170 }, { at: 875, chest: 'box' }, { at: 900, skin: ['ice', 'galaxy'] }, { at: 925, chest: 'big' },
+  { at: 950, coins: 200 }, { at: 975, chest: 'box' }, { at: 1000, skin: ['lightning', 'gold'] }, { at: 1025, chest: 'mega' },
+  { at: 1050, skin: ['poison', 'lava'] }, { at: 1075, chest: 'box' }, { at: 1100, skin: ['chain', 'neon'] }, { at: 1125, chest: 'big' },
+  { at: 1150, skin: ['forge', 'gold'] }, { at: 1200, coins: 150 }, { at: 1250, chest: 'big' }, { at: 1300, skin: ['basic', 'galaxy'] },
+  { at: 1350, coins: 160 }, { at: 1400, chest: 'big' }, { at: 1450, skin: ['leech', 'lava'] }, { at: 1500, chest: 'mega' },
+  { at: 1550, coins: 170 }, { at: 1600, skin: ['cell', 'neon'] }, { at: 1650, chest: 'big' }, { at: 1700, coins: 180 },
+  { at: 1750, skin: ['spider', 'candy'] }, { at: 1800, chest: 'big' }, { at: 1850, coins: 190 }, { at: 1900, skin: ['ninja', 'gold'] },
+  { at: 2000, chest: 'mega' }, { at: 2050, coins: 200 }, { at: 2100, skin: ['train', 'mint'] }, { at: 2150, chest: 'big' },
+  { at: 2200, coins: 210 }, { at: 2250, skin: ['magnet', 'lava'] }, { at: 2300, chest: 'big' }, { at: 2350, coins: 220 },
+  { at: 2400, skin: ['bomb', 'galaxy'] }, { at: 2500, chest: 'mega' }, { at: 2550, coins: 230 }, { at: 2600, skin: ['turtle', 'gold'] },
+  { at: 2650, chest: 'big' }, { at: 2700, coins: 240 }, { at: 2750, skin: ['hedgehog', 'neon'] }, { at: 2800, chest: 'big' },
+  { at: 2850, coins: 250 }, { at: 2900, skin: ['ice', 'candy'] }, { at: 3000, chest: 'mega' },
 ];
-// after the last reward the road goes on forever: +100 coins every 50 trophies
+// after the last reward the road goes on forever: a big chest every 100 trophies, 150 coins in between
 export function pathNodes(upTo) {
   const out = [...PATH];
-  for (let at = PATH.at(-1).at + 50; at <= Math.max(upTo, PATH.at(-1).at) + 100; at += 50) out.push({ at, coins: 100 });
+  for (let at = PATH.at(-1).at + 50; at <= Math.max(upTo, PATH.at(-1).at) + 100; at += 50) out.push(at % 100 ? { at, coins: 150 } : { at, chest: 'big' });
   return out;
 }
 export const claimable = s => pathNodes(s.maxTrophies).filter(n => n.at <= s.maxTrophies && !s.claimed.includes(n.at));
@@ -105,6 +125,10 @@ export function claim(s, node) {
     const coins = BALLS[node.ball].price / 2; // already bought it in the shop
     s.coins += coins;
     return { ball: node.ball, coins };
+  }
+  if (node.chest) {
+    s.chests[node.chest]++;
+    return { chest: node.chest };
   }
   if (node.skin) {
     const key = node.skin.join(':');
@@ -124,11 +148,13 @@ export const SKINS = {
   galaxy: { color: '#3b2a7a', pattern: 'stars' },
   lava: { color: '#e5482d', pattern: 'cracks' },
   mint: { color: '#7be0c3', pattern: 'dots' },
+  rainbow: { color: '#ff4d6d', pattern: 'rainbow', gift: true }, // the email-account gift: every ball, never sold
 };
 export const SKIN_PRICE = 150;
-export const hasSkin = (s, ball, style) => s.skins.includes(`${ball}:${style}`);
+export const hasSkin = (s, ball, style) =>
+  SKINS[style]?.gift ? s.accountGift && s.owned.includes(ball) : s.skins.includes(`${ball}:${style}`);
 export function buySkin(s, ball, style) {
-  if (!s.owned.includes(ball) || !SKINS[style] || hasSkin(s, ball, style) || s.coins < SKIN_PRICE) return false;
+  if (!s.owned.includes(ball) || !SKINS[style] || SKINS[style].gift || hasSkin(s, ball, style) || s.coins < SKIN_PRICE) return false;
   s.coins -= SKIN_PRICE;
   s.skins.push(`${ball}:${style}`);
   s.skinOf[ball] = style;
@@ -137,6 +163,36 @@ export function buySkin(s, ball, style) {
 export function equipSkin(s, ball, style) {
   if (style == null) delete s.skinOf[ball];
   else if (hasSkin(s, ball, style)) s.skinOf[ball] = style;
+}
+
+// ---------- chests ----------
+// Earned only: every CHEST_WINS wins, Glory Road nodes. Never sold. Odds are shown on the chest screen.
+export const CHEST_WINS = 3;
+export const CHESTS = {
+  box: { coins: [25, 45], skin: 0.2, ball: 0.06 },
+  big: { coins: [70, 110], skin: 0.45, ball: 0.18 },
+  mega: { coins: [180, 260], skin: 1, ball: 0.4 },
+};
+// A win moves the chest meter; every CHEST_WINS wins drop a chest. Returns true when one dropped.
+export function winTowardChest(s) {
+  s.chestWins++;
+  if (s.chestWins < CHEST_WINS) return false;
+  s.chestWins = 0;
+  s.chests.box++;
+  return true;
+}
+// Opens one chest of `kind`; `rand` is injected so tests are repeatable. Returns what fell out, or null.
+export function openChest(s, kind, rand) {
+  const c = CHESTS[kind];
+  if (!c || !(s.chests[kind] > 0)) return null;
+  s.chests[kind]--;
+  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), ball: null, skin: null };
+  const balls = ORDER.filter(id => !s.owned.includes(id));
+  if (balls.length && rand() < c.ball) { out.ball = balls[Math.floor(rand() * balls.length)]; s.owned.push(out.ball); }
+  const skins = s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !hasSkin(s, b, st)).map(st => [b, st]));
+  if (skins.length && rand() < c.skin) { out.skin = skins[Math.floor(rand() * skins.length)]; s.skins.push(out.skin.join(':')); }
+  s.coins += out.coins;
+  return out;
 }
 
 // ---------- days ----------
@@ -252,6 +308,9 @@ export function mergeSave(local, cloudRaw, server) {
   s.matches = Math.max(s.matches, cloud.matches);
   for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);
   for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;
+  for (const k of Object.keys(CHESTS)) s.chests[k] = Math.max(s.chests[k], cloud.chests[k]);
+  s.chestWins = Math.max(s.chestWins, cloud.chestWins);
+  s.accountGift ||= cloud.accountGift;
   if (dayNum(cloud.quests.day) > dayNum(s.quests.day)) s.quests = cloud.quests;
   else if (cloud.quests.day === s.quests.day) {
     for (const q of s.quests.list) {

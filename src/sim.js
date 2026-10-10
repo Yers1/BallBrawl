@@ -57,6 +57,11 @@ export function launch(w, angA, angB) {
 }
 
 export const foes = (w, e) => w.ents.filter(f => !f.dead && f.side !== e.side);
+// Full meter, and the side's lead ball has a super it can use right now (a lone cell fragment can't split again).
+export function canSuper(w, side) {
+  const me = w.ents.find(e => e.side === side && !e.dead);
+  return !!me && w.sides[side].meter >= METER.full && BALLS[me.kind].canSuper?.(w, me) !== false;
+}
 
 // meter=false for damage nobody dealt (sudden death)
 export function hurt(w, e, amount, quiet = false, meter = true) {
@@ -93,9 +98,9 @@ export function act(w, side, cmd) {
     }
     w.events.push({ type: 'dash', side, x: cmd.x, y: cmd.y });
   } else if (cmd.type === 'super') {
-    if (s.meter < METER.full) return false;
-    s.meter = 0;
     const me = team[0];
+    if (!canSuper(w, side)) return false;
+    s.meter = 0;
     BALLS[me.kind].onSuper?.(w, me);
     w.events.push({ type: 'super', side, kind: me.kind, x: me.x, y: me.y });
   } else return false;

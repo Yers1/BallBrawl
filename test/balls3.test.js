@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorld, step, act, METER, DMG, W } from '../src/sim.js';
+import { createWorld, step, act, hurt, canSuper, METER, DMG, W } from '../src/sim.js';
 import { POISON, CHAIN, FORGE } from '../src/balls.js';
 
 const DT = 1 / 60;
@@ -67,4 +67,16 @@ test('forge levels up over time and its super jumps levels; damage grows', () =>
   act(w, 0, { type: 'super' });
   assert.equal(me.lv, 2 + FORGE.superLv);
   assert.ok(w.events.some(e => e.type === 'text'));
+});
+
+test('cell fragments have no super: the meter stays full and nothing happens', () => {
+  const [w, cell] = duel('cell');
+  hurt(w, cell, cell.hp); // the whole cell dies and splits
+  const minis = w.ents.filter(e => e.side === 0 && !e.dead);
+  assert.ok(minis.length === 2 && minis.every(e => e.mini));
+  w.sides[0].meter = METER.full;
+  assert.equal(canSuper(w, 0), false);
+  assert.equal(act(w, 0, { type: 'super' }), false);
+  assert.equal(w.sides[0].meter, METER.full);
+  assert.equal(w.ents.filter(e => e.side === 0 && !e.dead).length, 2, 'no new fragments');
 });

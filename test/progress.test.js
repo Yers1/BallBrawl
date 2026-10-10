@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ORDER, BALLS } from '../src/balls.js';
 import {
   UNLOCK, aiLevel, enemyHpMulFor, applyResult, winCoinsFor, enemySquadFor, freshSave, migrate,
-  pathNodes, claimable, claim, SKINS, buySkin, dayKey, prevDay, refreshQuests, track, claimQuest, QUESTS,
+  pathNodes, claimable, claim, SKINS, buySkin, dayKey, prevDay, refreshQuests, track, claimQuest, QUESTS, PATH,
   dailyState, claimDaily, DAILY, ACHIEVEMENTS, claimAchievement, achievementValue,
 } from '../src/progress.js';
 
@@ -56,15 +56,19 @@ test('path: nodes claim once by best trophies, never lost, owned ball → coins 
   s.owned = ['basic', 'cell'];
   s.maxTrophies = 30;
   const ready = claimable(s);
-  assert.deepEqual(ready.map(n => n.at), [10, 20, 30]);
+  assert.deepEqual(ready.map(n => n.at), [5, 10, 20, 30]);
   const r = ready.map(n => claim(s, n));
+  assert.equal(s.chests.box, 1, 'the first node is a chest');
   assert.ok(s.owned.includes('leech'));
-  assert.equal(r[2].coins, BALLS.cell.price / 2, 'already owned cell pays coins');
+  assert.equal(r[3].coins, BALLS.cell.price / 2, 'already owned cell pays coins');
   assert.equal(claimable(s).length, 0);
   s.trophies = 0;
   assert.ok(s.owned.includes('leech'), 'dropping trophies never takes rewards back');
   const nodes = pathNodes(5000);
-  assert.ok(nodes.at(-1).at >= 5000 && nodes.at(-1).coins > 0, 'endless coin nodes after the last reward');
+  assert.ok(nodes.at(-1).at >= 5000 && (nodes.at(-1).coins > 0 || nodes.at(-1).chest), 'endless nodes after the last reward');
+  assert.ok(PATH.at(-1).at >= 3000, 'a long road');
+  const ats = PATH.map(n => n.at);
+  assert.deepEqual(ats, [...new Set(ats)].sort((a, b) => a - b), 'positions are unique and in order');
   for (const id of ORDER.slice(1)) assert.ok(nodes.some(n => n.ball === id), `${id} on the path`);
 });
 

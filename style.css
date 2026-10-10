@@ -513,6 +513,135 @@ body.record { background: #000; }
   color: var(--text); font: 800 18px ui-monospace, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase;
 }
 
+/* lobby: gift chip, chest button next to Play */
+.lobby-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lobby-top .me { min-width: 0; }
+.gift-chip {
+  flex: none; display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border-radius: 14px; cursor: pointer;
+  border: 3px solid var(--stroke); background: var(--gold); color: var(--gold-ink); box-shadow: var(--lift);
+  font-weight: 900; font-size: 12px; line-height: 1.1; text-align: left; max-width: 120px; animation: wiggle 2.4s ease-in-out infinite;
+}
+.gift-chip svg { width: 26px; height: 26px; flex: none; }
+.gift-chip:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--stroke); }
+@keyframes wiggle { 0%, 86%, 100% { transform: rotate(0); } 90% { transform: rotate(-5deg); } 94% { transform: rotate(5deg); } }
+.play-line { display: flex; gap: 10px; align-items: stretch; }
+.play-line .play { flex: 1; width: auto; }
+.chest-btn {
+  position: relative; flex: none; width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 4px 4px 6px; border-radius: 20px; cursor: pointer; color: var(--text);
+  border: 3px solid var(--stroke); background: var(--panel); box-shadow: 0 7px 0 var(--stroke);
+}
+.chest-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--stroke); }
+.chest-art svg { display: block; width: 60px; height: auto; }
+.chest-btn small { font-size: 11px; font-weight: 900; color: var(--muted); }
+.chest-btn.has .chest-art svg { animation: wiggle 2s ease-in-out infinite; }
+.chest-n {
+  position: absolute; top: -10px; right: -8px; min-width: 26px; height: 26px; padding: 0 6px; display: grid; place-items: center;
+  border-radius: 13px; background: var(--foe); color: #fff; border: 3px solid var(--stroke); font-size: 13px; font-weight: 900;
+}
+
+/* chest screen */
+.ch-list { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 6px; }
+.ch-row {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px;
+  border-radius: 16px; background: var(--panel-2); border: 2.5px solid var(--stroke); text-align: left;
+}
+.ch-row svg { display: block; width: 64px; height: auto; }
+.ch-row b { font-weight: 900; font-size: 15px; }
+.ch-row .cnt { color: var(--gold); margin-left: 4px; }
+.ch-row small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); }
+.ch-row.empty svg { filter: grayscale(0.8) brightness(0.7); }
+/* the opening scene */
+.opener {
+  position: fixed; inset: 0; z-index: 45; overflow: hidden; cursor: pointer; user-select: none; -webkit-user-select: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 16px;
+  background: radial-gradient(circle at 50% 45%, #2A4A8A 0%, #142647 45%, #0A1426 100%);
+}
+.opener.k-big { background: radial-gradient(circle at 50% 45%, #2E6BE0 0%, #15306E 45%, #0A1426 100%); }
+.opener.k-mega { background: radial-gradient(circle at 50% 45%, #8E3FE0 0%, #3E1A7A 45%, #120A26 100%); }
+.op-rays {
+  position: absolute; left: 50%; top: 45%; width: 180vmax; height: 180vmax; margin: -90vmax 0 0 -90vmax; pointer-events: none;
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.07) 0 8deg, transparent 8deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0, transparent 60%); mask-image: radial-gradient(circle, #000 0, transparent 60%);
+  animation: spin 24s linear infinite;
+}
+@keyframes spin { to { transform: rotate(1turn); } }
+.op-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.op-flash.go { animation: flash 0.5s ease-out; }
+@keyframes flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.op-title { position: relative; font-size: 30px; text-shadow: var(--stroke-text); color: var(--gold); }
+.op-stage { position: relative; width: min(100%, 360px); min-height: 300px; display: grid; place-items: center; }
+.op-chest { position: relative; width: 230px; }
+.op-chest .chest-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.op-chest .lid, .op-chest .body { transform-box: fill-box; transform-origin: 50% 100%; }
+.op-chest.drop { animation: opDrop 0.65s cubic-bezier(0.3, 1.4, 0.5, 1); }
+@keyframes opDrop { 0% { transform: translateY(-110vh); } 70% { transform: translateY(10px) scale(1.06, 0.9); } 100% { transform: none; } }
+.op-chest.hit { animation: opHit 0.32s ease-out; }
+@keyframes opHit {
+  0% { transform: none; } 30% { transform: scale(calc(1 + var(--k, 1) * 0.05), calc(1 - var(--k, 1) * 0.05)) rotate(calc(var(--k, 1) * -3deg)); }
+  65% { transform: scale(0.96, 1.05) rotate(calc(var(--k, 1) * 2.5deg)); } 100% { transform: none; }
+}
+.op-chest.hit::after, .op-chest.open::after {
+  content: ''; position: absolute; left: 50%; top: 40%; width: 10px; height: 10px; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 60px 40px rgba(255, 236, 150, 0.55); transform: translate(-50%, -50%); animation: glow 0.4s ease-out forwards;
+}
+.op-chest.open::after { box-shadow: 0 0 120px 90px rgba(255, 236, 150, 0.85); animation: glow 0.9s ease-out forwards; }
+@keyframes glow { from { opacity: 1; } to { opacity: 0; } }
+.op-chest.open .lid { animation: lidOff 0.7s cubic-bezier(0.2, 0.8, 0.4, 1) forwards; }
+@keyframes lidOff { to { transform: translate(40px, -170px) rotate(40deg); opacity: 0; } }
+.op-chest.open .body { animation: bodyBump 0.4s ease-out; }
+@keyframes bodyBump { 40% { transform: scale(1.08, 0.92); } }
+.op-item { position: absolute; inset: auto; }
+.op-item.show { animation: opItem 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+@keyframes opItem { 0% { transform: translateY(80px) scale(0.2); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.op-card, .op-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 20px 14px; min-width: 200px; max-width: 280px;
+  border-radius: 22px; background: var(--panel); border: 4px solid var(--stroke); box-shadow: 0 8px 0 var(--stroke); text-align: center; color: var(--text);
+}
+.op-item { box-shadow: 0 8px 0 var(--stroke), 0 0 60px rgba(255, 204, 51, 0.45); }
+.op-item.r-skin { border-color: #C890FF; box-shadow: 0 8px 0 var(--stroke), 0 0 70px rgba(200, 144, 255, 0.7); }
+.op-item.r-ball { border-color: #FF9F1C; box-shadow: 0 8px 0 var(--stroke), 0 0 80px rgba(255, 159, 28, 0.8); }
+.op-card b, .op-item b { font-size: 26px; font-weight: 900; line-height: 1.1; }
+.op-card small, .op-item small { font-size: 13px; font-weight: 700; color: var(--muted); }
+.op-card .ribbon, .op-item .ribbon {
+  padding: 3px 12px; border-radius: 999px; background: #FF9F1C; color: #3A1A00; border: 3px solid var(--stroke); font-size: 12px; font-weight: 900; letter-spacing: 1px;
+}
+.op-sum { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.op-card.small { min-width: 96px; max-width: 140px; padding: 10px; gap: 4px; animation: lootin 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.op-card.small b { font-size: 15px; }
+.op-card.small small { font-size: 11px; }
+@keyframes lootin { from { opacity: 0; transform: scale(0.3) translateY(24px); } }
+.op-hint { position: relative; min-height: 22px; margin: 0; font-size: 17px; font-weight: 900; color: #fff; text-shadow: 0 2px 0 var(--stroke); animation: bob2 1.2s ease-in-out infinite; }
+@keyframes bob2 { 50% { transform: translateY(-4px); } }
+.op-btns { position: relative; display: flex; flex-direction: column; gap: 10px; width: min(100%, 320px); }
+.op-btns .btn { width: 100%; }
+.chest-line { margin: 0 0 10px; font-weight: 900; color: var(--gold); }
+.small { font-size: 12px; }
+.rcard.is-chest { background: #3B2C7A; }
+.rcard .chest-ico svg, .rb-next .chest-ico svg, .ph-next .chest-ico svg { display: block; width: 62px; height: 56px; }
+.rb-next .chest-ico svg { width: 44px; height: 40px; }
+.reward .ball-hero .chest-svg { width: 160px; height: auto; }
+
+/* account (email) */
+.acct { margin: 4px 0 14px; padding: 14px; border-radius: 18px; background: var(--panel); border: 3px solid var(--stroke); box-shadow: 0 5px 0 var(--stroke); }
+.acct-pitch { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.acct-pitch canvas { flex: none; }
+.acct-pitch b { display: block; font-size: 16px; font-weight: 900; color: var(--gold); }
+.acct-pitch small { display: block; margin-top: 2px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.acct-form { display: flex; flex-direction: column; gap: 10px; }
+.acct-form .seg { margin: 0; }
+.fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.fld input {
+  padding: 12px; border-radius: 12px; border: 3px solid var(--stroke); background: var(--panel-2); color: var(--text);
+  font: 800 16px Nunito, system-ui, sans-serif;
+}
+.fld input:focus-visible, .chk input:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
+.chk { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
+.chk input { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--gold); }
+.acct-msg { margin: 0; padding: 8px 10px; border-radius: 10px; background: rgba(255, 77, 94, 0.16); color: #FFB3BC; font-weight: 800; font-size: 13px; }
+.acct-done p { margin: 0 0 8px; font-weight: 800; overflow-wrap: anywhere; }
+.acct-done b { color: var(--gold); }
+
 @media (max-width: 420px) {
   .overlay { padding: 10px; }
   .card { padding: 16px; border-radius: 20px; }
@@ -527,5 +656,5 @@ body.record { background: #000; }
   .play { font-size: 26px; padding: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .banner.show, .hint, .card, .trio canvas, .rcard.ready, .super-btn.ready, .dcell.today { animation-duration: 0.01s; animation-iteration-count: 1; }
+  .banner.show, .hint, .card, .trio canvas, .rcard.ready, .super-btn.ready, .dcell.today, .gift-chip, .chest-btn.has .chest-art svg, .op-rays, .op-chest, .op-chest .lid, .op-item, .op-hint { animation-duration: 0.01s; animation-iteration-count: 1; }
 }
