@@ -43,7 +43,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
   const w = {
     t: 0, tick: 0, launched: false, rand: rng(seed), ents: [], shots: [], zones: [], events: [], hitCd: {}, result: null, nextId: 1,
     map: MAPS[map] ? map : 'night', obstacles: (MAPS[map] ?? []).map(o => ({ ...o })),
-    sides: [0, 1].map(i => ({ dashes: DASH.charges * (players?.[i] ?? 1), regen: 0, meter: 0, n: players?.[i] ?? 1, dashMul: boosts?.[i]?.dash ?? 1, meterMul: boosts?.[i]?.meter ?? 1 })), // n = people steering this side
+    sides: [0, 1].map(i => ({ dashes: DASH.charges * (players?.[i] ?? 1), regen: 0, meter: 0, n: players?.[i] ?? 1, dashMul: boosts?.[i]?.dash ?? 1, dashPow: boosts?.[i]?.dashPow ?? 1, meterMul: boosts?.[i]?.meter ?? 1 })), // n = people steering this side
     log: [], // every accepted command: { tick, side, type, x?, y? } — seed + log replays the fight
   };
   [a, b].forEach((spec, side) => { // a spec, or a team of specs (2v2, the boss fight)
@@ -56,6 +56,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
       });
       if (sp.hp != null) e.hp = Math.min(sp.hp, e.maxHp);
       if (sp.armor) e.armor = sp.armor; // a Robot familiar: takes a little less damage
+      if (sp.regen) e.regen = sp.regen; // a Ghost familiar: heals HP/s
       e.split = !!sp.split;
       e.boss = !!sp.boss;
       e.skin = sp.skin || null; // cosmetic only — the sim never reads it
@@ -131,7 +132,7 @@ export function act(w, side, cmd) { // cmd.ent: in a party, the one ball this pl
       const dx = cmd.x - e.x, dy = cmd.y - e.y, d = Math.hypot(dx, dy);
       e.latch = null;
       if (d > 1) { e.vx = (dx / d) * e.speed; e.vy = (dy / d) * e.speed; }
-      e.boost = { until: w.t + DASH.time, mul: DASH.mul, dmg: DASH.dmg };
+      e.boost = { until: w.t + DASH.time, mul: DASH.mul, dmg: DASH.dmg * s.dashPow };
     }
     w.events.push({ type: 'dash', side, x: cmd.x, y: cmd.y });
   } else if (cmd.type === 'super') {
@@ -156,6 +157,7 @@ export function step(w, dt) {
   }
   w.zones = w.zones.filter(z => !z.owner.dead && z.until > w.t);
   for (const e of w.ents) e.slow = e.chillUntil > w.t ? e.chillSlow : 1;
+  for (const e of w.ents) if (e.regen && !e.dead) e.hp = Math.min(e.maxHp, e.hp + e.regen * dt);
   for (const e of w.ents) if (!e.dead) BALLS[e.kind].onTick?.(w, e, dt);
   for (const e of w.ents) { // poison keeps ticking even after the spike's owner is gone
     if (e.dead || e.poisonUntil <= w.t || (e.cd.poisonTick ?? 0) > w.t) continue;

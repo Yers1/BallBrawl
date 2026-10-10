@@ -15,7 +15,7 @@ export function aiAngle(fx, fy, tx, ty, level, rand) {
 export const MODES = ['classic', 'duo', 'boss'];
 export const BOSS = { r: 46, hpMul: 2.5, dmgMul: 1.2, speedMul: 0.8 };
 export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null }) {
-  const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg, speedMul: fam.speed, armor: fam.armor }) }); // fam: the familiar's bonus
+  const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg, speedMul: fam.speed, armor: fam.armor, regen: fam.regen }) }); // fam: the familiar's bonus
   return { boosts: [famA, famB], a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
 }
 

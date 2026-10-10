@@ -19,19 +19,19 @@ export const BY_UNLOCK = [...ORDER].sort((a, b) => UNLOCK[a] - UNLOCK[b]);
 // you meet there bring a familiar of the arena's usual level — so a maxed familiar never meets a level-1 one.
 export const FAM = { maxLv: 10, hpPer: 0.02, dmgPer: 0.01 };
 export const FAM_COST = [0, 0, 300, 700, 1500, 3000, 5000, 8000, 12000, 18000, 25000]; // coins to reach level i
-export const FAMILIARS = { king: { perk: 'all' }, dragon: { coins: 1200, perk: 'dmg' }, cat: { coins: 1200, perk: 'dash' }, owl: { gems: 45, perk: 'meter' }, robot: { coins: 2500, perk: 'armor' }, ghost: { gems: 80, perk: 'speed' } };
+export const FAMILIARS = { king: { perk: 'all' }, dragon: { coins: 1200, perk: 'dmg' }, cat: { coins: 1200, perk: 'dash' }, owl: { gems: 45, perk: 'meter' }, robot: { coins: 2500, perk: 'armor' }, ghost: { gems: 80, perk: 'regen' } };
 export const famNeed = lv => 60 * lv; // XP to fill before the next level can be bought
 export const famCap = maxTrophies => Math.min(FAM.maxLv, 2 + Math.floor(arenaIndex(arenaFor(maxTrophies).id) * 0.75));
 export const famPar = maxTrophies => Math.max(1, famCap(maxTrophies) - 1); // what the computer's familiar has here
 // What a familiar gives at level lv. Every kind is worth about the same; they just play differently.
 export function famBuff(lv, id = 'king') {
-  const b = { hp: 1, dmg: 1, speed: 1, armor: 1, dash: 1, meter: 1 }, perk = FAMILIARS[id]?.perk ?? 'all';
+  const b = { hp: 1, dmg: 1, speed: 1, armor: 1, dash: 1, dashPow: 1, meter: 1, regen: 0 }, perk = FAMILIARS[id]?.perk ?? 'all';
   if (perk === 'all') { b.hp = 1 + FAM.hpPer * lv; b.dmg = 1 + FAM.dmgPer * lv; } // the King: a bit of both
-  else if (perk === 'dmg') b.dmg = 1 + 0.03 * lv; // Dragon: harder hits
-  else if (perk === 'dash') b.dash = 1 + 0.05 * lv; // Kitty: dash charges come back sooner
-  else if (perk === 'meter') b.meter = 1 + 0.04 * lv; // Owlet: the super fills sooner
-  else if (perk === 'armor') b.armor = 1 - 0.02 * lv; // Robot: takes less damage
-  else if (perk === 'speed') b.speed = 1 + 0.02 * lv; // Ghost: rolls faster
+  else if (perk === 'dmg') b.dmg = 1 + 0.035 * lv; // Dragon: harder hits
+  else if (perk === 'dash') { b.dash = 1 + 0.08 * lv; b.dashPow = 1 + 0.045 * lv; } // Kitty: dashes come back sooner and hit harder
+  else if (perk === 'meter') b.meter = 1 + 0.1 * lv; // Owlet: the super fills sooner
+  else if (perk === 'armor') b.armor = 1 - 0.022 * lv; // Robot: takes less damage
+  else if (perk === 'regen') b.regen = 0.35 * lv; // Ghost: heals a little every second (HP/s)
   return b;
 }
 export const famXp = (s, n) => { s.fam.xp = Math.min(famNeed(s.fam.lv), s.fam.xp + n); };

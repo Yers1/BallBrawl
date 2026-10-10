@@ -1392,14 +1392,14 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   const DASH_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/></svg>';
   const STAR_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z" fill="#C890FF" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/></svg>';
   const SHIELD_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="#4CC9F0" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/></svg>';
-  const WIND_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h7" fill="none" stroke="#E6EDF7" stroke-width="2.4" stroke-linecap="round"/></svg>';
   // the chips under a familiar: what it boosts and by how much at this level
   const famStats = (id, lv) => {
     const b = famBuff(lv, id), p = n => Math.round(Math.abs(n - 1) * 100);
     const chip = (ic, label, v) => `<span><i>${ic}</i><span><small>${label}</small><b>${v}</b></span></span>`;
     return [b.hp > 1 && chip(HEART_IC, t('famHp'), `+${p(b.hp)}% HP`), b.dmg > 1 && chip(SWORD_IC, t('famDmg'), `+${p(b.dmg)}%`),
       b.dash > 1 && chip(DASH_IC, t('famDash'), `+${p(b.dash)}%`), b.meter > 1 && chip(STAR_IC, t('famMeter'), `+${p(b.meter)}%`),
-      b.armor < 1 && chip(SHIELD_IC, t('famArmor'), `−${p(b.armor)}%`), b.speed > 1 && chip(WIND_IC, t('famSpeed'), `+${p(b.speed)}%`)].filter(Boolean).join('');
+      b.dashPow > 1 && chip(SWORD_IC, t('famDmg'), `+${p(b.dashPow)}%`), b.armor < 1 && chip(SHIELD_IC, t('famArmor'), `−${p(b.armor)}%`),
+      b.regen > 0 && chip(HEART_IC, t('famSpeed'), `+${b.regen.toFixed(1)} HP/s`)].filter(Boolean).join(''); // famSpeed names the Ghost's healing
   };
   let famConfirm = '';
   function famScreen() {
