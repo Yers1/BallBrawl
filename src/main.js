@@ -2,7 +2,7 @@
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, BOSS } from './match.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setFamiliars } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -16,6 +16,7 @@ import {
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
+import { heroSvg } from './heroes.js';
 import * as online from './net.js';
 const { net } = online;
 
@@ -64,7 +65,7 @@ const S = {
 const canvas = $('#arena'), ctx = canvas.getContext('2d');
 let scale = 1;
 function layout() {
-  const reserved = 56 + 44 + 110; // header, hud, controls + footer
+  const reserved = 56 + 44 + 110 + (innerWidth < 760 ? 96 : 0); // header, hud, controls + footer (+ the commanders' row on phones)
   const width = RECORD != null ? Math.min(innerWidth, (innerHeight * 9) / 16) : innerWidth; // record mode: a 9:16 page
   const size = Math.max(260, Math.floor(Math.min(width - 24, innerHeight - (RECORD != null ? 150 : reserved), 560)));
   document.documentElement.style.setProperty('--size', size + 'px');
@@ -78,6 +79,7 @@ function show(screen) {
   $('#hud').hidden = !['aim', 'fight', 'ending', 'watch'].includes(S.mode);
   $('#controls').hidden = !['aim', 'fight', 'ending'].includes(S.mode);
   $('#watch-bar').hidden = S.mode !== 'watch';
+  $('#cmds').hidden = !S.fams || !['aim', 'fight', 'ending'].includes(S.mode);
   if (screen || S.mode === 'home') { $('#banner').className = 'banner'; $('#cards').hidden = true; }
 }
 
@@ -130,7 +132,7 @@ function demo() {
   S.demo = true;
   S.demoEnd = 0;
   setAuras({});
-  setFamiliars({});
+  S.fams = null;
   resetFx();
 }
 
@@ -171,7 +173,8 @@ function goChallenge() {
 
 function startChallenge() {
   const c = S.challenge;
-  setFamiliars({}); // challenges are mirror matches: no familiar bonus either
+  // challenges are mirror matches: no familiar bonus either
+  S.fams = null;
   S.match = createMatch({ squadA: [...c.squad], squadB: [...c.squad], hpMulB: 1, seed: c.seed, skinsA: save.skinOf }); // mirror squads: only skill decides
   S.aiLevel = c.level;
   beginMatch();
@@ -304,7 +307,6 @@ async function startMatch() {
   const cap = famCap(save.maxTrophies), of = S.opponent?.fam;
   const lvB = Number.isInteger(of?.lv) ? Math.min(cap, Math.max(1, of.lv)) : famPar(save.maxTrophies);
   S.fams = { 0: { id: save.fam.skin, lv: Math.min(save.fam.lv, cap) }, 1: { id: FAMILIARS[of?.skin] ? of.skin : Object.keys(FAMILIARS)[S.nextSeed % 6], lv: lvB } };
-  setFamiliars(S.fams);
   S.match = createMatch({
     famA: famBuff(S.fams[0].lv, S.fams[0].id), famB: famBuff(S.fams[1].lv, S.fams[1].id),
     squadA: [...save.squad],
@@ -317,10 +319,27 @@ async function startMatch() {
     map: arenaFor(save.maxTrophies).id, // your arena decides the map
   });
   S.aiLevel = aiLevel(save.trophies);
+  commanders(S.fams, foeCard().nick);
   show(null);
   playMusic(null); // quiet for the face-to-face and the fight
   await home.vs(foeCard(), S.fams[0]); // both banners first, like Clash Royale
   beginMatch();
+}
+// The commanders: yours on the left, theirs on the right, big, cheering and flinching with the fight.
+function commanders(fams, foeNick) {
+  for (const [side, cls] of [[0, 'you'], [1, 'them']]) {
+    const box = $('#cmds .cmd.' + cls), f = fams[side];
+    box.querySelector('.cmd-art').innerHTML = heroSvg(f.id);
+    box.querySelector('.cmd-name').textContent = `${side ? foeNick : nickText(save.nick, lang)} · ${t('famLv', { n: f.lv })}`;
+    box.className = 'cmd ' + cls;
+  }
+}
+function cmdReact(side, kind) {
+  const box = $('#cmds .cmd.' + (side ? 'them' : 'you'));
+  if (!box || $('#cmds').hidden) return;
+  box.classList.remove('cheer', 'ouch', 'cast', 'win', 'sad');
+  void box.offsetWidth; // restart the animation
+  box.classList.add(kind);
 }
 // How the opponent looks on the VS screen: a real player's banner, clan and level; the computer shows its lead ball.
 function foeCard() {
@@ -542,6 +561,8 @@ function finishMatch(r) {
   coinsUI();
   S.mode = 'result';
   playMusic(null);
+  cmdReact(0, won ? 'win' : 'sad');
+  cmdReact(1, won ? 'sad' : r === 'draw' ? 'sad' : 'win');
   won ? sfx.win() : sfx.lose();
   if (won) confetti(48);
   showResult();
@@ -710,7 +731,7 @@ function startWatch() {
   S.mode = 'watch';
   setAutoEmote([0, 1]);
   setAuras({});
-  setFamiliars({});
+  S.fams = null;
   const w = S.world, [a, b] = w.ents;
   S.watchAims = [aiAngle(a.x, a.y, b.x, b.y, 18, w.rand), aiAngle(b.x, b.y, a.x, a.y, 18, w.rand)];
   S.launchAt = performance.now() / 1000 + (RECORD != null ? 2.5 : 1.4);
@@ -734,6 +755,7 @@ function feel(w, now) {
   for (const ev of w.events) {
     if (ev.type === 'hit' && hits++ < 2) sfx.hit(ev.amount, w.ents.find(e => e.id === ev.id)?.kind);
     if (ev.type === 'hit' && ev.amount >= 18) S.freezeUntil = Math.max(S.freezeUntil, now + 0.05);
+    if (ev.type === 'hit' && ev.amount >= 8) { cmdReact(ev.side, 'ouch'); cmdReact(1 - ev.side, 'cheer'); }
     if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(S.match?.map ?? w.map); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
     if (ev.type === 'dash') { sfx.dash(); if (mine && ev.side === 0) S.ms.dashes++; }
@@ -746,6 +768,7 @@ function feel(w, now) {
     }
     if (ev.type === 'super') {
       sfx.super(ev.kind);
+      cmdReact(ev.side, 'cast');
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
       banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
       if (mine && ev.side === 0) S.ms.supers++;
@@ -959,7 +982,7 @@ function partyBegin(m) {
   S.challenge = null; S.ranked = false; S.matchId = null; S.matchStart = Date.now(); S.demo = false; S.dashed = false; S.ms = { dashes: 0, supers: 0, kills: 0 };
   setAutoEmote([]);
   setAuras({});
-  setFamiliars({});
+  S.fams = null;
   resetFx();
   S.mode = 'fight';
   show(null);

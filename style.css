@@ -1368,3 +1368,35 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .p-txt b { font-size: 14px; }
 .p-ok { color: var(--go); font-weight: 900; }
 .p-n { color: var(--muted); font-weight: 900; font-size: 12px; }
+
+/* ---------- commanders: big characters beside the arena who "lead" the balls ---------- */
+.hero-svg { display: block; width: 100%; height: auto; }
+.l-hero { display: block; width: 30px; }
+.fam-art { display: block; width: 150px; margin-top: 6px; animation: famBob 2.4s ease-in-out infinite; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35)); }
+.fam-mini { display: block; width: 58px; }
+.vs-fam .hero-svg { width: 26px; }
+.p-fam { width: 74px; }
+.cmds { width: var(--size); display: flex; justify-content: space-between; align-items: flex-end; margin-top: -10px; pointer-events: none; }
+.cmd { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 150px; }
+.cmd-art { display: block; width: 84px; filter: drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); animation: cmdIdle 2s ease-in-out infinite; transform-origin: 50% 100%; }
+.cmd.them .cmd-art { scale: -1 1; animation-delay: -1s; }
+.cmd-name { max-width: 150px; padding: 2px 8px; border-radius: 8px; border: 2px solid var(--stroke); font: 400 10px var(--display); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd.you .cmd-name { background: var(--you); color: #05202B; }
+.cmd.them .cmd-name { background: var(--foe); color: #fff; }
+.cmd.cheer .cmd-art { animation: cmdCheer 0.5s ease-out; }
+.cmd.ouch .cmd-art { animation: cmdOuch 0.4s ease-out; }
+.cmd.cast .cmd-art { animation: cmdCast 0.7s ease-out; }
+.cmd.win .cmd-art { animation: cmdWin 0.6s ease-in-out infinite; }
+.cmd.sad .cmd-art { animation: none; transform: translateY(6px) rotate(-4deg); filter: grayscale(0.5) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); }
+@keyframes cmdIdle { 50% { transform: translateY(-3px) scaleY(1.02); } }
+@keyframes cmdCheer { 40% { transform: translateY(-14px) rotate(-6deg); } }
+@keyframes cmdOuch { 30% { transform: translateX(-6px) rotate(-8deg); filter: brightness(1.8) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); } 60% { transform: translateX(4px) rotate(4deg); } }
+@keyframes cmdCast { 30% { transform: scale(1.18) rotate(4deg); filter: drop-shadow(0 0 14px #FFE38A); } }
+@keyframes cmdWin { 50% { transform: translateY(-16px); } }
+@media (min-width: 760px) { /* wide screens: they stand beside the arena, bigger */
+  .stage { position: relative; }
+  .cmds { position: absolute; top: 50%; left: 50%; width: calc(var(--size) + 380px); translate: -50% -40%; margin: 0; }
+  .cmd { width: 170px; }
+  .cmd-art { width: 150px; }
+  .cmd-name { font-size: 12px; max-width: 170px; }
+}

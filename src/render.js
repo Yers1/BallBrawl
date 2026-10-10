@@ -10,7 +10,7 @@ const SIDE_RGB = ['76,201,240', '255,77,94'];
 const FONT = 'Nunito, system-ui, sans-serif';
 const INK = '#0A0F1C'; // outline for numbers and small shapes
 export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
-const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {}, famPos: {} };
+const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {} };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
@@ -81,8 +81,6 @@ let auraOf = {};
 export const setAuras = map => { auraOf = map || {}; };
 
 // ---------- familiars: little round companions (the look only; the bonus is in the match) ----------
-let famOf = {}; // side -> { id, lv }
-export const setFamiliars = map => { famOf = map || {}; fx.famPos = {}; };
 const FAM_COL = { king: '#FFC93C', dragon: '#5FD35B', cat: '#FF9F45', owl: '#A8764E', robot: '#C9D2E0', ghost: '#F4F7FF' };
 export function famBody(ctx, id, x, y, r, t = 0, look = null) { // look: {x, y} — which way the eyes turn
   const P = Math.PI, col = FAM_COL[id] ?? FAM_COL.king, lw = Math.max(1.2, r * 0.12);
@@ -138,15 +136,6 @@ export function drawFamiliar(canvas, id, css = 48) {
   const c = canvas.getContext('2d');
   c.scale(dpr, dpr);
   famBody(c, id, css / 2, css * 0.56, css * 0.3);
-}
-function familiars(ctx, w, t) { // each side's familiar sits on its own wall and watches the fight from the side
-  for (const [side, f] of Object.entries(famOf)) {
-    if (!f) continue;
-    const x = +side ? W - 62 : 62, y = +side ? -5 : H + 5;
-    const ball = w.ents.filter(e => !e.dead).reduce((a, e) => (!a || Math.hypot(e.x - x, e.y - y) < Math.hypot(a.x - x, a.y - y) ? e : a), null);
-    const d = ball ? Math.hypot(ball.x - x, ball.y - y) || 1 : 1, look = ball ? { x: (ball.x - x) / d, y: (ball.y - y) / d } : null;
-    famBody(ctx, f.id, x, y + Math.sin(t * 3 + +side) * 1.2, 10, t, look);
-  }
 }
 const AURA_RGB = { fire: '255,138,43', frost: '127,231,255', storm: '255,214,10', hearts: '255,92,138', void: '150,70,230', stars: '255,204,51' };
 function sparkle(ctx, x, y, s, color) {
@@ -1722,7 +1711,6 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
-  familiars(ctx, w, w.t);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t, z.side);

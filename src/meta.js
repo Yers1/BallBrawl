@@ -13,6 +13,7 @@ import {
 } from './progress.js';
 import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
+import { heroSvg } from './heroes.js';
 import { setArena, drawEmote, drawFamiliar } from './render.js';
 import { MAPS } from './sim.js';
 import { offerReward } from './ads.js';
@@ -700,7 +701,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#p-clan').innerHTML = myClan ? `<span class="clan-badge">${clanBadge(myClan.badge)}</span><small></small>` : '';
     if (myClan) $('#p-clan small').textContent = clanText(myClan.name, lang);
     $('#p-fav-art').replaceWith(Object.assign(icon(fav, 150, save.skinOf[fav], save.wear.aura), { id: 'p-fav-art' }));
-    drawFamiliar($('#p-fam'), save.fam.skin, 58);
+    $('#p-fam').innerHTML = heroSvg(save.fam.skin);
     $('#p-fav-name').textContent = ballName(fav);
     const r = ballRank(save.mastery[fav] ?? 0);
     $('#p-fav-rank').innerHTML = `${rankBadge(r)}<small></small>`;
@@ -1265,7 +1266,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // ---------- lobby ----------
   function lobby() {
-    drawFamiliar($('#l-fam'), save.fam.skin, 34);
+    $('#l-fam').innerHTML = heroSvg(save.fam.skin);
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
     $('#l-trio').replaceChildren(icon(l, 136, sk(l)), icon(lead, 232, sk(lead), save.wear.aura), icon(r, 136, sk(r)));
     const a = arenaFor(save.maxTrophies).id;
@@ -1434,12 +1435,11 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   function famScreen() {
     const f = save.fam, cap = famCap(save.maxTrophies), need = famNeed(f.lv), cost = FAM_COST[f.lv + 1];
     const hero = el('div', 'fam-hero');
-    hero.innerHTML = `<b class="fam-lv">${t('famLv', { n: f.lv })}</b><canvas class="fam-art"></canvas><h3 class="fam-name"></h3>`
+    hero.innerHTML = `<b class="fam-lv">${t('famLv', { n: f.lv })}</b><span class="fam-art">${heroSvg(f.skin)}</span><h3 class="fam-name"></h3>`
       + `<div class="fam-stats">${famStats(f.skin, f.lv)}</div><p class="fam-perk"></p>`
       + `<div class="fam-xp"><small>${t('famXp')}</small><b>${f.xp} / ${need}</b></div>`
       + `<span class="xp-bar fam-bar"><i style="width:${Math.min(100, Math.round((f.xp / need) * 100))}%"></i></span>`
       + `<button class="btn primary big wide-btn fam-up"></button><p class="muted center fam-note"></p>`;
-    drawFamiliar(hero.querySelector('.fam-art'), f.skin, 150);
     hero.querySelector('.fam-name').textContent = t('fam_' + f.skin);
     hero.querySelector('.fam-perk').textContent = t('famPerk_' + f.skin);
     const up = hero.querySelector('.fam-up');
@@ -1457,9 +1457,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     for (const id of Object.keys(FAMILIARS)) {
       const own = f.own.includes(id), on = f.skin === id, it = FAMILIARS[id], price = it.gems ? ['gems', it.gems] : ['coins', it.coins ?? 0];
       const card = el('button', 'sh-tile fam-card' + (own ? ' own' : '') + (on ? ' on' : '') + (famConfirm === id ? ' confirm' : ''));
-      const cv = el('canvas');
-      drawFamiliar(cv, id, 64);
-      card.append(cv, el('b', ''), el('small', 'fam-what'), el('span', 'sh-price'));
+      card.append(el('span', 'fam-mini', heroSvg(id)), el('b', ''), el('small', 'fam-what'), el('span', 'sh-price'));
       card.children[1].textContent = t('fam_' + id);
       card.children[2].textContent = t('famPerk_' + id); // what it gives, before you buy it
       card.lastChild.innerHTML = on ? t('famPicked') : own ? t('shWear') : famConfirm === id ? `${t('shBuy')} ${money(price)}` : money(price);
@@ -1494,9 +1492,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     card.querySelector('.vs-av').append(icon(p.avatar, 58, p.skin), ...(p.level ? [el('b', 'lvl-badge', String(p.level))] : []));
     card.querySelector('.vs-nick').textContent = p.nick;
     if (p.fam) { // the familiar and its level: they're always close, the arena sees to it
-      const fc = el('span', 'vs-fam'), cv = el('canvas');
-      drawFamiliar(cv, p.fam.id, 30);
-      fc.append(cv, el('b', '', t('famLv', { n: p.fam.lv })));
+      const fc = el('span', 'vs-fam', heroSvg(p.fam.id));
+      fc.append(el('b', '', t('famLv', { n: p.fam.lv })));
       card.querySelector('.vs-meta').append(fc);
     }
     if (p.clan) {
