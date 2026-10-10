@@ -267,6 +267,9 @@ function absorb(w, now) {
       if (ev.amount >= 1) dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
       burst(ev.x, ev.y, 5, '#ffffff', 120, [2, 3]);
       if (ev.amount >= 15) ring(ev.x, ev.y, 10, 3.2, 0.3, '255,255,255', 4);
+    } else if (ev.type === 'cut') { // hit a spike or a saw: sparks
+      burst(ev.x, ev.y, 12, '#FFE08A', 240, [2, 3.5]);
+      fx.shake = Math.max(fx.shake, 4);
     } else if (ev.type === 'tick') { // damage over time (a web): just the number, no flash
       dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
     } else if (ev.type === 'chill') { // hit by Ice: "-50%" in ice blue, a puff of snow
@@ -595,6 +598,28 @@ function obstacles(ctx, w, now) {
       ctx.fillStyle = '#0A0820'; ctx.strokeStyle = i ? '#FF2BD6' : '#00F0FF'; ctx.lineWidth = 3.5; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12 * glow;
       ctx.beginPath(); ctx.arc(0, 0, o.r, 0, P * 2); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, o.r * 0.55, 0, P * 2); ctx.stroke();
+    } else if (o.k === 'spike') { // a spike trap: stone in the temple, ice on the frost peak, steel elsewhere
+      const [c, d, base] = ARENA === 'frost' ? ['#E6F7FF', '#7FC4EE', '#3E7FB0'] : ARENA === 'temple' ? ['#D9D2C0', '#8C8270', '#6E5A3A'] : ['#E1E6EE', '#8E95A8', '#3A3F4A'];
+      ctx.fillStyle = 'rgba(8,16,32,0.35)'; ctx.beginPath(); ctx.ellipse(3, 5, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
+      ctx.fillStyle = base; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.82, 0, P * 2); ctx.fill(); ctx.stroke();
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * P * 2 + i, x = Math.cos(a) * o.r * 0.42, y = Math.sin(a) * o.r * 0.42;
+        const g = ctx.createLinearGradient(x - 6, y - 6, x + 6, y + 6); g.addColorStop(0, c); g.addColorStop(1, d);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * o.r * 0.62, y + Math.sin(a) * o.r * 0.62);
+        ctx.lineTo(x + Math.cos(a + 1.7) * 6, y + Math.sin(a + 1.7) * 6); ctx.lineTo(x + Math.cos(a - 1.7) * 6, y + Math.sin(a - 1.7) * 6); ctx.closePath(); ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, -o.r * 0.55); ctx.lineTo(7, 4); ctx.lineTo(-7, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (o.k === 'saw') { // a buzz saw spinning in its slot
+      ctx.fillStyle = 'rgba(8,16,32,0.35)'; ctx.beginPath(); ctx.ellipse(3, 5, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
+      ctx.rotate(now * 9 * (i % 2 ? -1 : 1));
+      ctx.beginPath();
+      for (let k = 0; k < 24; k++) { const a = (k / 24) * P * 2, rr = k % 2 ? o.r * 0.78 : o.r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      ctx.closePath();
+      const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, o.r); g.addColorStop(0, '#F2F5FA'); g.addColorStop(1, '#8E95A8');
+      ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = 'rgba(10,14,31,0.35)'; ctx.lineWidth = 1.5;
+      for (let k = 0; k < 4; k++) { const a = (k / 4) * P * 2; ctx.beginPath(); ctx.arc(Math.cos(a) * o.r * 0.45, Math.sin(a) * o.r * 0.45, o.r * 0.13, 0, P * 2); ctx.stroke(); }
+      ctx.fillStyle = i ? '#FF2BD6' : '#00F0FF'; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.2, 0, P * 2); ctx.fill(); ctx.stroke();
     } else if (o.k === 'rock') {
       const [c, d] = ROCK[ARENA] ?? ROCK.space;
       ctx.fillStyle = 'rgba(8,16,32,0.35)'; ctx.beginPath(); ctx.ellipse(4, 6, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();

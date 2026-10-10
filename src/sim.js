@@ -11,18 +11,19 @@ const spawnAt = (side, n, i) => { const [x, y] = SPAWNS[n][i]; return side ? [W 
 export const MAPS = {
   night: [],
   canyon: [{ k: 'rock', x: 200, y: 200, r: 26 }, { k: 'rock', x: 105, y: 105, r: 20 }, { k: 'rock', x: 295, y: 295, r: 20 }],
-  frost: [{ k: 'ice', x: 200, y: 128, r: 18 }, { k: 'ice', x: 200, y: 272, r: 18 }, { k: 'ice', x: 128, y: 200, r: 18 }, { k: 'ice', x: 272, y: 200, r: 18 }],
+  frost: [{ k: 'ice', x: 200, y: 128, r: 18 }, { k: 'ice', x: 200, y: 272, r: 18 }, { k: 'ice', x: 128, y: 200, r: 18 }, { k: 'ice', x: 272, y: 200, r: 18 }, { k: 'spike', x: 32, y: 32, r: 24 }, { k: 'spike', x: 368, y: 368, r: 24 }], // + ice spikes
   jungle: [{ k: 'bumper', x: 200, y: 200, r: 24 }, { k: 'bumper', x: 110, y: 110, r: 18 }, { k: 'bumper', x: 290, y: 290, r: 18 }],
   lava: [{ k: 'pool', x: 200, y: 200, r: 40 }, { k: 'pool', x: 105, y: 105, r: 26 }, { k: 'pool', x: 295, y: 295, r: 26 }],
   space: [{ k: 'portal', x: 105, y: 105, r: 20, to: 2 }, { k: 'rock', x: 200, y: 200, r: 22 }, { k: 'portal', x: 295, y: 295, r: 20, to: 0 }],
   candy: [{ k: 'rock', x: 110, y: 110, r: 18 }, { k: 'rock', x: 290, y: 290, r: 18 }], // lollipops
   pirate: [{ k: 'rock', x: 200, y: 120, r: 18 }, { k: 'rock', x: 200, y: 280, r: 18 }], // barrels
   stadium: [{ k: 'bumper', x: 200, y: 200, r: 14 }], // the match ball in the centre spot
-  temple: [{ k: 'rock', x: 140, y: 140, r: 18 }, { k: 'rock', x: 260, y: 260, r: 18 }], // stone idols
+  temple: [{ k: 'rock', x: 140, y: 140, r: 18 }, { k: 'rock', x: 260, y: 260, r: 18 }, { k: 'spike', x: 32, y: 32, r: 24 }, { k: 'spike', x: 368, y: 368, r: 24 }], // stone idols, spike traps
   chess: [], // just the board
-  neon: [{ k: 'bumper', x: 130, y: 200, r: 16 }, { k: 'bumper', x: 270, y: 200, r: 16 }], // glowing pads
+  neon: [{ k: 'bumper', x: 130, y: 200, r: 16 }, { k: 'bumper', x: 270, y: 200, r: 16 }, { k: 'saw', x: 32, y: 32, r: 24 }, { k: 'saw', x: 368, y: 368, r: 24 }], // glowing pads, buzz saws
 };
 export const POOL = { every: 0.5, dmg: 4 };
+export const CUT = { dmg: 7, every: 0.6 }; // spikes and saws in the corners: solid, and they hurt
 const JITTER = 0.3; // rad of random spin on each wall bounce
 const TURN = 0.275; // rad/s a ball curves toward its nearest enemy (halved again: players felt balls glued together)
 export const DASH = { charges: 2, regen: 2.5, time: 0.35, mul: 2.2, dmg: 1.3 };
@@ -225,7 +226,7 @@ function obstacle(w, e, o) {
     }
     return;
   }
-  const min = o.r + e.r; // rock, ice, bumper: solid
+  const min = o.r + e.r; // rock, ice, bumper, spike, saw: solid
   if (d >= min) return;
   const nx = dx / d, ny = dy / d, vn = e.vx * nx + e.vy * ny;
   e.x = o.x + nx * min;
@@ -234,6 +235,10 @@ function obstacle(w, e, o) {
   if (o.k === 'bumper') {
     e.boost = { until: w.t + 0.45, mul: 1.6, dmg: 1.2 };
     w.events.push({ type: 'bump', i: w.obstacles.indexOf(o), x: o.x, y: o.y });
+  } else if ((o.k === 'spike' || o.k === 'saw') && (e.cd.cut ?? 0) <= w.t) {
+    e.cd.cut = w.t + CUT.every;
+    w.events.push({ type: 'cut', x: o.x + nx * o.r, y: o.y + ny * o.r });
+    hurt(w, e, CUT.dmg);
   } else w.events.push({ type: 'wall', x: o.x + nx * o.r, y: o.y + ny * o.r });
 }
 
