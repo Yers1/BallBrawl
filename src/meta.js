@@ -12,6 +12,7 @@ import {
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
 } from './progress.js';
 import { THEMES } from './themes.js';
+import { DECO_ART } from './decos.js';
 import { setArena, drawEmote, drawFamiliar } from './render.js';
 import { MAPS } from './sim.js';
 import { offerReward } from './ads.js';
@@ -277,15 +278,8 @@ const CLAN_COLORS = ['#3D86FF', '#FF4D5E', '#36D27A', '#A85CFF', '#FF9F1C', '#4C
 const CLAN_ICONS = ['star', 'sword', 'crown', 'bolt', 'flame', 'shield', 'trophy', 'target'];
 export const clanBadge = i => `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2l16 6v12c0 10-7 18-16 22C11 38 4 30 4 20V8z" fill="${CLAN_COLORS[i] ?? CLAN_COLORS[0]}" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/>`
   + `<path d="M20 6l12 4.5v9c0 7-5 13-12 16" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5"/><g transform="translate(9 9) scale(0.55)">${DECO_SVG[CLAN_ICONS[i]] ?? ''}</g></svg>`;
-const DECO_TILE = { target: ['#FF7A88', '#C81E3A'], sword: ['#7FC4FF', '#2E5BD8'], shield: ['#5FD8FF', '#1E6FB8'], star: ['#FFE38A', '#E09A1E'], potion: ['#D3A0FF', '#7A3FC8'],
-  bolt: ['#FFE07A', '#FF8A1C'], flame: ['#FFB060', '#E0301E'], trophy: ['#FFE38A', '#C98A00'], crown: ['#9A70FF', '#3B1A8A'] };
-export const decoSvg = id => {
-  if (!DECO_SVG[id]) return '';
-  const [a, b] = DECO_TILE[id] ?? ['#5A6478', '#2B3550'];
-  return `<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="dt-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>`
-    + `<rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="url(#dt-${id})" stroke="#0A0E1F" stroke-width="2.5"/><path d="M7 5.5 H33" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="2.5" stroke-linecap="round"/>`
-    + `<g transform="translate(6 6) scale(0.7)">${DECO_SVG[id]}</g></svg>`;
-};
+// Banner decorations: the glossy badges drawn in Stitch (decos.js); the old flat icons stay for clan emblems.
+export const decoSvg = id => (DECO_ART[id] ? `<svg viewBox="0 0 100 100" aria-hidden="true">${DECO_ART[id]}</svg>` : '');
 const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
 const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
 const mmss = ms => { const m = Math.ceil(ms / 60e3); return m >= 60 ? `${unit(Math.floor(m / 60), 'hour')} ${unit(m % 60, 'minute')}` : unit(m, 'minute'); };

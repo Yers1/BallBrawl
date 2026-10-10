@@ -460,6 +460,7 @@ export const SHOP = {
   deco: {
     none: {}, target: { coins: 400 }, sword: { coins: 400 }, shield: { coins: 500 }, star: { gems: 25 },
     potion: { gems: 25 }, bolt: { gems: 30 }, flame: { gems: 40 }, trophy: { gems: 40 }, crown: { gems: 60 },
+    rainbow: { coins: 800 }, rocket: { gems: 50 }, diamond: { gems: 70 },
   },
   look: { candy: { gems: 80 }, neon: { gems: 80 }, ocean: { gems: 80 } },
   emote: Object.fromEntries(EMOTE_LIST.map(e => [e.id, EMOTE_PRICE[e.tier]])),
