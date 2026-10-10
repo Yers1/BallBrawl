@@ -162,7 +162,7 @@ export const titleOk = (s, id) => { const x = TITLES.find(t => t.id === id); ret
 export function freshSave() {
   return {
     v: 2, coins: 0, spent: { coins: 0, gems: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
-    nick: null, muted: false, avatar: 'basic', fav: null, // fav: the ball on the profile stand (null: the avatar)
+    nick: null, muted: false, music: true, avatar: 'basic', fav: null, // fav: the ball on the profile stand (null: the avatar)
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
     chests: { box: 0, big: 0, mega: 0 }, // stash: chests from the road and ball paths, opened right away
@@ -200,6 +200,7 @@ export function migrate(raw) {
   s.matches = int(r.matches) ?? 0;
   if (validNick(r.nick)) s.nick = r.nick;
   s.muted = r.muted === true;
+  s.music = r.music !== false;
   if (BALLS[r.avatar]) s.avatar = r.avatar;
   if (BALLS[r.fav] && s.owned.includes(r.fav)) s.fav = r.fav;
   s.created = list(r.created, Number.isInteger).slice(-100);

@@ -15,6 +15,7 @@ export function confetti(n = 36) {
 
 // Tiny WebAudio synth — no audio files. The context starts on the first user gesture (browser rule).
 let ac = null, master = null, muted = false, horn = null; // horn: a recorded diesel horn for the train
+let musicBus = null, musicOn = true; // music has its own volume and switch
 
 export function initAudio(isMuted) {
   muted = isMuted;
@@ -26,6 +27,9 @@ export function initAudio(isMuted) {
     master = ac.createGain();
     master.gain.value = muted ? 0 : 0.5;
     master.connect(ac.destination);
+    musicBus = ac.createGain();
+    musicBus.gain.value = musicOn ? 0.32 : 0;
+    musicBus.connect(master);
     fetch('sfx/train-horn.mp3').then(r => r.arrayBuffer()).then(b => ac.decodeAudioData(b)).then(buf => { horn = buf; }).catch(() => {});
   };
   for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, start, { once: true, capture: true });
@@ -36,7 +40,7 @@ export function setMuted(m) {
   if (master) master.gain.value = m ? 0 : 0.5;
 }
 
-function tone(freq, dur, { type = 'square', vol = 0.2, slide = 1, delay = 0 } = {}) {
+function tone(freq, dur, { type = 'square', vol = 0.2, slide = 1, delay = 0, out = null } = {}) {
   if (!ac || muted) return;
   const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
   o.type = type;
@@ -44,32 +48,75 @@ function tone(freq, dur, { type = 'square', vol = 0.2, slide = 1, delay = 0 } = 
   o.frequency.exponentialRampToValueAtTime(Math.max(30, freq * slide), t + dur);
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g).connect(master);
+  o.connect(g).connect(out ?? master);
   o.start(t);
   o.stop(t + dur + 0.02);
 }
 
-function noise(dur, { vol = 0.25, freq = 1200, q = 1, delay = 0, sweep = 1 } = {}) {
+function noise(dur, { vol = 0.25, freq = 1200, q = 1, delay = 0, sweep = 1, out = null, type = 'bandpass' } = {}) {
   if (!ac || muted) return;
   const t = ac.currentTime + delay, n = Math.ceil(ac.sampleRate * dur), buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   src.buffer = buf;
-  f.type = 'bandpass';
+  f.type = type;
   f.Q.value = q;
   f.frequency.setValueAtTime(freq, t);
   f.frequency.exponentialRampToValueAtTime(freq * sweep, t + dur);
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  src.connect(f).connect(g).connect(master);
+  src.connect(f).connect(g).connect(out ?? master);
   src.start(t);
 }
 
+// ---------- sound effects: every hit, wall and super sounds a little different ----------
+const J = (k = 0.12) => 1 + (Math.random() * 2 - 1) * k; // a little random pitch, so repeats never sound copy-pasted
+const KIND_TONE = { magnet: 'metal', chain: 'metal', train: 'metal', forge: 'metal', turtle: 'metal', cell: 'soft', leech: 'soft', spider: 'soft', poison: 'soft',
+  hedgehog: 'sharp', ninja: 'sharp', chess: 'wood', ice: 'glass', lightning: 'zap' };
+const WALL = { // each arena's walls answer in their own material
+  frost: () => tone(1700 * J(), 0.12, { type: 'sine', vol: 0.05 }),
+  candy: () => tone(300 * J(), 0.12, { type: 'sine', vol: 0.07, slide: 2.4 }),
+  pirate: () => { tone(260 * J(), 0.06, { type: 'triangle', vol: 0.08 }); noise(0.03, { vol: 0.06, freq: 800 }); },
+  stadium: () => noise(0.05, { vol: 0.1, freq: 300 * J(), q: 0.6 }),
+  neon: () => tone(880 * J(), 0.06, { type: 'square', vol: 0.035, slide: 1.6 }),
+  space: () => tone(660 * J(), 0.08, { type: 'sine', vol: 0.05, slide: 0.6 }),
+  chess: () => noise(0.04, { vol: 0.1, freq: 1400 * J(), q: 5 }),
+  temple: () => noise(0.06, { vol: 0.09, freq: 700 * J(), q: 2 }),
+  lava: () => noise(0.07, { vol: 0.08, freq: 400 * J(), q: 1 }),
+};
+const SUPER_FX = { // on top of the shared fanfare: what this ball's super sounds like
+  basic: () => noise(0.4, { vol: 0.25, freq: 300, sweep: 8, q: 2 }),
+  leech: () => { tone(500, 0.25, { type: 'sine', vol: 0.12, slide: 0.3 }); tone(200, 0.2, { type: 'sine', vol: 0.1, slide: 2.5, delay: 0.2 }); },
+  cell: () => [0, 0.09, 0.18].forEach(d => tone(600 + d * 900, 0.07, { type: 'sine', vol: 0.12, slide: 1.8, delay: d })),
+  spider: () => noise(0.35, { vol: 0.18, freq: 1200, sweep: 4, q: 3 }),
+  ninja: () => [0, 0.06, 0.12].forEach(d => noise(0.08, { vol: 0.18, freq: 6000, q: 8, delay: d })),
+  magnet: () => { for (let i = 0; i < 6; i++) tone(220 + (i % 2) * 60, 0.08, { type: 'square', vol: 0.06, delay: i * 0.06 }); },
+  bomb: () => noise(0.5, { vol: 0.12, freq: 5000, q: 2 }),
+  turtle: () => { tone(110, 0.6, { type: 'sine', vol: 0.18 }); tone(880, 0.4, { type: 'triangle', vol: 0.05, delay: 0.05 }); },
+  lightning: () => { for (let i = 0; i < 5; i++) tone(400 + Math.random() * 1600, 0.05, { type: 'sawtooth', vol: 0.06, delay: i * 0.05 }); noise(0.3, { vol: 0.2, freq: 3000, q: 0.5 }); },
+  hedgehog: () => { for (let i = 0; i < 8; i++) noise(0.03, { vol: 0.15, freq: 4000 + i * 300, q: 6, delay: i * 0.025 }); },
+  ice: () => [1568, 2093, 2637, 3136].forEach((f, i) => tone(f, 0.25, { type: 'sine', vol: 0.06, delay: i * 0.05 })),
+  poison: () => { for (let i = 0; i < 6; i++) tone(300 + Math.random() * 400, 0.08, { type: 'sine', vol: 0.08, slide: 1.6, delay: i * 0.07 }); },
+  chain: () => { for (let i = 0; i < 7; i++) noise(0.04, { vol: 0.14, freq: 2500 + (i % 3) * 700, q: 5, delay: i * 0.05 }); },
+  forge: () => { tone(900, 0.5, { type: 'square', vol: 0.08, slide: 0.98 }); tone(1350, 0.4, { type: 'triangle', vol: 0.06 }); noise(0.08, { vol: 0.2, freq: 3000, q: 2 }); },
+  chess: () => [0, 0.1, 0.2].forEach(d => { noise(0.04, { vol: 0.16, freq: 1600, q: 5, delay: d }); tone(196, 0.07, { type: 'square', vol: 0.06, delay: d }); }),
+};
+
 export const sfx = {
-  hit: amount => { noise(0.08, { vol: 0.2 + Math.min(0.3, amount / 60), freq: 900, q: 0.8 }); tone(160 + amount * 4, 0.09, { vol: 0.12, slide: 0.5 }); },
-  wall: () => noise(0.04, { vol: 0.05, freq: 2400 }),
-  dash: () => noise(0.22, { vol: 0.22, freq: 500, sweep: 5, q: 2 }),
-  shot: () => noise(0.05, { vol: 0.06, freq: 4000, q: 3 }),
+  hit: (amount, kind) => {
+    const v = Math.min(0.3, amount / 60), j = J();
+    const k = KIND_TONE[kind];
+    if (k === 'metal') { tone(320 * j, 0.12, { type: 'square', vol: 0.08 + v * 0.4, slide: 0.7 }); tone(1250 * j, 0.06, { type: 'triangle', vol: 0.05 }); noise(0.05, { vol: 0.15 + v, freq: 3200 * j, q: 4 }); }
+    else if (k === 'soft') { tone(180 * j, 0.12, { type: 'sine', vol: 0.18 + v, slide: 0.5 }); noise(0.08, { vol: 0.12, freq: 500 * j, q: 0.7 }); }
+    else if (k === 'sharp') { noise(0.04, { vol: 0.2 + v, freq: 5000 * j, q: 6 }); tone(900 * j, 0.05, { type: 'triangle', vol: 0.06 }); }
+    else if (k === 'wood') { noise(0.05, { vol: 0.2, freq: 1600 * j, q: 5 }); tone(220 * j, 0.07, { type: 'square', vol: 0.08 }); }
+    else if (k === 'glass') { tone(1800 * j, 0.18, { type: 'sine', vol: 0.08 }); tone(2400 * j, 0.12, { type: 'sine', vol: 0.05 }); noise(0.05, { vol: 0.12, freq: 4000, q: 3 }); }
+    else if (k === 'zap') { tone(600 * j, 0.08, { type: 'sawtooth', vol: 0.07, slide: 2.2 }); noise(0.06, { vol: 0.15, freq: 2500, q: 1 }); }
+    else { noise(0.08, { vol: 0.2 + v, freq: 900 * j, q: 0.8 }); tone((160 + amount * 4) * j, 0.09, { vol: 0.12, slide: 0.5 }); }
+  },
+  wall: arena => (WALL[arena] ?? (() => noise(0.04, { vol: 0.05, freq: 2400 * J() })))(),
+  dash: () => noise(0.22, { vol: 0.22, freq: 500 * J(), sweep: 5, q: 2 }),
+  shot: () => noise(0.05, { vol: 0.06, freq: 4000 * J(), q: 3 }),
   train: (express = false) => { // a diesel horn, then "choo-choo" puffs that speed up while it rolls past, over a low rumble
     if (horn && ac && !muted) {
       const src = ac.createBufferSource(), g = ac.createGain();
@@ -87,12 +134,73 @@ export const sfx = {
     }
     tone(65, at + 0.2, { type: 'sawtooth', vol: 0.05, slide: 0.85, delay: 0.25 });
   },
-  super: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.16, delay: i * 0.05 })),
-  death: () => { noise(0.45, { vol: 0.4, freq: 200, sweep: 0.3 }); tone(90, 0.4, { type: 'sine', vol: 0.3, slide: 0.4 }); },
+  super: kind => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, { type: 'triangle', vol: 0.12, delay: i * 0.045 })); SUPER_FX[kind]?.(); },
+  death: () => { const j = J(0.2); noise(0.45, { vol: 0.4, freq: 200 * j, sweep: 0.3 }); tone(90 * j, 0.4, { type: 'sine', vol: 0.3, slide: 0.4 }); tone(700 * j, 0.06, { type: 'triangle', vol: 0.08 }); },
   win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.14, delay: i * 0.09 })),
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.14, delay: i * 0.14 })),
-  click: () => tone(700, 0.05, { type: 'sine', vol: 0.08 }),
-  vs: () => { noise(0.35, { vol: 0.22, freq: 300, sweep: 6, q: 1.5 }); tone(196, 0.3, { type: 'square', vol: 0.1, delay: 0.32 }); tone(294, 0.35, { type: 'square', vol: 0.09, delay: 0.38 }); }, // whoosh, then a clang
+  click: () => tone(700 * J(0.06), 0.05, { type: 'sine', vol: 0.08 }),
+  round: () => { tone(880, 0.12, { type: 'square', vol: 0.06 }); tone(1320, 0.18, { type: 'square', vol: 0.06, delay: 0.1 }); },
+  count: (last = false) => tone(last ? 1320 : 880, last ? 0.3 : 0.12, { type: 'square', vol: 0.07 }),
+  vs: () => { // face to face: a whoosh as the banners fly in, then a drum hit, a cymbal crash and a brass chord as the shield lands
+    noise(0.45, { vol: 0.25, freq: 250, sweep: 8, q: 1.5 });
+    tone(130, 0.35, { type: 'sine', vol: 0.35, slide: 0.35, delay: 0.32 });
+    noise(0.9, { vol: 0.18, freq: 6000, q: 0.4, delay: 0.32, type: 'highpass' });
+    [196, 247, 294, 392].forEach(f => tone(f, 0.6, { type: 'sawtooth', vol: 0.04, delay: 0.34 }));
+    tone(98, 0.5, { type: 'square', vol: 0.08, delay: 0.34 });
+  },
   chess: () => { noise(0.05, { vol: 0.16, freq: 1600, q: 5 }); tone(196, 0.08, { type: 'square', vol: 0.07 }); }, // a wooden piece set down
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
 };
+
+// ---------- music: little chiptune loops (menus; a tense one in sudden death), scheduled just ahead on the audio clock ----------
+const NOTE = n => 440 * 2 ** ((n - 69) / 12);
+const m = (f, d, o) => tone(f, d, { ...o, out: musicBus });
+const kick = d => m(130, 0.16, { type: 'sine', vol: 0.5, slide: 0.35, delay: d });
+const snare = (d, v = 0.12) => noise(0.12, { vol: v, freq: 1800, q: 0.7, delay: d, out: musicBus });
+const hat = (d, v = 0.05) => noise(0.03, { vol: v, freq: 8000, q: 1, delay: d, out: musicBus, type: 'highpass' });
+const LOBBY_LEAD = [
+  [72, 0, 0, 76, 0, 0, 79, 0, 76, 0, 74, 0, 72, 0, 0, 0], [69, 0, 0, 72, 0, 0, 76, 0, 74, 0, 72, 0, 69, 0, 0, 0],
+  [65, 0, 0, 69, 0, 0, 72, 0, 77, 0, 76, 0, 74, 0, 0, 0], [67, 0, 71, 0, 74, 0, 0, 79, 0, 77, 0, 74, 71, 0, 0, 0],
+];
+const SONGS = {
+  lobby: { bpm: 104, step(i, d) { // C, Am, F, G: bouncy and friendly
+    const bar = Math.floor(i / 16) % 4, s = i % 16, ch = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]][bar];
+    if (s === 0 || s === 8) kick(d);
+    if (s === 4 || s === 12) snare(d, 0.07);
+    if (s % 2 === 0) hat(d, s % 4 === 2 ? 0.04 : 0.025);
+    if ([0, 6, 8, 14].includes(s)) m(NOTE(ch[0] - 24), 0.2, { type: 'square', vol: 0.09, delay: d });
+    if (s % 2 === 0) m(NOTE(ch[(s / 2) % 3] + 12), 0.12, { type: 'triangle', vol: 0.07, delay: d });
+    const n = LOBBY_LEAD[bar][s];
+    if (n) m(NOTE(n), 0.24, { type: 'square', vol: 0.05, delay: d });
+  } },
+  danger: { bpm: 150, step(i, d) { // A minor and F, a pounding pulse: hurry up!
+    const bar = Math.floor(i / 16) % 2, s = i % 16, root = bar ? 41 : 45;
+    if (s % 4 === 0) kick(d);
+    if (s === 4 || s === 12) snare(d, 0.14);
+    hat(d, s % 2 ? 0.02 : 0.04);
+    if (s % 2 === 0) m(NOTE(root + (s % 4 === 2 ? 12 : 0)), 0.12, { type: 'sawtooth', vol: 0.07, delay: d });
+    if (s === 0) [0, 3, 7].forEach(k => m(NOTE(root + 24 + k), 0.25, { type: 'square', vol: 0.035, delay: d }));
+    if (bar === 1 && s >= 12) m(NOTE(69 + (s - 12) * 2), 0.08, { type: 'square', vol: 0.04, delay: d });
+  } },
+};
+const music = { name: null, step: 0, next: 0 };
+export function playMusic(name) {
+  if (music.name === name) return;
+  music.name = SONGS[name] ? name : null;
+  music.step = 0;
+  music.next = 0;
+}
+export function setMusicOn(on) {
+  musicOn = on;
+  if (musicBus) musicBus.gain.value = on ? 0.32 : 0;
+}
+if (typeof window !== 'undefined') setInterval(() => { // keeps a quarter second of notes queued
+  if (!ac || !music.name || muted || !musicOn || document.hidden) return;
+  const song = SONGS[music.name], step = 60 / song.bpm / 4;
+  if (music.next < ac.currentTime) music.next = ac.currentTime + 0.05;
+  while (music.next < ac.currentTime + 0.25) {
+    song.step(music.step, music.next - ac.currentTime);
+    music.next += step;
+    music.step++;
+  }
+}, 60);

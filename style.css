@@ -1225,3 +1225,10 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .fam-perk { margin: 0; font-weight: 900; color: #DCE6FA; text-align: center; }
 .fam-card .fam-what { font-size: 10px; font-weight: 800; line-height: 1.15; color: var(--muted); text-align: center; }
 .fam-stats:has(> span:only-child) { grid-template-columns: 1fr; }
+
+/* the face-to-face lands hard: a white flash and a shake when the VS shield hits */
+.vs-intro::after { content: ''; position: absolute; inset: 0; background: #FFFFFF; opacity: 0; pointer-events: none; animation: vsFlash 0.5s 0.34s ease-out; }
+.vs-intro .vs-card.me { animation: vsFromLeft 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) 0.12s both, vsShake 0.35s 0.6s; }
+.vs-intro .vs-card.foe { animation: vsFromRight 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both, vsShake 0.35s 0.6s; }
+@keyframes vsFlash { 0% { opacity: 0.75; } 100% { opacity: 0; } }
+@keyframes vsShake { 20% { translate: -8px 3px; } 40% { translate: 7px -2px; } 60% { translate: -5px 2px; } 80% { translate: 3px -1px; } }

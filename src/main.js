@@ -9,7 +9,7 @@ import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
 import { randomNick, nickText, validNick, validClan } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
-import { initAudio, setMuted, sfx, confetti } from './sfx.js';
+import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
   claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS,
@@ -192,6 +192,7 @@ function goHome(tab) {
   if (!S.demo) demo();
   show(null);
   home.open(tab);
+  playMusic('lobby');
 }
 
 // ---------- squad & shop ----------
@@ -316,6 +317,7 @@ async function startMatch() {
   });
   S.aiLevel = aiLevel(save.trophies);
   show(null);
+  playMusic(null); // quiet for the face-to-face and the fight
   await home.vs(foeCard(), S.fams[0]); // both banners first, like Clash Royale
   beginMatch();
 }
@@ -352,6 +354,8 @@ function nextRound() {
   hud();
   cards(me, foe);
   banner(t('round', { n: S.match.round }));
+  playMusic(null);
+  sfx.round();
 }
 
 function fire() {
@@ -536,6 +540,7 @@ function finishMatch(r) {
   persist();
   coinsUI();
   S.mode = 'result';
+  playMusic(null);
   won ? sfx.win() : sfx.lose();
   if (won) confetti(48);
   showResult();
@@ -726,9 +731,9 @@ function feel(w, now) {
   let hits = 0;
   const mine = S.mode === 'fight' || S.mode === 'ending';
   for (const ev of w.events) {
-    if (ev.type === 'hit' && hits++ < 2) sfx.hit(ev.amount);
+    if (ev.type === 'hit' && hits++ < 2) sfx.hit(ev.amount, w.ents.find(e => e.id === ev.id)?.kind);
     if (ev.type === 'hit' && ev.amount >= 18) S.freezeUntil = Math.max(S.freezeUntil, now + 0.05);
-    if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(); }
+    if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(S.match?.map ?? w.map); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
     if (ev.type === 'dash') { sfx.dash(); if (mine && ev.side === 0) S.ms.dashes++; }
     if (ev.type === 'train') sfx.train(ev.express);
@@ -739,7 +744,7 @@ function feel(w, now) {
       if (mine && ev.side === 1 && !ev.mini) S.ms.kills++;
     }
     if (ev.type === 'super') {
-      sfx.super();
+      sfx.super(ev.kind);
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.08);
       banner(superName(ev.kind) + '!', false, ev.side ? 'foe' : 'you');
       if (mine && ev.side === 0) S.ms.supers++;
@@ -769,6 +774,7 @@ function tick(ms) {
     if (S.mode === 'aim' && (S.aimLeft -= dt) <= 0) fire(); // time's up: the round fires itself
     if (!S.demo) feel(w, now);
     if (w.result != null && (!S.party?.fight || S.party.host || S.party.fight.final)) onRoundOver(now); // in a party only the host's word ends it
+    if (S.mode === 'fight' && w.t > SUDDEN && w.result == null) playMusic('danger'); // sudden death: the music hurries you
     const preWatch = S.mode === 'watch' && !w.launched;
     draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : preWatch ? S.watchAims[0] : null, foeAim: S.mode === 'aim' ? S.foeAim : preWatch ? S.watchAims[1] : null, now, dt, me: S.party?.fight?.me.ent ?? null });
     mid();
@@ -957,9 +963,10 @@ function partyBegin(m) {
   S.mode = 'fight';
   show(null);
   hud();
-  banner('3');
-  setTimeout(() => { if (S.party === P) banner('2'); }, 1000);
-  setTimeout(() => { if (S.party === P) banner('1'); }, 2000);
+  playMusic(null);
+  banner('3'); sfx.count();
+  setTimeout(() => { if (S.party === P) { banner('2'); sfx.count(); } }, 1000);
+  setTimeout(() => { if (S.party === P) { banner('1'); sfx.count(true); } }, 2000);
 }
 function partyFrame(dt) {
   const F = P.fight, w = S.world, TT = PT.TURN * STEP, now = performance.now();
@@ -1066,9 +1073,12 @@ const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);
   $('#set-sound').setAttribute('aria-checked', String(!save.muted));
   $('#set-emotes').classList.toggle('on', save.foeEmotes);
+  $('#set-music').classList.toggle('on', save.music);
+  $('#set-music').setAttribute('aria-checked', String(save.music));
   $('#set-emotes').setAttribute('aria-checked', String(save.foeEmotes));
 };
 $('#set-sound').onclick = () => { save.muted = !save.muted; setMuted(save.muted); persist(); muteUI(); };
+$('#set-music').onclick = () => { save.music = !save.music; setMusicOn(save.music); persist(); muteUI(); };
 $('#set-emotes').onclick = () => { save.foeEmotes = !save.foeEmotes; setFoeEmotes(save.foeEmotes); persist(); muteUI(); sfx.click(); };
 $('#gear').onclick = () => { sfx.click(); home.settings(); muteUI(); $('#scr-settings').hidden = false; };
 $('#set-close').onclick = () => { $('#scr-settings').hidden = true; };
@@ -1087,6 +1097,8 @@ if (!langChosen() && RECORD == null) { // first launch: choose the language befo
 addEventListener('resize', layout);
 initAds();
 initAudio(save.muted);
+setMusicOn(save.music);
+playMusic('lobby'); // starts with the first tap (browsers keep audio off until then)
 muteUI();
 persist(); // stores the migrated save and the generated nickname right away
 layout();
