@@ -63,7 +63,7 @@ export function spawnBall(w, side, kind, { x, y, vx = 0, vy = 0, r = R, hp, hpMu
   const e = {
     id: w.nextId++, side, kind, x, y, vx, vy, r, hp: maxHp, maxHp, speed, dmg, dead: false, mini, split: false,
     slow: 1, cd: {}, latch: null, boost: null, yank: null, poisonUntil: 0,
-    shieldUntil: 0, shieldMul: 1, chillUntil: 0, chillSlow: 1, // status effects any ball can apply
+    shieldUntil: 0, shieldMul: 1, chillUntil: 0, chillSlow: 1, invulnUntil: 0, // status effects any ball can apply
   };
   w.ents.push(e);
   return e;
@@ -91,7 +91,7 @@ export function canSuper(w, side) {
 
 // meter=false for damage nobody dealt (sudden death)
 export function hurt(w, e, amount, quiet = false, meter = true) {
-  if (e.dead || amount <= 0) return;
+  if (e.dead || amount <= 0 || e.invulnUntil > w.t) return;
   if (e.shieldUntil > w.t) amount *= e.shieldMul;
   if (e.chillUntil > w.t && e.chillSlow <= ICE.freezeSlow) amount *= ICE.brittle; // frozen solid = brittle
   e.hp -= amount;

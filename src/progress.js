@@ -10,7 +10,9 @@ import { rng } from './sim.js';
 // ---------- trophies ----------
 // Every arena opens its own balls (Clash Royale style): Night 4, Canyon 3, Frost 3, Jungle 2, Lava 2, Space 1.
 // The Glory Road gives each ball at its mark. leech/cell keep their old marks (players already claimed them).
-export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 910, poison: 1210, chain: 1520, forge: 1910 };
+export const UNLOCK = { basic: 0, leech: 10, cell: 30, spider: 85, ninja: 120, train: 180, magnet: 265, bomb: 350, turtle: 450, lightning: 550, hedgehog: 710, ice: 910, poison: 1210, chain: 1520, forge: 1910, chess: 220 };
+// Balls in the order they unlock (ORDER itself never changes: challenge links store balls by their place in it)
+export const BY_UNLOCK = [...ORDER].sort((a, b) => UNLOCK[a] - UNLOCK[b]);
 export const LOSE_COINS = 5;
 export const aiLevel = tr => Math.min(LEVELS, Math.max(1, 1 + Math.floor(tr / 40)));
 // past the AI cap (1160) enemies keep gaining HP, so the top of the table can't be farmed by volume

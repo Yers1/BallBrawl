@@ -7,9 +7,10 @@ import {
   dailyState, claimDaily, DAILY, ACHIEVEMENTS, claimAchievement, achievementValue,
 } from '../src/progress.js';
 
-test('every ball has a path unlock, in roster order', () => {
-  assert.deepEqual(Object.keys(UNLOCK), ORDER);
-  for (let i = 1; i < ORDER.length; i++) assert.ok(UNLOCK[ORDER[i]] > UNLOCK[ORDER[i - 1]]);
+test('every ball has a path unlock; screens list them in unlock order', async () => {
+  const { BY_UNLOCK } = await import('../src/progress.js');
+  assert.deepEqual(Object.keys(UNLOCK).sort(), [...ORDER].sort());
+  for (let i = 1; i < BY_UNLOCK.length; i++) assert.ok(UNLOCK[BY_UNLOCK[i]] > UNLOCK[BY_UNLOCK[i - 1]]);
 });
 
 test('trophies: +8 a win (+1 flawless), growing loss, never below 0, best is kept', () => {

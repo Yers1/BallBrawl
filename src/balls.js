@@ -22,6 +22,8 @@ export const SPIKES = { thorns: 4, needles: 16, needleDmg: 5, curl: 2.5, curlMul
 export const ICE = { chill: 2, slow: 0.5, freeze: 2.5, freezeSlow: 0.05, brittle: 1.5 };
 export const POISON = { len: 28, hit: 7, tick: 1, every: 0.2, last: 2.5, max: 40, touchCd: 0.5, reach: 16 };
 export const CHAIN = { first: 1.4, every: 3, r: 70, life: 4, max: 3, dmg: 3, tick: 0.6, pull: 90, slow: 0.6, lead: 0.4 };
+// Chess: every few seconds it picks a random piece and moves like it across an 8×8 board, untouchable on the way.
+export const CHESS = { first: 1.5, every: 3.8, wind: 0.3, speed: 750, dmg: 10, queenMoves: 3, queenDmg: 10 };
 export const FORGE = { every: 2.5, dmgPerLv: 3.5, maxLv: 8, superLv: 3 };
 export const SUPER = {
   ramTime: 0.6, ramMul: 3, ramDmg: 2,
@@ -132,6 +134,49 @@ function splitOff(w, me, hp = CELL.hp) { // two mini cells fly out sideways
     });
   }
   w.events.push({ type: 'split', x: me.x, y: me.y });
+}
+
+// The board is the arena cut into 8×8 squares; a piece moves from the ball's square to the one nearest the foe.
+const PIECES = ['rook', 'bishop', 'knight'];
+const LINES = { rook: [[1, 0], [-1, 0], [0, 1], [0, -1]], bishop: [[1, 1], [1, -1], [-1, 1], [-1, -1]] };
+const KNIGHT = [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2]];
+function chessMove(w, me, piece, dmg) {
+  const SQ = W / 8, f = nearest(foes(w, me), me); // W isn't ready at load time (sim.js imports this file)
+  if (!f) return;
+  const c = Math.min(7, Math.max(0, Math.floor(me.x / SQ))), r = Math.min(7, Math.max(0, Math.floor(me.y / SQ)));
+  const on = (x, y) => x >= 0 && x < 8 && y >= 0 && y < 8, mid = (x, y) => ({ x: (x + 0.5) * SQ, y: (y + 0.5) * SQ });
+  const moves = []; // each one: the squares it passes through, ending on the target
+  if (piece === 'knight') {
+    for (const [dx, dy] of KNIGHT) if (on(c + dx, r + dy)) moves.push(Math.abs(dx) === 2 ? [[c + dx, r], [c + dx, r + dy]] : [[c, r + dy], [c + dx, r + dy]]);
+  } else {
+    for (const [dx, dy] of piece === 'queen' ? [...LINES.rook, ...LINES.bishop] : LINES[piece]) {
+      for (let k = 1; on(c + dx * k, r + dy * k); k++) moves.push([[c + dx * k, r + dy * k]]);
+    }
+  }
+  if (!moves.length) return;
+  const end = m => mid(...m[m.length - 1]);
+  const best = moves.reduce((a, m) => (Math.hypot(end(m).x - f.x, end(m).y - f.y) < Math.hypot(end(a).x - f.x, end(a).y - f.y) ? m : a));
+  const fit = p => ({ x: Math.min(W - me.r, Math.max(me.r, p.x)), y: Math.min(W - me.r, Math.max(me.r, p.y)) });
+  const pts = [{ x: me.x, y: me.y }, fit(mid(c, r)), ...best.map(s => fit(mid(...s)))];
+  me.chess = { piece, path: pathOf(pts), d: 0, go: w.t + CHESS.wind, dmg, hit: {}, squares: [[c, r], ...best] };
+  me.vx = me.vy = 0;
+  w.events.push({ type: 'chess', x: me.x, y: me.y, piece });
+}
+function chessTick(w, me, dt) {
+  const m = me.chess;
+  me.invulnUntil = w.t + 0.05; // nothing touches a moving piece
+  me.vx = me.vy = 0;
+  if (w.t < m.go) return; // the board lights up first, so you can see the move coming
+  m.d += CHESS.speed * dt;
+  const p = pathAt(m.path, m.d);
+  me.x = p.x;
+  me.y = p.y;
+  for (const f of foes(w, me)) if (!m.hit[f.id] && Math.hypot(f.x - me.x, f.y - me.y) < f.r + me.r) { m.hit[f.id] = true; hurt(w, f, m.dmg); }
+  if (m.d < m.path.len) return;
+  me.chess = null; // the move is over: roll on the way it went
+  me.vx = Math.cos(p.a) * me.speed;
+  me.vy = Math.sin(p.a) * me.speed;
+  if (me.cd.queen > 0) { me.cd.queen--; chessMove(w, me, 'queen', CHESS.queenDmg); }
 }
 
 export const BALLS = {
@@ -459,6 +504,23 @@ Object.assign(BALLS, {
       if (w.t >= me.cd.forge) { me.cd.forge = w.t + FORGE.every; if (me.lv < FORGE.maxLv) levelUp(w, me, 1); }
     },
     onSuper(w, me) { levelUp(w, me, FORGE.superLv); },
+  },
+
+  chess: { // modelled on Chess Ball: random piece moves along the board, invincible while moving
+    hp: 100, color: '#EDE6D6', price: 300,
+    onTick(w, me, dt) {
+      if (me.chess) return chessTick(w, me, dt);
+      me.cd.chess ??= CHESS.first;
+      if (w.t < me.cd.chess) return;
+      me.cd.chess = w.t + CHESS.every;
+      chessMove(w, me, PIECES[Math.floor(w.rand() * PIECES.length)], CHESS.dmg);
+    },
+    canSuper: (w, me) => !me.chess,
+    onSuper(w, me) { // the queen: three moves in a row, any line, any distance
+      me.cd.queen = CHESS.queenMoves - 1;
+      me.cd.chess = w.t + CHESS.every;
+      chessMove(w, me, 'queen', CHESS.queenDmg);
+    },
   },
 });
 

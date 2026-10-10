@@ -101,8 +101,8 @@ export default {
   quests: { win3: "3 ta jangda g'alaba qozon", dash15: "15 marta otil", super3: "3 ta super ishlat", kills10: "10 ta dushman sharini urib chiqar", flawless1: "Bitta ham shar yo'qotmay yut", challenge1: "Do'stni chaqir yoki chaqiruvni qabul qil", matches5: "5 ta jang o'yna" },
   achievements: { firstWin: "Birinchi g'alaba", wins10: "10 g'alaba", wins50: "50 g'alaba", tr100: "100 kubok", tr500: "500 kubok", tr1000: "1000 kubok", collector: "Barcha sharlarni yig'", supers25: "25 super", challenger: "5 chaqiruv", flawless5: "Yo'qotishsiz 5 g'alaba", chests10: "10 ta sandiq och", chests50: "50 ta sandiq och", skins5: "5 ta skin yig'", skins20: "20 ta skin yig'", level5: "5-daraja", level10: "10-daraja", rank5: "Shar bilan 5-daraja", rank10: "Shar bilan 10-daraja", duo10: "2 ga 2 rejimida 10 g'alaba", boss5: "5 ta bossni yeng", emotes20: "20 ta emotsiya yubor" },
   skins: { silver: "Kumush", gold: "Oltin", neon: "Neon", candy: "Konfet", galaxy: "Galaktika", lava: "Lava", mint: "Yalpiz", rainbow: "Kamalak" },
-  names: { basic: "Oddiy", leech: "Zuluk", cell: "Hujayra", spider: "O'rgimchak", ninja: "Ninja", train: "Poyezd", magnet: "Magnit", bomb: "Bomba", turtle: "Toshbaqa", lightning: "Chaqmoq", hedgehog: "Tipratikan", ice: "Muz", poison: "Tikan", chain: "Kishan", forge: "Temirchi" },
-  supers: { basic: "Taran", leech: "Sakrash", cell: "Bo'linish", spider: "Tuzoq", ninja: "Yelpig'ich", train: "Ekspress", magnet: "Tortish", bomb: "Gilam", turtle: "Qal'a", lightning: "Bo'ron", hedgehog: "Ignalar", ice: "Muzlatish", poison: "Qoziqlar", chain: "Qopqon", forge: "Toblash" },
+  names: { basic: "Oddiy", leech: "Zuluk", cell: "Hujayra", spider: "O'rgimchak", ninja: "Ninja", train: "Poyezd", magnet: "Magnit", bomb: "Bomba", turtle: "Toshbaqa", lightning: "Chaqmoq", hedgehog: "Tipratikan", ice: "Muz", poison: "Tikan", chain: "Kishan", forge: "Temirchi", chess: "Shaxmat" },
+  supers: { basic: "Taran", leech: "Sakrash", cell: "Bo'linish", spider: "Tuzoq", ninja: "Yelpig'ich", train: "Ekspress", magnet: "Tortish", bomb: "Gilam", turtle: "Qal'a", lightning: "Bo'ron", hedgehog: "Ignalar", ice: "Muzlatish", poison: "Qoziqlar", chain: "Qopqon", forge: "Toblash", chess: "Farzin" },
   superAbout: {
     magnet: "barcha dushmanlarni birdan ilib, tortadi va har birini uradi.",
     bomb: "dushman yo'li bo'ylab bombalar, har biri aynan o'z vaqtida.",
@@ -119,6 +119,7 @@ export default {
     poison: "har bir devorda birdaniga ikkitadan tikan.",
     chain: "dushman atrofida uchta tuzoq-halqa.",
     forge: "darhol +3 daraja.",
+    chess: "ketma-ket uchta farzin yurishi: istalgan tomonga, istalgan masofaga.",
   },
   about: {
     basic: "Oddiy, lekin eng chidamlisi.",
@@ -136,5 +137,6 @@ export default {
     poison: "Devorga har urilganda u yerda zaharli tikan qoladi. Tikanga tekkan dushman jarohat oladi va zaharlanadi.",
     chain: "Zanjir halqalarini tashlaydi: ichidagi dushman sekinlashadi, markazga tortiladi va HP yo'qotadi.",
     forge: "Har bir necha soniyada daraja oshiradi: daraja qancha yuqori bo'lsa, shuncha kuchli uradi.",
+    chess: "Har necha soniyada tasodifiy shakl kabi yuradi — rux, fil yoki ot — va yurayotganda zarar olmaydi. Yo'lidagi hammani uradi.",
   },
 };

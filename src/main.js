@@ -12,7 +12,7 @@ import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, gainXp, XP_WIN, XP_PLAY, SKINS,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, gainXp, XP_WIN, XP_PLAY, SKINS,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -249,7 +249,7 @@ function renderSquad() {
   $('#s-info span').textContent = ballAbout(info);
   $('#s-info em').textContent = `${t('super')} · ${superName(info)}: ${superAbout(info)}`;
 
-  $('#s-cards').replaceChildren(...ORDER.map(id => {
+  $('#s-cards').replaceChildren(...BY_UNLOCK.map(id => {
     const d = BALLS[id], ok = has(id), slots = save.squad.map((s, i) => (s === id ? i + 1 : 0)).filter(Boolean);
     const tile = el('div', 'tile' + (ok ? '' : ' locked') + (id === info ? ' info' : ''));
     tile.style.setProperty('--c', d.color);
@@ -654,7 +654,7 @@ function goWatch() {
 
 function renderWatch() {
   [['#w-left', 0], ['#w-right', 1]].forEach(([sel, i]) => {
-    $(sel).replaceChildren(...ORDER.map(id => {
+    $(sel).replaceChildren(...BY_UNLOCK.map(id => {
       const b = el('button', 'pick' + (S.watch[i] === id ? ' sel' : ''));
       b.append(icon(id, 44), document.createTextNode(ballName(id)));
       b.onclick = () => { S.watch[i] = id; renderWatch(); };
@@ -700,6 +700,7 @@ function feel(w, now) {
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
     if (ev.type === 'dash') { sfx.dash(); if (mine && ev.side === 0) S.ms.dashes++; }
     if (ev.type === 'train') sfx.train(ev.express);
+    if (ev.type === 'chess') sfx.chess();
     if (ev.type === 'death') {
       sfx.death();
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.12);

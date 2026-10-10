@@ -101,8 +101,8 @@ export default {
   quests: { win3: 'Gana 3 partidas', dash15: 'Lánzate 15 veces', super3: 'Usa 3 súpers', kills10: 'Elimina 10 pelotas rivales', flawless1: 'Gana sin perder ninguna pelota', challenge1: 'Reta a un amigo o acepta un reto', matches5: 'Juega 5 partidas' },
   achievements: { firstWin: 'Primera victoria', wins10: '10 victorias', wins50: '50 victorias', tr100: '100 trofeos', tr500: '500 trofeos', tr1000: '1000 trofeos', collector: 'Reúne todas las pelotas', supers25: '25 súpers', challenger: '5 retos', flawless5: '5 victorias sin bajas', chests10: 'Abre 10 cofres', chests50: 'Abre 50 cofres', skins5: 'Reúne 5 skins', skins20: 'Reúne 20 skins', level5: 'Nivel 5', level10: 'Nivel 10', rank5: 'Rango 5 con una pelota', rank10: 'Rango 10 con una pelota', duo10: '10 victorias en 2 vs 2', boss5: 'Vence a 5 jefes', emotes20: 'Envía 20 gestos' },
   skins: { silver: 'Plata', gold: 'Oro', neon: 'Neón', candy: 'Caramelo', galaxy: 'Galaxia', lava: 'Lava', mint: 'Menta', rainbow: 'Arcoíris' },
-  names: { basic: 'Básica', leech: 'Sanguijuela', cell: 'Célula', spider: 'Araña', ninja: 'Ninja', train: 'Tren', magnet: 'Imán', bomb: 'Bomba', turtle: 'Tortuga', lightning: 'Rayo', hedgehog: 'Erizo', ice: 'Hielo', poison: 'Púa', chain: 'Grilletes', forge: 'Forja' },
-  supers: { basic: 'Embestida', leech: 'Salto', cell: 'Mitosis', spider: 'Trampa', ninja: 'Abanico', train: 'Expreso', magnet: 'Atracción', bomb: 'Bombardeo', turtle: 'Fortaleza', lightning: 'Tormenta', hedgehog: 'Agujas', ice: 'Congelar', poison: 'Empalizada', chain: 'Cepo', forge: 'Temple' },
+  names: { basic: 'Básica', leech: 'Sanguijuela', cell: 'Célula', spider: 'Araña', ninja: 'Ninja', train: 'Tren', magnet: 'Imán', bomb: 'Bomba', turtle: 'Tortuga', lightning: 'Rayo', hedgehog: 'Erizo', ice: 'Hielo', poison: 'Púa', chain: 'Grilletes', forge: 'Forja', chess: 'Ajedrez' },
+  supers: { basic: 'Embestida', leech: 'Salto', cell: 'Mitosis', spider: 'Trampa', ninja: 'Abanico', train: 'Expreso', magnet: 'Atracción', bomb: 'Bombardeo', turtle: 'Fortaleza', lightning: 'Tormenta', hedgehog: 'Agujas', ice: 'Congelar', poison: 'Empalizada', chain: 'Cepo', forge: 'Temple', chess: 'Dama' },
   superAbout: {
     magnet: 'engancha a todos los rivales a la vez, los atrae y golpea a cada uno.',
     bomb: 'bombas en el camino del rival, cada una justo a tiempo.',
@@ -119,6 +119,7 @@ export default {
     poison: 'dos púas en cada pared a la vez.',
     chain: 'tres anillos trampa alrededor del rival.',
     forge: '+3 niveles al instante.',
+    chess: 'tres movimientos de dama seguidos: cualquier línea, cualquier distancia.',
   },
   about: {
     basic: 'Simple, y la más resistente.',
@@ -136,5 +137,6 @@ export default {
     poison: 'Cada choque con la pared deja ahí una púa venenosa. El rival que la toca se lastima y se envenena.',
     chain: 'Lanza anillos de cadenas: el rival que queda dentro se frena, es arrastrado al centro y pierde HP.',
     forge: 'Sube de nivel cada par de segundos: cuanto más nivel, más fuerte golpea.',
+    chess: 'Cada pocos segundos se mueve como una pieza al azar —torre, alfil o caballo— y es invencible mientras se mueve. Golpea a todos en su camino.',
   },
 };

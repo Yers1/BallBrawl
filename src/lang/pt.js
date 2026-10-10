@@ -101,8 +101,8 @@ export default {
   quests: { win3: 'Vença 3 partidas', dash15: 'Faça 15 investidas', super3: 'Use 3 supers', kills10: 'Derrube 10 bolas inimigas', flawless1: 'Vença sem perder nenhuma bola', challenge1: 'Desafie um amigo ou aceite um desafio', matches5: 'Jogue 5 partidas' },
   achievements: { firstWin: 'Primeira vitória', wins10: '10 vitórias', wins50: '50 vitórias', tr100: '100 troféus', tr500: '500 troféus', tr1000: '1000 troféus', collector: 'Junte todas as bolas', supers25: '25 supers', challenger: '5 desafios', flawless5: '5 vitórias sem perdas', chests10: 'Abra 10 baús', chests50: 'Abra 50 baús', skins5: 'Junte 5 skins', skins20: 'Junte 20 skins', level5: 'Nível 5', level10: 'Nível 10', rank5: 'Rank 5 com uma bola', rank10: 'Rank 10 com uma bola', duo10: '10 vitórias no 2 x 2', boss5: 'Vença 5 chefões', emotes20: 'Mande 20 emotes' },
   skins: { silver: 'Prata', gold: 'Ouro', neon: 'Neon', candy: 'Doce', galaxy: 'Galáxia', lava: 'Lava', mint: 'Menta', rainbow: 'Arco-íris' },
-  names: { basic: 'Básico', leech: 'Sanguessuga', cell: 'Célula', spider: 'Aranha', ninja: 'Ninja', train: 'Trem', magnet: 'Ímã', bomb: 'Bomba', turtle: 'Tartaruga', lightning: 'Raio', hedgehog: 'Ouriço', ice: 'Gelo', poison: 'Espinho', chain: 'Correntes', forge: 'Forja' },
-  supers: { basic: 'Aríete', leech: 'Bote', cell: 'Mitose', spider: 'Armadilha', ninja: 'Leque', train: 'Expresso', magnet: 'Atração', bomb: 'Bombardeio', turtle: 'Fortaleza', lightning: 'Tempestade', hedgehog: 'Agulhas', ice: 'Congelar', poison: 'Paliçada', chain: 'Laço', forge: 'Têmpera' },
+  names: { basic: 'Básico', leech: 'Sanguessuga', cell: 'Célula', spider: 'Aranha', ninja: 'Ninja', train: 'Trem', magnet: 'Ímã', bomb: 'Bomba', turtle: 'Tartaruga', lightning: 'Raio', hedgehog: 'Ouriço', ice: 'Gelo', poison: 'Espinho', chain: 'Correntes', forge: 'Forja', chess: 'Xadrez' },
+  supers: { basic: 'Aríete', leech: 'Bote', cell: 'Mitose', spider: 'Armadilha', ninja: 'Leque', train: 'Expresso', magnet: 'Atração', bomb: 'Bombardeio', turtle: 'Fortaleza', lightning: 'Tempestade', hedgehog: 'Agulhas', ice: 'Congelar', poison: 'Paliçada', chain: 'Laço', forge: 'Têmpera', chess: 'Rainha' },
   superAbout: {
     magnet: 'prende todos os inimigos de uma vez, puxa e acerta cada um.',
     bomb: 'bombas no caminho do inimigo, cada uma no tempo certo.',
@@ -119,6 +119,7 @@ export default {
     poison: 'dois espinhos em cada parede de uma vez.',
     chain: 'três anéis-armadilha em volta do inimigo.',
     forge: '+3 níveis na hora.',
+    chess: 'três lances de rainha seguidos: qualquer linha, qualquer distância.',
   },
   about: {
     basic: 'Simples, e o mais resistente.',
@@ -136,5 +137,6 @@ export default {
     poison: 'Cada batida na parede deixa um espinho venenoso nela. O inimigo no espinho se machuca e fica envenenado.',
     chain: 'Lança anéis de corrente: o inimigo dentro fica lento, é puxado para o centro e perde HP.',
     forge: 'Sobe de nível a cada poucos segundos: quanto maior o nível, mais forte ele bate.',
+    chess: 'A cada poucos segundos se move como uma peça aleatória — torre, bispo ou cavalo — e fica invencível enquanto se move. Acerta todos no caminho.',
   },
 };

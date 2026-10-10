@@ -121,8 +121,8 @@ export const dict = {
     quests: { win3: 'Выиграй 3 боя', dash15: 'Сделай 15 рывков', super3: 'Используй 3 супера', kills10: 'Выбей 10 вражеских шаров', flawless1: 'Выиграй бой, не потеряв ни одного шара', challenge1: 'Вызови друга или прими вызов', matches5: 'Сыграй 5 боёв' },
     achievements: { firstWin: 'Первая победа', wins10: '10 побед', wins50: '50 побед', tr100: '100 кубков', tr500: '500 кубков', tr1000: '1000 кубков', collector: 'Собери все шары', supers25: '25 суперов', challenger: '5 вызовов', flawless5: '5 побед без потерь', chests10: 'Открой 10 сундуков', chests50: 'Открой 50 сундуков', skins5: 'Собери 5 скинов', skins20: 'Собери 20 скинов', level5: 'Уровень 5', level10: 'Уровень 10', rank5: 'Ранг 5 у шара', rank10: 'Ранг 10 у шара', duo10: '10 побед 2 на 2', boss5: 'Победи 5 боссов', emotes20: 'Отправь 20 эмоций' },
     skins: { silver: 'Серебро', gold: 'Золото', neon: 'Неон', candy: 'Леденец', galaxy: 'Галактика', lava: 'Лава', mint: 'Мята', rainbow: 'Радуга' },
-    names: { basic: 'Обычный', leech: 'Пиявка', cell: 'Клетка', spider: 'Паук', ninja: 'Ниндзя', train: 'Поезд', magnet: 'Магнит', bomb: 'Бомба', turtle: 'Черепаха', lightning: 'Молния', hedgehog: 'Ёж', ice: 'Лёд', poison: 'Шип', chain: 'Оковы', forge: 'Кузнец' },
-    supers: { basic: 'Таран', leech: 'Прыжок', cell: 'Деление', spider: 'Ловушка', ninja: 'Веер', train: 'Экспресс', magnet: 'Притяжение', bomb: 'Ковёр', turtle: 'Крепость', lightning: 'Гроза', hedgehog: 'Иглы', ice: 'Заморозка', poison: 'Частокол', chain: 'Капкан', forge: 'Закалка' },
+    names: { basic: 'Обычный', leech: 'Пиявка', cell: 'Клетка', spider: 'Паук', ninja: 'Ниндзя', train: 'Поезд', magnet: 'Магнит', bomb: 'Бомба', turtle: 'Черепаха', lightning: 'Молния', hedgehog: 'Ёж', ice: 'Лёд', poison: 'Шип', chain: 'Оковы', forge: 'Кузнец', chess: 'Шахматы' },
+    supers: { basic: 'Таран', leech: 'Прыжок', cell: 'Деление', spider: 'Ловушка', ninja: 'Веер', train: 'Экспресс', magnet: 'Притяжение', bomb: 'Ковёр', turtle: 'Крепость', lightning: 'Гроза', hedgehog: 'Иглы', ice: 'Заморозка', poison: 'Частокол', chain: 'Капкан', forge: 'Закалка', chess: 'Ферзь' },
     superAbout: {
       magnet: 'цепляет всех врагов разом, притягивает и бьёт каждого.',
       bomb: 'бомбы по пути врага, каждая точно в срок.',
@@ -139,6 +139,7 @@ export const dict = {
       poison: 'сразу по два шипа на каждой стене.',
       chain: 'три кольца-ловушки вокруг врага.',
       forge: 'сразу +3 уровня.',
+      chess: 'три хода ферзём подряд — в любую сторону и на любое расстояние.',
     },
     about: {
       basic: 'Простой и самый крепкий.',
@@ -156,6 +157,7 @@ export const dict = {
       poison: 'Каждый удар о стену оставляет на ней ядовитый шип. Враг на шипе ранится и травится.',
       chain: 'Бросает кольца из цепей: враг внутри замедляется, тянется к центру и теряет HP.',
       forge: 'Каждые пару секунд растёт на уровень: чем выше уровень, тем больнее бьёт.',
+      chess: 'Каждые пару секунд ходит случайной фигурой — ладьёй, слоном или конём — и пока ходит, неуязвим. Бьёт всех на своём пути.',
     },
   },
   en: {
@@ -261,8 +263,8 @@ export const dict = {
     quests: { win3: 'Win 3 matches', dash15: 'Dash 15 times', super3: 'Use 3 supers', kills10: 'Knock out 10 enemy balls', flawless1: 'Win without losing a ball', challenge1: 'Challenge a friend or take a challenge', matches5: 'Play 5 matches' },
     achievements: { firstWin: 'First win', wins10: '10 wins', wins50: '50 wins', tr100: '100 trophies', tr500: '500 trophies', tr1000: '1000 trophies', collector: 'Collect every ball', supers25: '25 supers', challenger: '5 challenges', flawless5: '5 flawless wins', chests10: 'Open 10 chests', chests50: 'Open 50 chests', skins5: 'Collect 5 skins', skins20: 'Collect 20 skins', level5: 'Level 5', level10: 'Level 10', rank5: 'Rank 5 with a ball', rank10: 'Rank 10 with a ball', duo10: '10 wins in 2 vs 2', boss5: 'Beat 5 bosses', emotes20: 'Send 20 emotes' },
     skins: { silver: 'Silver', gold: 'Gold', neon: 'Neon', candy: 'Candy', galaxy: 'Galaxy', lava: 'Lava', mint: 'Mint', rainbow: 'Rainbow' },
-    names: { basic: 'Basic', leech: 'Leech', cell: 'Cell', spider: 'Spider', ninja: 'Ninja', train: 'Train', magnet: 'Magnet', bomb: 'Bomb', turtle: 'Turtle', lightning: 'Lightning', hedgehog: 'Hedgehog', ice: 'Ice', poison: 'Spike', chain: 'Shackles', forge: 'Forge' },
-    supers: { basic: 'Ram', leech: 'Pounce', cell: 'Mitosis', spider: 'Trap', ninja: 'Fan', train: 'Express', magnet: 'Pull', bomb: 'Carpet', turtle: 'Fortress', lightning: 'Storm', hedgehog: 'Needles', ice: 'Freeze', poison: 'Palisade', chain: 'Snare', forge: 'Temper' },
+    names: { basic: 'Basic', leech: 'Leech', cell: 'Cell', spider: 'Spider', ninja: 'Ninja', train: 'Train', magnet: 'Magnet', bomb: 'Bomb', turtle: 'Turtle', lightning: 'Lightning', hedgehog: 'Hedgehog', ice: 'Ice', poison: 'Spike', chain: 'Shackles', forge: 'Forge', chess: 'Chess' },
+    supers: { basic: 'Ram', leech: 'Pounce', cell: 'Mitosis', spider: 'Trap', ninja: 'Fan', train: 'Express', magnet: 'Pull', bomb: 'Carpet', turtle: 'Fortress', lightning: 'Storm', hedgehog: 'Needles', ice: 'Freeze', poison: 'Palisade', chain: 'Snare', forge: 'Temper', chess: 'Queen' },
     superAbout: {
       magnet: 'hooks every foe at once, reels them in and slams each.',
       bomb: 'bombs along the foe\'s path, each perfectly timed.',
@@ -279,6 +281,7 @@ export const dict = {
       poison: 'two spikes on every wall at once.',
       chain: 'three trap rings around the foe.',
       forge: '+3 levels right away.',
+      chess: 'three queen moves in a row — any line, any distance.',
     },
     about: {
       basic: 'Simple, and the toughest.',
@@ -296,6 +299,7 @@ export const dict = {
       poison: 'Every wall hit leaves a poison spike there. A foe on a spike gets hurt and poisoned.',
       chain: 'Drops chain rings: a foe inside is slowed, dragged to the middle and loses HP.',
       forge: 'Levels up every couple of seconds: the higher the level, the harder it hits.',
+      chess: 'Every few seconds it moves like a random piece — rook, bishop or knight — and can\'t be hurt while moving. Hits everyone in its path.',
     },
   },
 };

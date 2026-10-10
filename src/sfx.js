@@ -85,5 +85,6 @@ export const sfx = {
   win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.14, delay: i * 0.09 })),
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.14, delay: i * 0.14 })),
   click: () => tone(700, 0.05, { type: 'sine', vol: 0.08 }),
+  chess: () => { noise(0.05, { vol: 0.16, freq: 1600, q: 5 }); tone(196, 0.08, { type: 'square', vol: 0.07 }); }, // a wooden piece set down
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
 };

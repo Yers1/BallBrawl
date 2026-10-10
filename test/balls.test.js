@@ -14,7 +14,7 @@ const duel = (a, b) => {
 };
 
 test('roster has 12 balls with known prices', () => {
-  assert.deepEqual(ORDER, ['basic', 'leech', 'cell', 'spider', 'ninja', 'train', 'magnet', 'bomb', 'turtle', 'lightning', 'hedgehog', 'ice', 'poison', 'chain', 'forge']);
+  assert.deepEqual(ORDER, ['basic', 'leech', 'cell', 'spider', 'ninja', 'train', 'magnet', 'bomb', 'turtle', 'lightning', 'hedgehog', 'ice', 'poison', 'chain', 'forge', 'chess']);
   for (const id of ORDER) assert.ok(BALLS[id].hp > 0 && BALLS[id].price >= 0 && BALLS[id].color);
 });
 

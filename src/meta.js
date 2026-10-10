@@ -7,7 +7,7 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, FRAG_NEED, pay, skinPool, chestBalls,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, FRAG_NEED, pay, skinPool, chestBalls,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
 } from './progress.js';
@@ -345,7 +345,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
         h.querySelector('b').textContent = t('arena_' + a.id);
         h.querySelector('.vr-plate').textContent = t('arenaN', { n: it.i + 1 });
         h.querySelector('.vr-opens').textContent = t('arenaUnlocks');
-        h.querySelector('.vr-unlocks').append(...ORDER.filter(id => arenaFor(UNLOCK[id]).id === a.id).map(id => {
+        h.querySelector('.vr-unlocks').append(...BY_UNLOCK.filter(id => arenaFor(UNLOCK[id]).id === a.id).map(id => {
           const c = el('span', 'vr-ball' + (save.owned.includes(id) ? '' : ' no'));
           c.append(icon(id, 46, save.skinOf[id]), el('small', ''));
           c.lastChild.textContent = ballName(id);
@@ -436,7 +436,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // ---------- balls & skins ----------
   function balls() { // character tiles; details and skins open on tap
-    $('#b-grid').replaceChildren(...ORDER.map(id => {
+    $('#b-grid').replaceChildren(...BY_UNLOCK.map(id => {
       const own = save.owned.includes(id);
       const tile = el('button', 'tile' + (own ? '' : ' locked'));
       tile.style.setProperty('--c', BALLS[id].color);

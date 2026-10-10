@@ -102,8 +102,8 @@ export default {
   quests: { win3: 'Menangkan 3 laga', dash15: 'Melesat 15 kali', super3: 'Pakai 3 super', kills10: 'Jatuhkan 10 bola lawan', flawless1: 'Menang tanpa kehilangan bola', challenge1: 'Tantang teman atau terima tantangan', matches5: 'Main 5 laga' },
   achievements: { firstWin: 'Kemenangan pertama', wins10: '10 kemenangan', wins50: '50 kemenangan', tr100: '100 trofi', tr500: '500 trofi', tr1000: '1000 trofi', collector: 'Kumpulkan semua bola', supers25: '25 super', challenger: '5 tantangan', flawless5: '5 kemenangan sempurna', chests10: 'Buka 10 peti', chests50: 'Buka 50 peti', skins5: 'Kumpulkan 5 skin', skins20: 'Kumpulkan 20 skin', level5: 'Level 5', level10: 'Level 10', rank5: 'Rank 5 dengan bola', rank10: 'Rank 10 dengan bola', duo10: '10 menang di 2 vs 2', boss5: 'Kalahkan 5 bos', emotes20: 'Kirim 20 emote' },
   skins: { silver: 'Perak', gold: 'Emas', neon: 'Neon', candy: 'Permen', galaxy: 'Galaksi', lava: 'Lava', mint: 'Mint', rainbow: 'Pelangi' },
-  names: { basic: 'Biasa', leech: 'Lintah', cell: 'Sel', spider: 'Laba-laba', ninja: 'Ninja', train: 'Kereta', magnet: 'Magnet', bomb: 'Bom', turtle: 'Kura-kura', lightning: 'Petir', hedgehog: 'Landak', ice: 'Es', poison: 'Duri', chain: 'Belenggu', forge: 'Tempa' },
-  supers: { basic: 'Seruduk', leech: 'Terkam', cell: 'Membelah', spider: 'Jebakan', ninja: 'Kipas', train: 'Ekspres', magnet: 'Tarikan', bomb: 'Hujan Bom', turtle: 'Benteng', lightning: 'Badai', hedgehog: 'Jarum', ice: 'Beku', poison: 'Pagar Duri', chain: 'Jerat', forge: 'Membara' },
+  names: { basic: 'Biasa', leech: 'Lintah', cell: 'Sel', spider: 'Laba-laba', ninja: 'Ninja', train: 'Kereta', magnet: 'Magnet', bomb: 'Bom', turtle: 'Kura-kura', lightning: 'Petir', hedgehog: 'Landak', ice: 'Es', poison: 'Duri', chain: 'Belenggu', forge: 'Tempa', chess: 'Catur' },
+  supers: { basic: 'Seruduk', leech: 'Terkam', cell: 'Membelah', spider: 'Jebakan', ninja: 'Kipas', train: 'Ekspres', magnet: 'Tarikan', bomb: 'Hujan Bom', turtle: 'Benteng', lightning: 'Badai', hedgehog: 'Jarum', ice: 'Beku', poison: 'Pagar Duri', chain: 'Jerat', forge: 'Membara', chess: 'Ratu' },
   superAbout: {
     magnet: 'mengait semua lawan sekaligus, menarik mereka lalu menghantam satu per satu.',
     bomb: 'bom di sepanjang jalur lawan, masing-masing tepat waktu.',
@@ -120,6 +120,7 @@ export default {
     poison: 'dua duri di setiap dinding sekaligus.',
     chain: 'tiga cincin jebakan di sekitar lawan.',
     forge: 'langsung +3 level.',
+    chess: 'tiga langkah ratu berturut-turut: arah mana pun, sejauh apa pun.',
   },
   about: {
     basic: 'Sederhana, dan paling tangguh.',
@@ -137,5 +138,6 @@ export default {
     poison: 'Tiap menabrak dinding, ia meninggalkan duri beracun di sana. Lawan yang kena duri terluka dan keracunan.',
     chain: 'Menjatuhkan cincin rantai: lawan di dalamnya melambat, tertarik ke tengah dan kehilangan HP.',
     forge: 'Naik level setiap beberapa detik: makin tinggi levelnya, makin keras pukulannya.',
+    chess: 'Setiap beberapa detik bergerak seperti bidak acak — benteng, gajah, atau kuda — dan kebal saat bergerak. Menghantam semua yang dilewati.',
   },
 };

@@ -1067,6 +1067,13 @@ function deco(ctx, e, t) {
     ctx.fillStyle = INK;
     ctx.beginPath(); ctx.arc(x, y + r * 0.03, r * 0.06, 0, P * 2); ctx.fill();
     ctx.fillRect(x - r * 0.025, y + r * 0.04, r * 0.05, r * 0.13);
+  } else if (e.kind === 'chess') { // a checkerboard, black on ivory
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.99, 0, P * 2); ctx.clip();
+    ctx.fillStyle = 'rgba(20,24,34,0.88)';
+    const q = r / 2;
+    for (let i = -2; i < 2; i++) for (let j = -2; j < 2; j++) if ((i + j) & 1) ctx.fillRect(x + i * q, y + j * q, q, q);
+    ctx.restore();
   } else if (e.kind === 'forge') { // a hammer decal that turns with the ball
     const hx = C(head), hy = S(head);
     ctx.strokeStyle = '#7A4A1E';
@@ -1264,6 +1271,39 @@ function legs(ctx, e, t) {
   }
 }
 
+// Chess: a see-through 8×8 board over the arena, the squares of the move in gold, the target square outlined.
+const GLYPH = { rook: '♜', bishop: '♝', knight: '♞', queen: '♛' };
+function chessBoard(ctx, e, t) {
+  const m = e.chess, sq = 50, k = Math.min(1, (t - (m.go - 0.3)) / 0.15);
+  ctx.save();
+  ctx.globalAlpha = 0.24 * k;
+  ctx.fillStyle = '#0B1020';
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) if ((i + j) & 1) ctx.fillRect(i * sq, j * sq, sq, sq);
+  ctx.globalAlpha = 0.42 * k;
+  ctx.fillStyle = '#FFCC33';
+  for (const [i, j] of m.squares) ctx.fillRect(i * sq, j * sq, sq, sq);
+  const [ti, tj] = m.squares[m.squares.length - 1];
+  ctx.globalAlpha = k;
+  ctx.strokeStyle = '#FFCC33';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(ti * sq + 2, tj * sq + 2, sq - 4, sq - 4);
+  ctx.restore();
+}
+function chessPiece(ctx, e, t) {
+  const y = e.y - e.r - 16 - Math.abs(Math.sin(t * 10)) * 3;
+  ctx.save();
+  ctx.font = `900 30px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = INK;
+  ctx.strokeText(GLYPH[e.chess.piece], e.x, y);
+  ctx.fillStyle = e.chess.piece === 'queen' ? '#FFCC33' : '#FFFFFF';
+  ctx.fillText(GLYPH[e.chess.piece], e.x, y);
+  ctx.restore();
+}
+
 // afterimages while dashing / ramming
 function trail(ctx, e, t) {
   if (!e.boost || e.boost.until <= t) return;
@@ -1435,10 +1475,12 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     else if (z.kind === 'zap') zapZone(ctx, z, w.t);
   }
   faces(w);
+  for (const e of w.ents) if (!e.dead && e.chess) chessBoard(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
+  for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t);
   for (const e of w.ents) {
     if (!e.dead && e.kind === 'train' && (e.vx || e.vy) && Math.random() < 0.3) puff(e);

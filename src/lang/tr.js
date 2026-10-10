@@ -101,8 +101,8 @@ export default {
   quests: { win3: '3 maç kazan', dash15: '15 kez atıl', super3: '3 süper kullan', kills10: '10 düşman topunu nakavt et', flawless1: 'Hiç top kaybetmeden kazan', challenge1: 'Arkadaşına meydan oku ya da bir meydan okumayı kabul et', matches5: '5 maç oyna' },
   achievements: { firstWin: 'İlk zafer', wins10: '10 zafer', wins50: '50 zafer', tr100: '100 kupa', tr500: '500 kupa', tr1000: '1000 kupa', collector: 'Tüm topları topla', supers25: '25 süper', challenger: '5 meydan okuma', flawless5: '5 kayıpsız zafer', chests10: '10 sandık aç', chests50: '50 sandık aç', skins5: '5 kostüm topla', skins20: '20 kostüm topla', level5: 'Seviye 5', level10: 'Seviye 10', rank5: 'Bir topla Rütbe 5', rank10: 'Bir topla Rütbe 10', duo10: '2’ye 2 modunda 10 zafer', boss5: '5 boss yen', emotes20: '20 ifade gönder' },
   skins: { silver: 'Gümüş', gold: 'Altın', neon: 'Neon', candy: 'Şeker', galaxy: 'Galaksi', lava: 'Lav', mint: 'Nane', rainbow: 'Gökkuşağı' },
-  names: { basic: 'Basit', leech: 'Sülük', cell: 'Hücre', spider: 'Örümcek', ninja: 'Ninja', train: 'Tren', magnet: 'Mıknatıs', bomb: 'Bomba', turtle: 'Kaplumbağa', lightning: 'Şimşek', hedgehog: 'Kirpi', ice: 'Buz', poison: 'Diken', chain: 'Pranga', forge: 'Demirci' },
-  supers: { basic: 'Koçbaşı', leech: 'Sıçrayış', cell: 'Bölünme', spider: 'Tuzak', ninja: 'Yelpaze', train: 'Ekspres', magnet: 'Çekim', bomb: 'Bombardıman', turtle: 'Kale', lightning: 'Fırtına', hedgehog: 'İğneler', ice: 'Ayaz', poison: 'Çit', chain: 'Kapan', forge: 'Sertleşme' },
+  names: { basic: 'Basit', leech: 'Sülük', cell: 'Hücre', spider: 'Örümcek', ninja: 'Ninja', train: 'Tren', magnet: 'Mıknatıs', bomb: 'Bomba', turtle: 'Kaplumbağa', lightning: 'Şimşek', hedgehog: 'Kirpi', ice: 'Buz', poison: 'Diken', chain: 'Pranga', forge: 'Demirci', chess: 'Satranç' },
+  supers: { basic: 'Koçbaşı', leech: 'Sıçrayış', cell: 'Bölünme', spider: 'Tuzak', ninja: 'Yelpaze', train: 'Ekspres', magnet: 'Çekim', bomb: 'Bombardıman', turtle: 'Kale', lightning: 'Fırtına', hedgehog: 'İğneler', ice: 'Ayaz', poison: 'Çit', chain: 'Kapan', forge: 'Sertleşme', chess: 'Vezir' },
   superAbout: {
     magnet: 'tüm düşmanları aynı anda kancalar, çeker ve her birine çarpar.',
     bomb: 'düşmanın yoluna bombalar, her biri tam zamanında.',
@@ -119,6 +119,7 @@ export default {
     poison: 'her duvara aynı anda iki diken.',
     chain: 'düşmanın etrafına üç tuzak halkası.',
     forge: 'anında +3 seviye.',
+    chess: 'art arda üç vezir hamlesi: her yöne, her mesafeye.',
   },
   about: {
     basic: 'Basit ve en dayanıklısı.',
@@ -136,5 +137,6 @@ export default {
     poison: 'Duvara her çarpışında oraya zehirli bir diken bırakır. Dikene değen düşman yaralanır ve zehirlenir.',
     chain: 'Zincir halkalar atar: içindeki düşman yavaşlar, ortaya çekilir ve HP kaybeder.',
     forge: 'Birkaç saniyede bir seviye atlar: seviye ne kadar yüksekse o kadar sert vurur.',
+    chess: 'Birkaç saniyede bir rastgele bir taş gibi oynar — kale, fil ya da at — ve oynarken hasar almaz. Yolundaki herkese vurur.',
   },
 };

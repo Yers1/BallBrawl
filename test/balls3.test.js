@@ -80,3 +80,19 @@ test('cell fragments have no super: the meter stays full and nothing happens', (
   assert.equal(w.sides[0].meter, METER.full);
   assert.equal(w.ents.filter(e => e.side === 0 && !e.dead).length, 2, 'no new fragments');
 });
+
+test('chess moves like a random piece, square to square, untouchable on the way', async () => {
+  const { CHESS } = await import('../src/balls.js');
+  const [w, me, foe] = duel('chess');
+  let moves = 0, hurtWhileMoving = false;
+  for (let i = 0; i < 60 * 12 && w.result == null; i++) {
+    const hp = me.hp, moving = !!me.chess && w.t >= me.chess.go;
+    step(w, 1 / 60);
+    if (moving && me.hp < hp) hurtWhileMoving = true;
+    if (w.events.some(e => e.type === 'chess')) moves++;
+    w.events.length = 0;
+  }
+  assert.ok(moves >= 3, `made ${moves} moves`);
+  assert.ok(!hurtWhileMoving, 'no damage during a move');
+  assert.ok(CHESS.queenMoves === 3);
+});
