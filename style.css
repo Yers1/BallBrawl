@@ -1605,3 +1605,11 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 @keyframes podDrop { from { opacity: 0; transform: translateY(-40px) scale(0.6); } }
 @keyframes podGlow { 50% { opacity: 0.6; scale: 0.9; } }
 @keyframes podCrown { 50% { transform: translateY(-4px) rotate(-6deg); } }
+
+/* ---------- nickname editor ---------- */
+.nick-card { max-height: 90vh; overflow-y: auto; }
+.nk-preview { margin: 6px 0 10px; padding: 12px; border-radius: 14px; background: rgba(10, 14, 31, 0.45); border: 2px solid var(--stroke); font: 400 22px var(--display); text-align: center; color: var(--gold); }
+.nick-card h3 { margin: 10px 2px 6px; font: 400 12px var(--display); text-transform: uppercase; color: var(--muted); text-align: left; }
+.nk-words { max-height: 150px; overflow-y: auto; justify-content: flex-start; padding: 2px; }
+.nk-words .chip { padding: 7px 11px; font-size: 13px; }
+.nick-card #nk-dice { margin-top: 10px; }

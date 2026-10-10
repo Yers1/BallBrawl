@@ -596,6 +596,7 @@ function finishMatch(r) {
   const flawless = won && S.match.mode === 'classic' && S.match.a.length === 3 && !S.match.revived; // not a single ball lost
   S.outcome = r;
   S.delta = 0;
+  S.capped = false;
   S.settleLater = false;
   if (c) { // challenges: no trophies; a one-time bonus, never for your own links
     const fresh = !save.created.includes(c.seed) && !save.answered.includes(c.seed);
@@ -647,7 +648,7 @@ function trophyLine() {
   $('#r-trophies').innerHTML = `<i class="trophy" style="width:26px;height:26px"></i><span class="cnt">${shown - d}</span> <span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}</span>`;
   countUp($('#r-trophies .cnt'), shown - d, shown);
   const next = pathNodes(save.maxTrophies).find(n => n.at > shown);
-  $('#r-sub').textContent = next ? t('toNext', { n: next.at - shown }) : '';
+  $('#r-sub').textContent = S.capped ? t('dailyCap') : next ? t('toNext', { n: next.at - shown }) : '';
   const ready = claimable(save).length > 0;
   $('#r-reward').hidden = !ready;
   if (ready) $('#r-reward').textContent = t('rewardWaiting');
@@ -679,6 +680,7 @@ async function settle() {
     save.trophies = r.trophies;
     save.maxTrophies = Math.max(save.maxTrophies, r.max_trophies);
     S.delta = r.delta;
+    S.capped = !!r.capped; // the daily +200 is reached
     persist();
     trophyLine();
     if (S.mode === 'home') home.render();

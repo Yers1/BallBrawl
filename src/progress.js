@@ -169,6 +169,7 @@ export const titleOk = (s, id) => { const x = TITLES.find(t => t.id === id); ret
 export function freshSave() {
   return {
     bought: [], // gem packs paid with money, by payment id
+    nickChanges: 0, // the first nickname change is free
     v: 2, coins: 0, spent: { coins: 0, gems: 0, chest: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
     nick: null, muted: false, music: true, avatar: 'basic', fav: null, // fav: the ball on the profile stand (null: the avatar)
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
@@ -255,6 +256,7 @@ export function migrate(raw) {
   s.vibrate = r.vibrate !== false;
   if (['classic', 'duo', 'boss', 'survival', 'football'].includes(r.mode)) s.mode = r.mode;
   s.best = { survival: int(r.best?.survival, 0, 9999) ?? 0 };
+  s.nickChanges = int(r.nickChanges, 0, 9999) ?? 0;
   s.xp = int(r.xp) ?? 0;
   if (r.fam && typeof r.fam === 'object') {
     const own = ['king', ...list(r.fam.own, id => FAMILIARS[id] && id !== 'king')];
@@ -678,6 +680,7 @@ export function mergeSave(local, cloudRaw, server) {
   s.achieved = union(s.achieved, cloud.achieved);
   s.created = union(s.created, cloud.created).slice(-100);
   s.answered = union(s.answered, cloud.answered).slice(-100);
+  s.nickChanges = Math.max(s.nickChanges, cloud.nickChanges);
   s.best.survival = Math.max(s.best.survival, cloud.best.survival);
   s.matches = Math.max(s.matches, cloud.matches);
   for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);

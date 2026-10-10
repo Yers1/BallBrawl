@@ -2,7 +2,7 @@
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
 import { t, lang, LANGS, setLang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
-import { nickText, randomNick, validNick, clanText, validClan, NICK_RANGE } from './nick.js';
+import { nickText, randomNick, validNick, clanText, validClan, NICK_RANGE, nickWords } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
@@ -815,7 +815,37 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       [save.best.survival, 'statSurvival'], [s.bossWins ?? 0, 'statBosses'], [s.kills ?? 0, 'statKills'],
     ].map(([v, k]) => el('div', 'stat', `<b>${v}</b><small>${t(k)}</small>`)));
   }
-  $('#p-renick').onclick = () => { save.nick = randomNick(); persist(); sfx.click(); render(); };
+  // a new nickname from the word lists (still no free text): the first change is free, every next one costs gems
+  const NICK_PRICE = 60;
+  let nickDraft = null;
+  function nickEditor() {
+    const W = nickWords(lang), free = !save.nickChanges, same = ['a', 'n', 'd'].every(k => nickDraft[k] === save.nick[k]);
+    $('#nk-preview').textContent = nickText(nickDraft, lang);
+    const words = (box, list, key) => $(box).replaceChildren(...list.map((w, i) => {
+      const b = el('button', 'chip' + (nickDraft[key] === i ? ' on' : ''), w);
+      b.onclick = () => { nickDraft[key] = i; sfx.click(); nickEditor(); };
+      return b;
+    }));
+    words('#nk-adj', W.adj, 'a');
+    words('#nk-noun', W.noun, 'n');
+    $('#nk-price').textContent = free ? t('nickFree') : t('nickPaid', { n: NICK_PRICE });
+    $('#nk-ok').innerHTML = free ? t('nickSave') : `${t('nickSave')} · <i class="gem"></i>${NICK_PRICE}`;
+    $('#nk-ok').disabled = same;
+  }
+  $('#p-renick').onclick = () => { sfx.click(); nickDraft = { ...save.nick }; nickEditor(); $('#scr-nick').hidden = false; };
+  $('#nk-dice').onclick = () => { nickDraft.d = randomNick().d; sfx.click(); nickEditor(); };
+  $('#nk-close').onclick = () => { $('#scr-nick').hidden = true; };
+  $('#nk-ok').onclick = () => {
+    if (save.nickChanges) {
+      if (save.gems < NICK_PRICE) return toast(t('needGems'));
+      pay(save, 'gems', NICK_PRICE);
+    }
+    save.nick = { ...nickDraft };
+    save.nickChanges = (save.nickChanges ?? 0) + 1;
+    persist(); coinsUI(); sfx.coin(); confetti(20);
+    $('#scr-nick').hidden = true;
+    render();
+  };
   $('#p-delete').onclick = async () => {
     if (!confirm(t('deleteConfirm'))) return;
     try {

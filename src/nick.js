@@ -13,6 +13,7 @@ const NOUN = [
   ['Жук', 'Beetle'], ['Краб', 'Crab'], ['Лис', 'Fox'], ['Барсук', 'Badger'], ['Дельфин', 'Dolphin'],
 ];
 
+export const nickWords = lang => { const i = lang === 'ru' ? 0 : 1; return { adj: ADJ.map(w => w[i]), noun: NOUN.map(w => w[i]) }; };
 export const NICK_RANGE = { a: ADJ.length, n: NOUN.length, dMin: 10, dMax: 999 };
 
 export const randomNick = (rand = Math.random) => ({
