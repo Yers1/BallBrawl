@@ -30,7 +30,7 @@ const TURN = 0.275; // rad/s a ball curves toward its nearest enemy (halved agai
 export const DASH = { charges: 2, regen: 2.5, time: 0.35, mul: 2.2, dmg: 1.3 };
 // Football (a test mode): 2 vs 2, a light ball, goals in the middle of the bottom wall (yours) and the top (theirs).
 // Nobody takes damage; a dash is a hard kick. First to 3, or the most after 90 s (a tie plays on to a golden goal).
-export const FOOT = { goal: 130, r: 10, player: 20, friction: 0.5, kick: 1.45, max: 950, win: 3, time: 90, reset: 1.3, turn: 4 }; // player: a smaller ball, so the pitch feels big
+export const FOOT = { goal: 130, r: 10, player: 20, speed: 0.72, friction: 0.5, kick: 1.45, max: 820, win: 3, time: 90, reset: 1.3, turn: 4 }; // player: a smaller, slower ball, so the pitch feels big
 const FOOT_SPAWN = [[160, 285], [240, 355]]; // the forward, nearer the ball, and the one who stays back
 export const METER = { full: 100, dealt: 0.9, taken: 0.6 };
 
@@ -58,7 +58,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
       const [x, y] = football ? (side ? [W - FOOT_SPAWN[i][0], H - FOOT_SPAWN[i][1]] : FOOT_SPAWN[i]) : spawnAt(side, team.length, i), base = BALLS[sp.id];
       const e = spawnBall(w, side, sp.id, {
         x, y, r: sp.r ?? (football ? FOOT.player : R), hpMul: (side ? hpMulB : 1) * (sp.hpMul ?? 1),
-        dmg: sp.dmgMul ? (base.dmg ?? DMG) * sp.dmgMul : undefined, speed: sp.speedMul ? (base.speed ?? SPEED) * sp.speedMul : undefined,
+        dmg: sp.dmgMul ? (base.dmg ?? DMG) * sp.dmgMul : undefined, speed: sp.speedMul || football ? (base.speed ?? SPEED) * (sp.speedMul ?? 1) * (football ? FOOT.speed : 1) : undefined,
       });
       if (sp.hp != null) e.hp = Math.min(sp.hp, e.maxHp);
       if (sp.armor) e.armor = sp.armor; // a Robot familiar: takes a little less damage
@@ -283,6 +283,7 @@ function footStep(w, dt) {
     if (d >= min) continue;
     const nx = dx / d, ny = dy / d, boost = e.boost && e.boost.until > w.t ? e.boost.mul : 1;
     b.x = e.x + nx * min; b.y = e.y + ny * min;
+    b.last = e.side; // who touched it last: your own goal never counts against you
     const push = Math.max(60, (e.vx * nx + e.vy * ny) * boost * FOOT.kick), vn = b.vx * nx + b.vy * ny;
     if (vn < push) { b.vx += nx * (push - vn); b.vy += ny * (push - vn); }
     const m = Math.hypot(b.vx, b.vy);
@@ -294,6 +295,10 @@ function footStep(w, dt) {
   if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx) * 0.85; }
   if (!mouth && b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * 0.85; }
   if (!mouth && b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy) * 0.85; }
+  if ((b.y < b.r && b.last === 1) || (b.y > H - b.r && b.last === 0)) { // no own goals: your own kick bounces off your goal line
+    b.y = b.y < H / 2 ? b.r : H - b.r;
+    b.vy = -b.vy * 0.85;
+  }
   if (b.y < -b.r || b.y > H + b.r) { // GOAL: the top goal is theirs, so a ball in it is yours
     const side = b.y < 0 ? 0 : 1;
     w.goals[side]++;
