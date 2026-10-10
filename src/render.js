@@ -1271,30 +1271,45 @@ function legs(ctx, e, t) {
   }
 }
 
-// Chess: a see-through 8×8 board over the arena, the squares of the move in gold, the target square outlined.
+// Chess: while a piece is in play the arena becomes a chessboard (like the original), red lines show where it can strike.
 const GLYPH = { rook: '♜', bishop: '♝', knight: '♞', queen: '♛' };
-function chessBoard(ctx, e, t) {
-  const m = e.chess, sq = 50, k = Math.min(1, (t - (m.go - 0.3)) / 0.15);
+const boardFade = (m, t) => (m.stage === 'go' ? Math.min(1, (t - m.at) / 0.2) : m.stage === 'aim' ? 1 : Math.max(0, 1 - (t - m.at) / 0.4));
+function chessBoard(ctx, w, t) {
+  const m = w.ents.find(e => !e.dead && e.chess)?.chess;
+  if (!m) return false;
+  const k = boardFade(m, t), n = 5, sq = 400 / n;
   ctx.save();
-  ctx.globalAlpha = 0.24 * k;
-  ctx.fillStyle = '#0B1020';
-  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) if ((i + j) & 1) ctx.fillRect(i * sq, j * sq, sq, sq);
-  ctx.globalAlpha = 0.42 * k;
-  ctx.fillStyle = '#FFCC33';
-  for (const [i, j] of m.squares) ctx.fillRect(i * sq, j * sq, sq, sq);
-  const [ti, tj] = m.squares[m.squares.length - 1];
-  ctx.globalAlpha = k;
-  ctx.strokeStyle = '#FFCC33';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(ti * sq + 2, tj * sq + 2, sq - 4, sq - 4);
+  ctx.globalAlpha = 0.88 * k;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    ctx.fillStyle = (i + j) & 1 ? '#121A2C' : '#C9DCF2';
+    ctx.fillRect(i * sq, j * sq, sq, sq);
+  }
+  ctx.restore();
+  return true;
+}
+function chessLines(ctx, e, t) {
+  const m = e.chess;
+  if (!m.from) return;
+  const k = boardFade(m, t), pulse = 0.75 + 0.25 * Math.sin(t * 20);
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.shadowColor = '#FF2D46';
+  ctx.shadowBlur = 8;
+  ctx.strokeStyle = `rgba(255,45,70,${0.85 * k * pulse})`;
+  ctx.lineWidth = 2.5;
+  for (const p of m.lines ?? []) { ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+  for (const p of m.targets ?? []) { ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.lineWidth = 5; // the line it takes
+  ctx.strokeStyle = `rgba(255,70,90,${k})`;
+  ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(m.end.x, m.end.y); ctx.stroke();
   ctx.restore();
 }
-function chessPiece(ctx, e, t) {
-  const y = e.y - e.r - 16 - Math.abs(Math.sin(t * 10)) * 3;
+function chessPiece(ctx, e, t) { // the piece stands on top of the ball
+  const y = e.y - e.r * 0.55 - Math.abs(Math.sin(t * 8)) * 3;
   ctx.save();
-  ctx.font = `900 30px serif`;
+  ctx.font = `900 ${Math.round(e.r * 1.25)}px serif`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'bottom';
   ctx.lineJoin = 'round';
   ctx.lineWidth = 5;
   ctx.strokeStyle = INK;
@@ -1466,6 +1481,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   if (fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
   fx.shake = Math.max(0, fx.shake - dt * 40);
   arena(ctx, w, now);
+  if (chessBoard(ctx, w, w.t)) obstacles(ctx, w, now); // rocks and pools stay visible on the board
   for (const z of w.zones) {
     if (z.kind === 'web') web(ctx, z, w.t);
     else if (z.kind === 'spike') spike(ctx, z);
@@ -1475,7 +1491,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     else if (z.kind === 'zap') zapZone(ctx, z, w.t);
   }
   faces(w);
-  for (const e of w.ents) if (!e.dead && e.chess) chessBoard(ctx, e, w.t);
+  for (const e of w.ents) if (!e.dead && e.chess) chessLines(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);

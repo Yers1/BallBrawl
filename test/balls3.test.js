@@ -86,7 +86,7 @@ test('chess moves like a random piece, square to square, untouchable on the way'
   const [w, me, foe] = duel('chess');
   let moves = 0, hurtWhileMoving = false;
   for (let i = 0; i < 60 * 12 && w.result == null; i++) {
-    const hp = me.hp, moving = !!me.chess && w.t >= me.chess.go;
+    const hp = me.hp, moving = !!me.chess;
     step(w, 1 / 60);
     if (moving && me.hp < hp) hurtWhileMoving = true;
     if (w.events.some(e => e.type === 'chess')) moves++;
