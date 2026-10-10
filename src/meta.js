@@ -2,7 +2,7 @@
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
 import { t, lang, LANGS, setLang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
-import { nickText, randomNick, validNick, clanText, validClan, NICK_RANGE, nickWords } from './nick.js';
+import { nickText, randomNick, validNick, clanText, validClan, NICK_RANGE, checkNick, parseNick } from './nick.js';
 import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
@@ -819,23 +819,21 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   const NICK_PRICE = 60;
   let nickDraft = null;
   function nickEditor() {
-    const W = nickWords(lang), free = !save.nickChanges, same = ['a', 'n', 'd'].every(k => nickDraft[k] === save.nick[k]);
-    $('#nk-preview').textContent = nickText(nickDraft, lang);
-    const words = (box, list, key) => $(box).replaceChildren(...list.map((w, i) => {
-      const b = el('button', 'chip' + (nickDraft[key] === i ? ' on' : ''), w);
-      b.onclick = () => { nickDraft[key] = i; sfx.click(); nickEditor(); };
-      return b;
-    }));
-    words('#nk-adj', W.adj, 'a');
-    words('#nk-noun', W.noun, 'n');
+    const free = !save.nickChanges, text = $('#nk-input').value, err = checkNick(text);
+    nickDraft = err ? null : parseNick(text);
+    const same = nickDraft && nickText(nickDraft, lang) === nickText(save.nick, lang);
+    $('#nk-err').hidden = !err || !text.trim();
+    $('#nk-err').textContent = err ? t('nickErr_' + err) : '';
     $('#nk-price').textContent = free ? t('nickFree') : t('nickPaid', { n: NICK_PRICE });
     $('#nk-ok').innerHTML = free ? t('nickSave') : `${t('nickSave')} · <i class="gem"></i>${NICK_PRICE}`;
-    $('#nk-ok').disabled = same;
+    $('#nk-ok').disabled = !nickDraft || same;
   }
-  $('#p-renick').onclick = () => { sfx.click(); nickDraft = { ...save.nick }; nickEditor(); $('#scr-nick').hidden = false; };
-  $('#nk-dice').onclick = () => { nickDraft.d = randomNick().d; sfx.click(); nickEditor(); };
+  $('#nk-input').oninput = nickEditor;
+  $('#p-renick').onclick = () => { sfx.click(); $('#nk-input').value = nickText(save.nick, lang); nickEditor(); $('#scr-nick').hidden = false; $('#nk-input').focus(); };
+  $('#nk-dice').onclick = () => { $('#nk-input').value = nickText(randomNick(), lang); sfx.click(); nickEditor(); };
   $('#nk-close').onclick = () => { $('#scr-nick').hidden = true; };
   $('#nk-ok').onclick = () => {
+    if (!nickDraft) return;
     if (save.nickChanges) {
       if (save.gems < NICK_PRICE) return toast(t('needGems'));
       pay(save, 'gems', NICK_PRICE);
@@ -1717,16 +1715,13 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   }
   function friendsScreen() {
     $('#fr-mynick').textContent = nickText(save.nick, lang);
-    if (!$('#fr-a').options.length) {
-      const W = nickWords(lang), opts = (sel, list) => sel.replaceChildren(...list.map((w, i) => Object.assign(document.createElement('option'), { value: i, textContent: w })));
-      opts($('#fr-a'), W.adj); opts($('#fr-n'), W.noun);
-    }
+    $('#fr-q').placeholder = t('frNickPh');
     $('#fr-results').replaceChildren();
     $('#fr-note').textContent = net.online ? '' : t('needNet');
     if (net.online) loadFriends().then(friendLists);
   }
   $('#fr-search').onclick = async () => {
-    const nick = { a: +$('#fr-a').value, n: +$('#fr-n').value, d: Math.floor(+$('#fr-d').value) };
+    const nick = parseNick($('#fr-q').value);
     if (!validNick(nick)) return toast(t('frBadNick'));
     if (!net.online) return toast(t('needNet'));
     sfx.click();

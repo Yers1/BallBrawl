@@ -41,3 +41,18 @@ test('nicknames come only from the word lists, in both languages', () => {
   }
   assert.ok(!validNick({ a: NICK_RANGE.a, n: 0, d: 50 }));
 });
+
+test('own nicknames: normal ones pass, rude ones and contacts are caught even with tricks', async () => {
+  const { checkNick, parseNick, ownNick } = await import('../src/nick.js');
+  for (const ok of ['Ерасыл', 'Айгерім', 'Dark Knight', 'Командир 7', 'Хлеб', 'Небо', 'Classic', 'Snake_2010', 'Peace', 'Barber', 'Снайпер', 'Нурсултан', 'Жанибек', 'Mr. Fox', 'Ананас', 'Сусанна', 'Kitty', 'Gamer-KZ', 'Ball Master'])
+    assert.equal(checkNick(ok), null, ok);
+  for (const [bad, why] of [['хуй', 'bad'], ['х у й', 'bad'], ['xyй', 'bad'], ['Хууууй', 'bad'], ['бл@ть', 'chars'], ['блять', 'bad'], ['6ля', 'bad'], ['сука 123', 'bad'], ['fuuuck', 'bad'], ['f.u.c.k', 'bad'], ['5hit', 'bad'],
+    ['ПиЗдЕц', 'bad'], ['pidor', 'bad'], ['Мудак', 'bad'], ['Hitler', 'bad'], ['жалап', 'bad'], ['admin', 'reserved'], ['Поддержка', 'reserved'], ['87011234567', 'contact'],
+    ['my site.kz', 'contact'], ['@cool', 'chars'], ['ab', 'short'], ['Очень длинный ник тут', 'long'], ['😀😀😀', 'chars']])
+    assert.equal(checkNick(bad), why, bad);
+  assert.deepEqual(parseNick('Хитрый Кит 786'), { a: 2, n: 13, d: 786 }, 'a word nickname typed out is the word nickname');
+  assert.deepEqual(parseNick('  Dark   Knight '), ownNick('Dark Knight'));
+  const link = encodeChallenge({ ...base, nick: { t: 'Ерасыл 7' } });
+  assert.deepEqual(decodeChallenge(link).nick, { t: 'Ерасыл 7' }, 'challenge links carry your own nickname');
+  assert.equal(decodeChallenge(encodeChallenge({ ...base, nick: { t: 'сука' } })), null, 'a rude one is refused');
+});

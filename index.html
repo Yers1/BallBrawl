@@ -171,9 +171,7 @@
             <div class="fr-me"><small data-t="frMyNick"></small><b id="fr-mynick"></b></div>
             <h3 data-t="frFind"></h3>
             <div class="fr-find">
-              <select id="fr-a" aria-label="first word"></select>
-              <select id="fr-n" aria-label="second word"></select>
-              <input id="fr-d" type="number" min="10" max="999" inputmode="numeric" placeholder="123" aria-label="number">
+              <input id="fr-q" maxlength="24" autocomplete="off" spellcheck="false" aria-label="nickname">
               <button id="fr-search" class="btn primary" data-t="frSearch"></button>
             </div>
             <div id="fr-results" class="fr-list"></div>
@@ -352,12 +350,10 @@
   <section id="scr-nick" class="overlay" hidden>
     <div class="card result nick-card">
       <h2 data-t="nickTitle"></h2>
-      <p id="nk-preview" class="nk-preview"></p>
-      <h3 data-t="nickAdj"></h3>
-      <div id="nk-adj" class="chip-row nk-words"></div>
-      <h3 data-t="nickNoun"></h3>
-      <div id="nk-noun" class="chip-row nk-words"></div>
-      <button id="nk-dice" class="btn ghost wide-btn" data-t="nickNumber"></button>
+      <input id="nk-input" class="nk-input" maxlength="16" autocomplete="off" spellcheck="false" aria-label="nickname">
+      <p id="nk-err" class="nk-err" hidden></p>
+      <p class="muted small" data-t="nickRules"></p>
+      <button id="nk-dice" class="btn ghost wide-btn" data-t="nickRandom"></button>
       <p id="nk-price" class="muted small"></p>
       <button id="nk-ok" class="btn primary wide-btn"></button>
       <button id="nk-close" class="btn ghost wide-btn" data-t="close"></button>

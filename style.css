@@ -1640,3 +1640,11 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .inv-text { font-weight: 800; font-size: 16px; }
 @keyframes invPop { from { transform: scale(0.3); opacity: 0; } }
 #fr-results:empty, #fr-note:empty { display: none; }
+
+/* own nickname */
+.nk-input, #fr-q { width: 100%; padding: 12px 14px; border-radius: 14px; border: 3px solid var(--stroke); background: #0F1A33; color: var(--gold); font: 400 20px var(--display); text-align: center; }
+#fr-q { font-size: 16px; color: var(--text); text-align: left; }
+.nk-input:focus, #fr-q:focus { outline: 2px solid var(--you); }
+.nk-err { margin: 6px 0 0; color: #FF7A85; font-weight: 800; font-size: 13px; }
+.fr-find { grid-template-columns: 1fr auto; }
+.fr-find .btn { grid-column: auto; }
