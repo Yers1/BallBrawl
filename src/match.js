@@ -15,16 +15,17 @@ export function aiAngle(fx, fy, tx, ty, level, rand) {
 export const MODES = ['classic', 'duo', 'boss'];
 export const BOSS = { r: 46, hpMul: 2.5, dmgMul: 1.2, speedMul: 0.8 };
 export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null }) {
-  const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg }) }); // fam: the familiar's bonus
-  return { a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
+  const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg, speedMul: fam.speed, armor: fam.armor }) }); // fam: the familiar's bonus
+  return { boosts: [famA, famB], a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
 }
 
 export function roundWorld(m) {
   m.round++;
   const seed = m.seed * 7919 + m.round, map = m.map ?? 'night';
-  if (m.mode === 'duo') return createWorld({ seed, a: m.a.slice(0, 2), b: m.b.slice(0, 2), hpMulB: m.hpMulB, map });
-  if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [{ ...m.b[0], boss: true, ...BOSS }], map }); // its size is the challenge; trophies only sharpen its AI
-  return createWorld({ seed, a: m.a[0], b: m.b[0], hpMulB: m.hpMulB, map });
+  const boosts = m.boosts;
+  if (m.mode === 'duo') return createWorld({ seed, a: m.a.slice(0, 2), b: m.b.slice(0, 2), hpMulB: m.hpMulB, map, boosts });
+  if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [{ ...m.b[0], boss: true, ...BOSS, armor: 1 }], map, boosts: [boosts?.[0]] }); // its size is the challenge; trophies only sharpen its AI
+  return createWorld({ seed, a: m.a[0], b: m.b[0], hpMulB: m.hpMulB, map, boosts });
 }
 
 export function endRound(m, w) {

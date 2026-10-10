@@ -1221,3 +1221,7 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .p-fav-name { margin-top: 8px; font: 400 24px var(--display); text-transform: uppercase; color: var(--gold); text-shadow: var(--stroke-text); }
 .p-fav-rank { display: flex; align-items: center; gap: 6px; font-weight: 900; color: var(--muted); }
 .p-fam { position: absolute; left: 14%; top: 14px; z-index: 2; animation: famBob 2.2s ease-in-out infinite reverse; }
+
+.fam-perk { margin: 0; font-weight: 900; color: #DCE6FA; text-align: center; }
+.fam-card .fam-what { font-size: 10px; font-weight: 800; line-height: 1.15; color: var(--muted); text-align: center; }
+.fam-stats:has(> span:only-child) { grid-template-columns: 1fr; }

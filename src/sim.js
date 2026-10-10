@@ -39,11 +39,11 @@ export function rng(seed) { // mulberry32
   };
 }
 
-export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players = null }) {
+export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players = null, boosts = null }) { // boosts: per side { dash, meter } from familiars
   const w = {
     t: 0, tick: 0, launched: false, rand: rng(seed), ents: [], shots: [], zones: [], events: [], hitCd: {}, result: null, nextId: 1,
     map: MAPS[map] ? map : 'night', obstacles: (MAPS[map] ?? []).map(o => ({ ...o })),
-    sides: [0, 1].map(i => ({ dashes: DASH.charges * (players?.[i] ?? 1), regen: 0, meter: 0, n: players?.[i] ?? 1 })), // n = people steering this side
+    sides: [0, 1].map(i => ({ dashes: DASH.charges * (players?.[i] ?? 1), regen: 0, meter: 0, n: players?.[i] ?? 1, dashMul: boosts?.[i]?.dash ?? 1, meterMul: boosts?.[i]?.meter ?? 1 })), // n = people steering this side
     log: [], // every accepted command: { tick, side, type, x?, y? } — seed + log replays the fight
   };
   [a, b].forEach((spec, side) => { // a spec, or a team of specs (2v2, the boss fight)
@@ -55,6 +55,7 @@ export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players
         dmg: sp.dmgMul ? (base.dmg ?? DMG) * sp.dmgMul : undefined, speed: sp.speedMul ? (base.speed ?? SPEED) * sp.speedMul : undefined,
       });
       if (sp.hp != null) e.hp = Math.min(sp.hp, e.maxHp);
+      if (sp.armor) e.armor = sp.armor; // a Robot familiar: takes a little less damage
       e.split = !!sp.split;
       e.boss = !!sp.boss;
       e.skin = sp.skin || null; // cosmetic only — the sim never reads it
@@ -99,13 +100,14 @@ export function canSuper(w, side) {
 // meter=false for damage nobody dealt (sudden death)
 export function hurt(w, e, amount, quiet = false, meter = true) {
   if (e.dead || amount <= 0 || e.invulnUntil > w.t) return;
+  if (e.armor) amount *= e.armor;
   if (e.shieldUntil > w.t) amount *= e.shieldMul;
   if (e.chillUntil > w.t && e.chillSlow <= ICE.freezeSlow) amount *= ICE.brittle; // frozen solid = brittle
   e.hp -= amount;
   if (meter) {
     const me = w.sides[e.side], them = w.sides[1 - e.side];
-    me.meter = Math.min(METER.full, me.meter + amount * METER.taken);
-    them.meter = Math.min(METER.full, them.meter + amount * METER.dealt);
+    me.meter = Math.min(METER.full, me.meter + amount * METER.taken * me.meterMul);
+    them.meter = Math.min(METER.full, them.meter + amount * METER.dealt * them.meterMul);
   }
   if (!quiet) w.events.push({ type: 'hit', id: e.id, x: e.x, y: e.y, amount, side: e.side });
   if (e.hp > 0) return;
@@ -149,7 +151,7 @@ export function step(w, dt) {
   w.tick++;
   for (const s of w.sides) {
     if (s.dashes >= DASH.charges * s.n) { s.regen = 0; continue; }
-    s.regen += dt * s.n;
+    s.regen += dt * s.n * s.dashMul;
     if (s.regen >= DASH.regen) { s.dashes++; s.regen -= DASH.regen; }
   }
   w.zones = w.zones.filter(z => !z.owner.dead && z.until > w.t);

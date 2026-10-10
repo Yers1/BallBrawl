@@ -1389,19 +1389,30 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- the familiar: its level and bonus, the upgrade (XP from fights + coins, capped by the arena), its looks ----------
   const HEART_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8.2 3.4 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.6 0 6 3.7 4.5 7.3C19.5 16.4 12 21 12 21z" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2"/></svg>';
   const SWORD_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l10-10 2-5 3-1-1 3-5 2L4 18z" fill="#E6EDF7" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 15l5 5M3 21l3-3" stroke="#FFCC33" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  const DASH_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  const STAR_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z" fill="#C890FF" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  const SHIELD_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="#4CC9F0" stroke="#0A0E1F" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  const WIND_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h7" fill="none" stroke="#E6EDF7" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  // the chips under a familiar: what it boosts and by how much at this level
+  const famStats = (id, lv) => {
+    const b = famBuff(lv, id), p = n => Math.round(Math.abs(n - 1) * 100);
+    const chip = (ic, label, v) => `<span><i>${ic}</i><span><small>${label}</small><b>${v}</b></span></span>`;
+    return [b.hp > 1 && chip(HEART_IC, t('famHp'), `+${p(b.hp)}% HP`), b.dmg > 1 && chip(SWORD_IC, t('famDmg'), `+${p(b.dmg)}%`),
+      b.dash > 1 && chip(DASH_IC, t('famDash'), `+${p(b.dash)}%`), b.meter > 1 && chip(STAR_IC, t('famMeter'), `+${p(b.meter)}%`),
+      b.armor < 1 && chip(SHIELD_IC, t('famArmor'), `−${p(b.armor)}%`), b.speed > 1 && chip(WIND_IC, t('famSpeed'), `+${p(b.speed)}%`)].filter(Boolean).join('');
+  };
   let famConfirm = '';
   function famScreen() {
-    const f = save.fam, cap = famCap(save.maxTrophies), need = famNeed(f.lv), b = famBuff(f.lv), cost = FAM_COST[f.lv + 1];
-    const pct = n => `+${Math.round((n - 1) * 100)}%`;
+    const f = save.fam, cap = famCap(save.maxTrophies), need = famNeed(f.lv), cost = FAM_COST[f.lv + 1];
     const hero = el('div', 'fam-hero');
     hero.innerHTML = `<b class="fam-lv">${t('famLv', { n: f.lv })}</b><canvas class="fam-art"></canvas><h3 class="fam-name"></h3>`
-      + `<div class="fam-stats"><span><i>${HEART_IC}</i><span><small>${t('famHp')}</small><b>${pct(b.hp)} HP</b></span></span>`
-      + `<span><i>${SWORD_IC}</i><span><small>${t('famDmg')}</small><b>${pct(b.dmg)}</b></span></span></div>`
+      + `<div class="fam-stats">${famStats(f.skin, f.lv)}</div><p class="fam-perk"></p>`
       + `<div class="fam-xp"><small>${t('famXp')}</small><b>${f.xp} / ${need}</b></div>`
       + `<span class="xp-bar fam-bar"><i style="width:${Math.min(100, Math.round((f.xp / need) * 100))}%"></i></span>`
       + `<button class="btn primary big wide-btn fam-up"></button><p class="muted center fam-note"></p>`;
     drawFamiliar(hero.querySelector('.fam-art'), f.skin, 150);
     hero.querySelector('.fam-name').textContent = t('fam_' + f.skin);
+    hero.querySelector('.fam-perk').textContent = t('famPerk_' + f.skin);
     const up = hero.querySelector('.fam-up');
     if (f.lv >= cap) { up.textContent = t('famTop'); up.disabled = true; }
     else {
@@ -1419,8 +1430,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const card = el('button', 'sh-tile fam-card' + (own ? ' own' : '') + (on ? ' on' : '') + (famConfirm === id ? ' confirm' : ''));
       const cv = el('canvas');
       drawFamiliar(cv, id, 64);
-      card.append(cv, el('b', ''), el('span', 'sh-price'));
+      card.append(cv, el('b', ''), el('small', 'fam-what'), el('span', 'sh-price'));
       card.children[1].textContent = t('fam_' + id);
+      card.children[2].textContent = t('famPerk_' + id); // what it gives, before you buy it
       card.lastChild.innerHTML = on ? t('famPicked') : own ? t('shWear') : famConfirm === id ? `${t('shBuy')} ${money(price)}` : money(price);
       card.onclick = () => {
         sfx.click();

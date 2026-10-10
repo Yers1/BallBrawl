@@ -304,7 +304,7 @@ async function startMatch() {
   S.fams = { 0: { id: save.fam.skin, lv: Math.min(save.fam.lv, cap) }, 1: { id: FAMILIARS[of?.skin] ? of.skin : Object.keys(FAMILIARS)[S.nextSeed % 6], lv: lvB } };
   setFamiliars(S.fams);
   S.match = createMatch({
-    famA: famBuff(S.fams[0].lv), famB: famBuff(S.fams[1].lv),
+    famA: famBuff(S.fams[0].lv, S.fams[0].id), famB: famBuff(S.fams[1].lv, S.fams[1].id),
     squadA: [...save.squad],
     squadB: enemySquad(), // a real player's squad is still piloted by the AI, at your trophies' difficulty
     hpMulB: enemyHpMulFor(save.trophies),

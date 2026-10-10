@@ -84,7 +84,7 @@ export const setAuras = map => { auraOf = map || {}; };
 let famOf = {}; // side -> { id, lv }
 export const setFamiliars = map => { famOf = map || {}; fx.famPos = {}; };
 const FAM_COL = { king: '#FFC93C', dragon: '#5FD35B', cat: '#FF9F45', owl: '#A8764E', robot: '#C9D2E0', ghost: '#F4F7FF' };
-export function famBody(ctx, id, x, y, r, t = 0) {
+export function famBody(ctx, id, x, y, r, t = 0, look = null) { // look: {x, y} — which way the eyes turn
   const P = Math.PI, col = FAM_COL[id] ?? FAM_COL.king, lw = Math.max(1.2, r * 0.12);
   ctx.save();
   ctx.translate(x, y);
@@ -117,7 +117,7 @@ export function famBody(ctx, id, x, y, r, t = 0) {
   // the face
   const blink = Math.sin(t * 1.3) > 0.985 ? 0.15 : 1;
   for (const s of [-1, 1]) {
-    const ex = s * r * 0.36, ey = id === 'owl' ? -r * 0.12 : -r * 0.14;
+    const ex = s * r * 0.36 + (look ? look.x * r * 0.07 : 0), ey = (id === 'owl' ? -r * 0.12 : -r * 0.14) + (look ? look.y * r * 0.07 : 0);
     if (id === 'robot') { ctx.fillStyle = '#4CF0FF'; ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.13, r * 0.13 * blink, 0, 0, P * 2); ctx.fill(); continue; }
     ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.13, r * 0.17 * blink, 0, 0, P * 2); ctx.fill();
     ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(ex + r * 0.04, ey - r * 0.06, r * 0.05, 0, P * 2); ctx.fill();
@@ -139,13 +139,13 @@ export function drawFamiliar(canvas, id, css = 48) {
   c.scale(dpr, dpr);
   famBody(c, id, css / 2, css * 0.56, css * 0.3);
 }
-function familiars(ctx, w, t, dt) { // each side's familiar hovers by its lead ball, a little behind
+function familiars(ctx, w, t) { // each side's familiar sits on its own wall and watches the fight from the side
   for (const [side, f] of Object.entries(famOf)) {
-    const lead = w.ents.find(e => e.side === +side && !e.dead);
-    if (!lead || !f) continue;
-    const tx = lead.x + (+side ? 30 : -30), ty = lead.y - lead.r - 10, p = (fx.famPos[side] ??= { x: tx, y: ty }), k = Math.min(1, dt * 4);
-    p.x += (tx - p.x) * k; p.y += (ty - p.y) * k;
-    famBody(ctx, f.id, p.x, p.y + Math.sin(t * 3 + +side) * 3, 10, t);
+    if (!f) continue;
+    const x = +side ? W - 62 : 62, y = +side ? -5 : H + 5;
+    const ball = w.ents.filter(e => !e.dead).reduce((a, e) => (!a || Math.hypot(e.x - x, e.y - y) < Math.hypot(a.x - x, a.y - y) ? e : a), null);
+    const d = ball ? Math.hypot(ball.x - x, ball.y - y) || 1 : 1, look = ball ? { x: (ball.x - x) / d, y: (ball.y - y) / d } : null;
+    famBody(ctx, f.id, x, y + Math.sin(t * 3 + +side) * 1.2, 10, t, look);
   }
 }
 const AURA_RGB = { fire: '255,138,43', frost: '127,231,255', storm: '255,214,10', hearts: '255,92,138', void: '150,70,230', stars: '255,204,51' };
@@ -1718,7 +1718,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
-  familiars(ctx, w, w.t, dt || 0);
+  familiars(ctx, w, w.t);
   for (const e of w.ents) if (!e.dead) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t);
