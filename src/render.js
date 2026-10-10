@@ -143,10 +143,10 @@ let autoSides = [1]; // which sides react to kills by themselves (the computer; 
 export const setAutoEmote = sides => { autoSides = sides; };
 let foeEmotes = true;
 export const setFoeEmotes = on => { foeEmotes = on; };
-export function emote(side, id) {
+export function emote(side, id, ent = null) {
   const cur = fx.emotes[side];
   if (!EMOTE_BY_ID[id] || (cur && cur.age < 1.3) || (side === 1 && !foeEmotes)) return false; // no spam: one at a time
-  fx.emotes[side] = { id, age: 0 };
+  fx.emotes[side] = { id, age: 0, ent };
   return true;
 }
 const pickMood = moods => { const l = EMOTE_LIST.filter(e => moods.includes(e.mood)); return l[Math.floor(Math.random() * l.length)].id; };
@@ -240,7 +240,7 @@ function drawEmotes(ctx, w, dt) {
     if (!em) continue;
     em.age += dt;
     if (em.age > 2.4) { delete fx.emotes[side]; continue; }
-    const e = w.ents.find(b => b.side === side && !b.dead);
+    const e = (em.ent != null && w.ents.find(b => b.id === em.ent && !b.dead)) || w.ents.find(b => b.side === side && !b.dead);
     if (!e) continue;
     const p = em.age, pop = p < 0.12 ? 0.3 + p * 9 : p < 0.26 ? 1.38 - (p - 0.12) * 2.7 : 1;
     const below = e.y - e.r - 38 < 26, dir = below ? -1 : 1; // near the top wall the bubble hangs under the ball
@@ -1420,7 +1420,7 @@ function puff(e) {
 
 // ---------- frame ----------
 
-export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
+export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null }) {
   absorb(w, now);
   ctx.setTransform(s, 0, 0, s, M * s, M * s);
   if (fx.shake > 0.2) ctx.translate(rnd(-1, 1) * fx.shake, rnd(-1, 1) * fx.shake);
@@ -1516,6 +1516,14 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt }) {
     ctx.restore();
   }
   drawEmotes(ctx, w, dt);
+  const mine = me != null && w.ents.find(e => e.id === me && !e.dead);
+  if (mine) { // in a party: a bobbing marker over the ball you steer
+    const y = mine.y - mine.r - 12 - Math.abs(Math.sin(now * 4)) * 4;
+    ctx.save();
+    ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(mine.x - 8, y - 8); ctx.lineTo(mine.x + 8, y - 8); ctx.lineTo(mine.x, y + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   fx.floats = fx.floats.filter(f => f.age < f.life);
 }
 

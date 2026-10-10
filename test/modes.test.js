@@ -43,3 +43,25 @@ test('classic fights replay exactly as before (no new randomness at launch)', ()
   launch(v, 1, 2);
   assert.equal(v.rand(), r, 'launch draws nothing in 1v1');
 });
+
+test('party: each player steers only their own ball; dash charges grow with the team', async () => {
+  const { act, DASH } = await import('../src/sim.js');
+  const w = createWorld({ seed: 2, a: [{ id: 'basic' }, { id: 'ninja' }], b: [{ id: 'leech' }], players: [2, 1] });
+  assert.equal(w.sides[0].dashes, DASH.charges * 2);
+  launch(w, 0.5, 3.5);
+  const [p1, p2] = w.ents.filter(e => e.side === 0), before = [p2.vx, p2.vy];
+  assert.ok(act(w, 0, { type: 'dash', x: 10, y: 10, ent: p1.id }));
+  assert.ok(p1.boost && !p2.boost, 'only the steered ball dashes');
+  assert.deepEqual([p2.vx, p2.vy], before);
+  assert.ok(!act(w, 0, { type: 'dash', x: 10, y: 10, ent: 999 }), 'no such ball');
+  assert.equal(w.log.at(-1).ent, p1.id);
+});
+
+test('party bot whose ball is out just waits (no crash)', async () => {
+  const { createAI } = await import('../src/ai.js');
+  const w = createWorld({ seed: 3, a: [{ id: 'basic' }, { id: 'ninja' }], b: [{ id: 'leech' }, { id: 'cell' }] });
+  launch(w, 0.5, 3.5);
+  const bot = w.ents.find(e => e.side === 1);
+  bot.dead = true;
+  assert.doesNotThrow(() => createAI(1, 3, 1, { ent: bot.id }).think(w));
+});

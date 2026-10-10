@@ -243,6 +243,29 @@
     </div>
   </section>
 
+  <section id="scr-pchoice" class="overlay" hidden>
+    <div class="card result pchoice">
+      <h2 id="pc-mode"></h2>
+      <button class="btn primary big wide-btn" id="pc-create" data-t="partyFriends"></button>
+      <button class="btn wide-btn" id="pc-solo" data-t="partySolo"></button>
+      <div class="row pc-join"><input id="pc-code" class="code-in" maxlength="5" placeholder="ABCDE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="code"><button class="btn" id="pc-join" data-t="partyJoin"></button></div>
+      <button class="btn ghost wide-btn" id="pc-close" data-t="close"></button>
+    </div>
+  </section>
+
+  <section id="scr-party" class="overlay" hidden>
+    <div class="card result party">
+      <h2 data-t="partyTitle"></h2>
+      <p class="muted"><span id="pt-mode"></span> · <span data-t="partyCode"></span> <b id="pt-code" class="pt-code"></b></p>
+      <div id="pt-list" class="pt-list"></div>
+      <button class="btn wide-btn" id="pt-share" data-t="partyShare"></button>
+      <button class="btn primary big wide-btn" id="pt-start" data-t="partyStart"></button>
+      <p id="pt-wait" class="muted center" data-t="partyWait"></p>
+      <p class="muted small center" data-t="partyHint"></p>
+      <button class="btn ghost wide-btn" id="pt-leave" data-t="partyLeave"></button>
+    </div>
+  </section>
+
   <section id="scr-settings" class="overlay" hidden>
     <div class="card result settings">
       <h2 data-t="settingsTitle"></h2>

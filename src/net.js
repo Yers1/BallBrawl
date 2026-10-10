@@ -24,7 +24,10 @@ export async function connect(save) {
   if (q.has('offline') || (local && !q.has('online'))) return { save };
   try {
     const { createClient } = await timeout(import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'), 10000);
-    sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'ballbrawl.auth' } });
+    sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'ballbrawl.auth' },
+      realtime: { params: { eventsPerSecond: 30 } }, // parties send ~8 messages a second; the default 10 drops some
+    });
     let { data: { session } } = await timeout(sb.auth.getSession());
     if (!session) {
       const { data, error } = await timeout(sb.auth.signInAnonymously());
@@ -109,6 +112,16 @@ export const finishMatch = ({ match, result, flawless }) => rpc('finish_match', 
 export const leaderboard = week => rpc('leaderboard', { p_week: week });
 export const news = () => rpc('news');
 export const clanList = () => rpc('clan_list');
+export const myUid = () => uid;
+// A party room: presence says who's in, broadcast carries the game's packets. No server code, no stored data.
+export function partyChannel(code, me, { onPresence, onMsg }) {
+  if (!sb || !uid) throw new Error('offline');
+  const ch = sb.channel('bbparty-' + code, { config: { broadcast: { self: false }, presence: { key: me.uid } } });
+  ch.on('broadcast', { event: 'm' }, ({ payload }) => onMsg(payload));
+  ch.on('presence', { event: 'sync' }, () => onPresence(Object.values(ch.presenceState()).map(a => a[0])));
+  ch.subscribe(status => { if (status === 'SUBSCRIBED') ch.track(me); });
+  return { send: payload => ch.send({ type: 'broadcast', event: 'm', payload }), leave: () => { ch.untrack(); sb.removeChannel(ch); } };
+}
 export const clanInfo = id => rpc('clan_info', { p_clan: id ?? null });
 export const clanCreate = (name, badge) => rpc('clan_create', { p_name: name, p_badge: badge });
 export const clanJoin = id => rpc('clan_join', { p_clan: id });

@@ -1,18 +1,18 @@
 // Browser layer: screens, aiming, the battle loop, saving, ads wiring.
 import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METER, MAPS } from './sim.js';
 import { BALLS, ORDER } from './balls.js';
-import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
+import { createMatch, roundWorld, endRound, revive, aiAngle, BOSS } from './match.js';
 import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
-import { randomNick, nickText } from './nick.js';
+import { randomNick, nickText, validNick } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, gainXp, XP_WIN, XP_PLAY,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, gainXp, XP_WIN, XP_PLAY, SKINS,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -178,11 +178,12 @@ function startChallenge() {
 // ---------- home ----------
 const home = createHome({
   save, persist, el, icon, coinsUI, toast, online,
-  onPlay: () => goSquad(),
+  onPlay: () => (save.mode === 'classic' ? goSquad() : partyChoice()),
   onWatch: () => goWatch(),
   onChallenge: () => shareChallenge(),
 });
 function goHome(tab) {
+  if (S.party) partyLeave();
   cancelReward();
   S.mode = 'home';
   S.challenge = null;
@@ -340,11 +341,17 @@ function aimAt(e) {
   const [x, y] = toArena(e), me = S.world.ents[0];
   if (Math.hypot(x - me.x, y - me.y) > 6) S.aim = Math.atan2(y - me.y, x - me.x);
 }
-const useSuper = () => { if (S.mode === 'fight') act(S.world, 0, { type: 'super' }); };
+const useSuper = () => {
+  if (S.mode !== 'fight') return;
+  const F = S.party?.fight;
+  if (F) F.out.push({ type: 'super', ent: F.me.ent, side: F.me.side });
+  else act(S.world, 0, { type: 'super' });
+};
 canvas.addEventListener('pointerdown', e => {
   if (S.mode === 'fight') { // tap = dash there
-    const [x, y] = toArena(e);
-    if (act(S.world, 0, { type: 'dash', x, y })) S.dashed = true;
+    const [x, y] = toArena(e), F = S.party?.fight;
+    if (F) { F.out.push({ type: 'dash', x, y, ent: F.me.ent, side: F.me.side }); S.dashed = true; }
+    else if (act(S.world, 0, { type: 'dash', x, y })) S.dashed = true;
     return;
   }
   if (S.mode !== 'aim') return;
@@ -392,12 +399,12 @@ const pips = Array.from({ length: DASH.charges }, () => el('span', 'pip', BOLT))
 $('#dash-pips').append(...pips);
 function controls() {
   if ($('#controls').hidden) return;
-  const s = S.world.sides[0], k = s.meter / METER.full, btn = $('#super-btn');
+  const side = S.party?.fight?.me.side ?? 0, s = S.world.sides[side], k = s.meter / METER.full, btn = $('#super-btn');
   pips.forEach((p, i) => {
     p.classList.toggle('on', i < s.dashes);
     p.style.setProperty('--p', i === s.dashes ? s.regen / DASH.regen : 0);
   });
-  const can = canSuper(S.world, 0);
+  const can = canSuper(S.world, side);
   btn.style.setProperty('--p', k);
   btn.disabled = S.mode !== 'fight' || !can;
   btn.classList.toggle('ready', can);
@@ -455,6 +462,10 @@ function onRoundOver(now) {
 // ---------- results ----------
 const CHALLENGE_BONUS = 10;
 function finishMatch(r) {
+  if (S.party) { // the result is from side 0's view; flip it for a player on side 1, then leave the room
+    if (S.party.fight?.me.side === 1 && r !== 'draw') r = 1 - r;
+    partyLeave();
+  }
   const won = r === 0, c = S.challenge, before = save.trophies;
   const flawless = won && S.match.mode === 'classic' && S.match.a.length === 3 && !S.match.revived; // not a single ball lost
   S.outcome = r;
@@ -494,7 +505,8 @@ function trophyLine() {
   if (S.mode !== 'result' || S.challenge) return;
   if (!S.ranked) {
     $('#r-trophies').hidden = true;
-    $('#r-sub').textContent = t('training');
+    const mode = S.match?.mode;
+    $('#r-sub').textContent = mode && mode !== 'classic' ? t('mode_' + mode) : t('training'); // 2 vs 2 and the boss never move trophies
     return;
   }
   const d = S.delta, shown = save.pendingFinish ? save.trophies + d : save.trophies;
@@ -677,7 +689,7 @@ function feel(w, now) {
     if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
     if (ev.type === 'dash') { sfx.dash(); if (mine && ev.side === 0) S.ms.dashes++; }
-    if (ev.type === 'train') sfx.train();
+    if (ev.type === 'train') sfx.train(ev.express);
     if (ev.type === 'death') {
       sfx.death();
       S.freezeUntil = Math.max(S.freezeUntil, now + 0.12);
@@ -694,13 +706,14 @@ function feel(w, now) {
 
 // ---------- loop ----------
 let last = performance.now() / 1000, acc = 0;
-function frame(ms) {
-  const now = ms / 1000, dt = Math.min(0.05, Math.max(0, now - last));
+function tick(ms) {
+  const now = ms / 1000, real = Math.max(0, now - last), dt = Math.min(0.05, real);
   last = now;
   const w = S.world;
   if (w) {
     if (S.mode === 'watch' && !w.launched && now >= S.launchAt) watchLaunch();
     if (now < S.freezeUntil) acc = 0; // hit-stop: hold the frame, the sim just waits
+    else if (S.party && S.mode === 'fight') partyFrame(real); // real time: a slow phone catches up instead of lagging behind
     else if (S.demo || S.mode === 'fight' || S.mode === 'watch') {
       acc += dt;
       while (acc >= STEP) {
@@ -714,12 +727,205 @@ function frame(ms) {
     if (!S.demo) feel(w, now);
     if (w.result != null) onRoundOver(now);
     const preWatch = S.mode === 'watch' && !w.launched;
-    draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : preWatch ? S.watchAims[0] : null, foeAim: S.mode === 'aim' ? S.foeAim : preWatch ? S.watchAims[1] : null, now, dt });
+    draw(ctx, S.world, scale, { aim: S.mode === 'aim' ? S.aim : preWatch ? S.watchAims[0] : null, foeAim: S.mode === 'aim' ? S.foeAim : preWatch ? S.watchAims[1] : null, now, dt, me: S.party?.fight?.me.ent ?? null });
     mid();
     controls();
     hints();
   }
-  requestAnimationFrame(frame);
+}
+function frame(ms) { tick(ms); requestAnimationFrame(frame); }
+// a hidden tab gets no animation frames — keep a party fight going so friends aren't frozen waiting for you
+setInterval(() => { if (S.party && performance.now() / 1000 - last > 0.25) tick(performance.now()); }, 250);
+
+// ---------- parties: play online with friends — the Boss together (1–3 people) or 2 vs 2 (up to 4, bots fill in) ----------
+// Lockstep: every phone runs the same deterministic fight. Your taps are sent for a turn a little ahead (DELAY), and no
+// one plays a turn before having every player's packet for it. The host also plays the boss and the bots, and every
+// few turns sends where the balls really are, so tiny float differences between phones never split the fight.
+// No chat: only the game, nicknames from word lists, and emotes.
+const PT = { TURN: 8, DELAY: 2, FIX: 8, DROP: 5000 };
+const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/, PMAX = { boss: 3, duo: 4 };
+const newCode = () => Array.from({ length: 5 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
+let P = null; // the party you're in
+const cleanMember = m => (m && typeof m.uid === 'string' && validNick(m.nick) && BALLS[m.ball] ? {
+  uid: m.uid, nick: m.nick, ball: m.ball, skin: SKINS[m.skin] ? m.skin : null, at: Number(m.at) || 0, host: m.host === true,
+  mode: m.mode === 'boss' || m.mode === 'duo' ? m.mode : null,
+} : null);
+function partyChoice() {
+  if (!net.online) return toast(t('needNet'));
+  $('#pc-mode').textContent = t('mode_' + save.mode);
+  $('#pc-code').value = '';
+  $('#scr-pchoice').hidden = false;
+}
+$('#pc-solo').onclick = () => { $('#scr-pchoice').hidden = true; goSquad(); };
+$('#pc-create').onclick = () => { $('#scr-pchoice').hidden = true; partyOpen(newCode(), true); };
+$('#pc-join').onclick = () => {
+  const c = $('#pc-code').value.trim().toUpperCase();
+  if (!CODE_RE.test(c)) return toast(t('partyNoCode'));
+  $('#scr-pchoice').hidden = true;
+  partyOpen(c, false);
+};
+$('#pc-close').onclick = () => { $('#scr-pchoice').hidden = true; };
+function partyOpen(code, host) {
+  partyLeave();
+  const me = { uid: online.myUid(), nick: save.nick, ball: save.squad[0], skin: save.skinOf[save.squad[0]] ?? null, at: Date.now(), host, mode: host ? save.mode : null };
+  P = { code, host, me, members: [], mode: host ? save.mode : null, state: 'lobby', sawHost: false };
+  globalThis.bbParty = P; // handy in the console when a party misbehaves
+  try { P.chan = online.partyChannel(code, me, { onPresence: partyPresence, onMsg: partyMsg }); } catch { P = null; return toast(t('needNet')); }
+  partyRender();
+  $('#scr-party').hidden = false;
+}
+function partyLeave() {
+  if (P) { try { P.chan.leave(); } catch { /* already gone */ } }
+  P = null;
+  S.party = null;
+  $('#scr-party').hidden = true;
+}
+function partyPresence(list) {
+  if (!P) return;
+  P.members = list.map(cleanMember).filter(Boolean).sort((a, b) => a.at - b.at);
+  const host = P.members.find(m => m.host);
+  if (!P.host) {
+    if (host) { P.mode = host.mode; P.sawHost = true; }
+    else if (P.sawHost) { // the host left
+      toast(t('partyGone'));
+      if (P.state === 'fight') { partyLeave(); goHome('lobby'); } else partyLeave();
+      return;
+    }
+  }
+  if (P.state === 'lobby') partyRender();
+}
+function partyRender() {
+  const mode = P.mode ?? 'boss', max = PMAX[mode];
+  $('#pt-code').textContent = P.code;
+  $('#pt-mode').textContent = P.mode ? t('mode_' + P.mode) : '…';
+  const seats = P.members.slice(0, max);
+  $('#pt-list').className = 'pt-list' + (mode === 'duo' ? ' duo' : '');
+  $('#pt-list').replaceChildren(...Array.from({ length: max }, (_, i) => {
+    const m = seats[i], d = el('div', 'pt-seat' + (mode === 'duo' ? (i % 2 ? ' red' : ' blue') : ''));
+    if (m) { d.append(icon(m.ball, 44, m.skin), el('b', '')); d.lastChild.textContent = nickText(m.nick, lang) + (m.host ? ` · ${t('partyHost')}` : ''); }
+    else d.append(el('span', 'pt-empty'), ...(mode === 'duo' ? [el('small', '', t('partyBot'))] : [])); // the boss fight has no bots on your side
+    return d;
+  }));
+  $('#pt-start').hidden = !P.host;
+  $('#pt-wait').hidden = P.host;
+  $('#pt-start').disabled = !seats.length;
+}
+$('#pt-share').onclick = async () => {
+  if (!P) return;
+  const url = `${location.origin}${location.pathname}?party=${P.code}`, text = t('partyInvite', { code: P.code });
+  try {
+    if (navigator.share) await navigator.share({ title: 'BallBrawl', text, url });
+    else { await navigator.clipboard.writeText(`${text} ${url}`); toast(t('partyCopied')); }
+  } catch { /* closed the share sheet */ }
+};
+$('#pt-leave').onclick = () => { sfx.click(); partyLeave(); };
+$('#pt-start').onclick = () => {
+  if (!P?.host) return;
+  const mode = P.mode, seats = P.members.slice(0, PMAX[mode]), foes = enemySquadFor(save.trophies, Math.random);
+  const human = m => ({ uid: m.uid, ball: m.ball, skin: m.skin });
+  const seatList = mode === 'boss'
+    ? [...seats.map(m => ({ ...human(m), side: 0 })), { uid: null, ball: foes[0], skin: null, side: 1, boss: true }]
+    : Array.from({ length: 4 }, (_, i) => (seats[i] ? { ...human(seats[i]), side: i % 2 } : { uid: null, ball: foes[i % 3], skin: null, side: i % 2 }));
+  const msg = { t: 'start', seed: Math.floor(Math.random() * 1e9), mode, map: arenaFor(save.maxTrophies).id, seats: seatList, bossMul: BOSS.hpMul * (0.45 + 0.2 * seats.length), level: aiLevel(save.trophies) };
+  P.chan.send(msg);
+  partyBegin(msg);
+};
+const cleanStart = m => {
+  if (!m || !Array.isArray(m.seats) || m.seats.length > 5 || !MAPS[m.map] || !(m.mode === 'boss' || m.mode === 'duo')) return null;
+  const seats = m.seats.map(s => ({ uid: typeof s?.uid === 'string' ? s.uid : null, ball: BALLS[s?.ball] ? s.ball : 'basic', skin: SKINS[s?.skin] ? s.skin : null, side: s?.side === 1 ? 1 : 0, boss: s?.boss === true }));
+  return { t: 'start', seed: Math.floor(Number(m.seed)) || 1, mode: m.mode, map: m.map, seats, bossMul: Math.min(10, Math.max(1, Number(m.bossMul) || 5)), level: Math.min(30, Math.max(1, Math.floor(Number(m.level)) || 1)) };
+};
+function partyMsg(m) {
+  if (!P || !m || typeof m !== 'object') return;
+  const F = P.fight;
+  if (m.t === 'start' && !P.host && P.state === 'lobby') { const s = cleanStart(m); if (s) partyBegin(s); return; }
+  if (!F) return;
+  if (m.t === 'turn' && F.humans.includes(m.uid) && Array.isArray(m.turns)) { // one message carries every turn a player played that frame
+    const seat = F.seats.find(s => s.uid === m.uid), host = m.uid === F.hostUid;
+    for (const [n, list] of m.turns.slice(0, 12)) {
+      if (!Number.isInteger(n) || n < F.turn) continue;
+      (F.packets[n] ??= {})[m.uid] = (Array.isArray(list) ? list.slice(0, 16) : []).filter(c => c && (c.type === 'dash' || c.type === 'super') && Number.isInteger(c.ent)
+        && (c.ent === seat.ent || (host && F.seats.some(s => !s.uid && s.ent === c.ent)))).map(c => ({
+        type: c.type, ent: c.ent, side: F.seats.find(s => s.ent === c.ent).side,
+        ...(c.type === 'dash' && { x: Math.min(W, Math.max(0, Number(c.x) || 0)), y: Math.min(H, Math.max(0, Number(c.y) || 0)) }),
+      }));
+    }
+    F.seen[m.uid] = performance.now();
+    const fix = host && !P.host && m.fix;
+    if (fix && Number.isInteger(fix.n)) { if (F.turn > fix.n) partyFix(fix); else F.fixes[fix.n] = fix; }
+  } else if (m.t === 'drop' && typeof m.uid === 'string') F.dropped.add(m.uid);
+  else if (m.t === 'emote' && Number.isInteger(m.ent)) emote(m.side === 1 ? 1 : 0, String(m.id), m.ent);
+}
+function partyFix(m) { // the host's truth about the balls (positions, speed, health, meters)
+  const w = S.world;
+  for (const r of Array.isArray(m.ents) ? m.ents : []) {
+    const e = Array.isArray(r) && w.ents.find(x => x.id === r[0]);
+    if (!e || r.slice(1, 6).some(v => !Number.isFinite(v))) continue;
+    [e.x, e.y, e.vx, e.vy, e.hp] = r.slice(1, 6);
+    if (r[6] && !e.dead) { e.dead = true; e.hp = 0; }
+  }
+  (Array.isArray(m.sides) ? m.sides : []).forEach((v, i) => { if (Array.isArray(v) && w.sides[i] && v.every(Number.isFinite)) [w.sides[i].meter, w.sides[i].dashes, w.sides[i].regen] = v; });
+}
+function partyBegin(m) {
+  const mySeat = m.seats.find(s => s.uid === P.me.uid);
+  if (!mySeat) { toast(t('partyFull')); partyLeave(); return; }
+  P.state = 'fight';
+  $('#scr-party').hidden = true;
+  $('#scr-pchoice').hidden = true;
+  const s0 = m.seats.filter(s => s.side === 0), s1 = m.seats.filter(s => s.side === 1);
+  const spec = s => ({ id: s.ball, skin: s.skin, ...(s.boss && { ...BOSS, boss: true, hpMul: m.bossMul }) });
+  const w = createWorld({ seed: m.seed, a: s0.map(spec), b: s1.map(spec), map: m.map, players: [s0.length, s1.length] });
+  const e0 = w.ents.filter(e => e.side === 0), e1 = w.ents.filter(e => e.side === 1);
+  s0.forEach((s, i) => { s.ent = e0[i].id; });
+  s1.forEach((s, i) => { s.ent = e1[i].id; });
+  const humans = m.seats.filter(s => s.uid).map(s => s.uid);
+  const F = P.fight = { m, seats: m.seats, me: mySeat, humans, hostUid: P.host ? P.me.uid : P.members.find(x => x.host)?.uid, packets: {}, seen: {}, dropped: new Set(), fixes: {}, turn: 0, acc: 0, out: [], started: performance.now(), launchAt: performance.now() + 3000, bots: [] };
+  for (let k = 0; k < PT.DELAY; k++) F.packets[k] = Object.fromEntries(humans.map(u => [u, []]));
+  if (P.host) F.bots = m.seats.filter(s => !s.uid).map((s, i) => createAI(s.side, m.level, m.seed + i + 1, { ent: s.ent, act: (_w, side, cmd) => { F.out.push({ ...cmd, side, ent: s.ent }); return true; } }));
+  S.party = P;
+  S.world = w;
+  S.match = { a: s0.map(s => ({ id: s.ball, skin: s.skin })), b: s1.map(s => ({ id: s.ball, skin: s.skin })), mode: m.mode, revived: true, round: 1 };
+  S.challenge = null; S.ranked = false; S.matchId = null; S.matchStart = Date.now(); S.demo = false; S.dashed = false; S.ms = { dashes: 0, supers: 0, kills: 0 };
+  setAutoEmote([]);
+  setAuras({});
+  resetFx();
+  S.mode = 'fight';
+  show(null);
+  hud();
+  banner('3');
+  setTimeout(() => { if (S.party === P) banner('2'); }, 1000);
+  setTimeout(() => { if (S.party === P) banner('1'); }, 2000);
+}
+function partyFrame(dt) {
+  const F = P.fight, w = S.world, TT = PT.TURN * STEP;
+  if (!w.launched) {
+    if (performance.now() < F.launchAt) return;
+    const a = w.ents.find(e => e.side === 0), b = w.ents.find(e => e.side === 1);
+    launch(w, Math.atan2(b.y - a.y, b.x - a.x), Math.atan2(a.y - b.y, a.x - b.x));
+    return;
+  }
+  if (w.result != null) return;
+  F.acc = Math.min(F.acc + dt, TT * 6);
+  const sent = [];
+  let fix = null;
+  while (F.acc >= TT && w.result == null) {
+    const n = F.turn, got = F.packets[n] ?? {}, need = F.humans.filter(u => !F.dropped.has(u));
+    if (!need.every(u => u in got)) { // someone is slow: wait (the host drops a player who went silent)
+      if (P.host) for (const u of need) if (!(u in got) && performance.now() - (F.seen[u] ?? F.started + 3000) > PT.DROP) { F.dropped.add(u); P.chan.send({ t: 'drop', uid: u }); }
+      break;
+    }
+    for (const u of need) for (const c of got[u]) act(w, c.side, c);
+    delete F.packets[n];
+    for (let i = 0; i < PT.TURN && w.result == null; i++) { if (P.host) for (const ai of F.bots) ai.think(w); step(w, STEP); }
+    F.acc -= TT;
+    F.turn++;
+    const cmds = F.out.splice(0, 16);
+    (F.packets[n + PT.DELAY] ??= {})[P.me.uid] = cmds;
+    sent.push([n + PT.DELAY, cmds]);
+    if (P.host && n % PT.FIX === 0) fix = { n, ents: w.ents.map(e => [e.id, e.x, e.y, e.vx, e.vy, e.hp, e.dead ? 1 : 0]), sides: w.sides.map(s => [s.meter, s.dashes, s.regen]) };
+    if (F.fixes[n]) { partyFix(F.fixes[n]); delete F.fixes[n]; }
+  }
+  if (sent.length) P.chan.send({ t: 'turn', uid: P.me.uid, turns: sent, ...(fix && { fix }) }); // one message per frame, never more
 }
 
 // ---------- boot ----------
@@ -738,6 +944,14 @@ function emoteTray() {
     b.onclick = ev => {
       ev.stopPropagation();
       $('#emote-tray').hidden = true;
+      const F = S.party?.fight;
+      if (F) {
+        if (!emote(F.me.side, e.id, F.me.ent)) return;
+        S.party.chan.send({ t: 'emote', side: F.me.side, ent: F.me.ent, id: e.id });
+        save.stats.emotes++;
+        sfx.click();
+        return;
+      }
       if (!emote(0, e.id)) return;
       save.stats.emotes++;
       sfx.click();
@@ -801,6 +1015,8 @@ requestAnimationFrame(frame);
 // Go online in the background; the game is already playable offline.
 setTimeout(async () => {
   const { save: merged } = await online.connect(save);
+  const invite = new URLSearchParams(location.search).get('party')?.toUpperCase();
+  if (invite && CODE_RE.test(invite) && net.online) setTimeout(() => partyOpen(invite, false), 600);
   if (merged === save) return; // offline: connect hands back our own save untouched — nothing to swap in
   for (const k of Object.keys(save)) delete save[k]; // swap contents in place: home & the match hold this object
   Object.assign(save, merged);

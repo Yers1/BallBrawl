@@ -69,7 +69,17 @@ export const sfx = {
   wall: () => noise(0.04, { vol: 0.05, freq: 2400 }),
   dash: () => noise(0.22, { vol: 0.22, freq: 500, sweep: 5, q: 2 }),
   shot: () => noise(0.05, { vol: 0.06, freq: 4000, q: 3 }),
-  train: () => { tone(110, 0.5, { type: 'sawtooth', vol: 0.1, slide: 0.7 }); noise(0.5, { vol: 0.12, freq: 300 }); },
+  train: (express = false) => { // a whistle, then "choo-choo" puffs that speed up while it rolls past, over a low rumble
+    tone(740, 0.4, { type: 'triangle', vol: 0.09 });
+    tone(880, 0.4, { type: 'triangle', vol: 0.07, delay: 0.03 });
+    const n = express ? 14 : 10;
+    let at = 0.3;
+    for (let i = 0; i < n; i++) {
+      noise(0.08, { vol: 0.17 - i * 0.008, freq: i % 2 ? 900 : 550, q: 1.5, delay: at });
+      at += Math.max(0.09, 0.2 - i * 0.012);
+    }
+    tone(65, at + 0.2, { type: 'sawtooth', vol: 0.05, slide: 0.85, delay: 0.25 });
+  },
   super: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.16, delay: i * 0.05 })),
   death: () => { noise(0.45, { vol: 0.4, freq: 200, sweep: 0.3 }); tone(90, 0.4, { type: 'sine', vol: 0.3, slide: 0.4 }); },
   win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.14, delay: i * 0.09 })),

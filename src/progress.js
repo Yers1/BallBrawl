@@ -552,13 +552,6 @@ export function claimAchievement(s, id) {
 }
 
 // ---------- shop ----------
-export function buyBall(s, id) { // only balls of an arena you've reached
-  if (!BALLS[id] || s.owned.includes(id) || s.coins < BALLS[id].price || UNLOCK[id] > s.maxTrophies) return false;
-  s.coins -= BALLS[id].price;
-  s.owned.push(id);
-  return true;
-}
-
 // ---------- cloud merge ----------
 // Combine this device's save with the cloud copy without losing anything: collections are unioned,
 // counters take the larger value, today's quests keep the best progress. Trophies always come from the server.

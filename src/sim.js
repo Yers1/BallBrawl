@@ -32,11 +32,11 @@ export function rng(seed) { // mulberry32
   };
 }
 
-export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night' }) {
+export function createWorld({ seed = 1, a, b, hpMulB = 1, map = 'night', players = null }) {
   const w = {
     t: 0, tick: 0, launched: false, rand: rng(seed), ents: [], shots: [], zones: [], events: [], hitCd: {}, result: null, nextId: 1,
     map: MAPS[map] ? map : 'night', obstacles: (MAPS[map] ?? []).map(o => ({ ...o })),
-    sides: [0, 1].map(() => ({ dashes: DASH.charges, regen: 0, meter: 0 })),
+    sides: [0, 1].map(i => ({ dashes: DASH.charges * (players?.[i] ?? 1), regen: 0, meter: 0, n: players?.[i] ?? 1 })), // n = people steering this side
     log: [], // every accepted command: { tick, side, type, x?, y? } — seed + log replays the fight
   };
   [a, b].forEach((spec, side) => { // a spec, or a team of specs (2v2, the boss fight)
@@ -110,13 +110,15 @@ export function hurt(w, e, amount, quiet = false, meter = true) {
 }
 
 // Player / AI commands, applied between steps. Returns whether it was accepted.
-export function act(w, side, cmd) {
+export function act(w, side, cmd) { // cmd.ent: in a party, the one ball this player steers
   const team = w.ents.filter(e => e.side === side && !e.dead), s = w.sides[side];
   if (!w.launched || w.result != null || !team.length) return false;
+  const one = cmd.ent != null ? team.find(e => e.id === cmd.ent) : null;
+  if (cmd.ent != null && !one) return false;
   if (cmd.type === 'dash') {
     if (s.dashes < 1) return false;
     s.dashes--;
-    for (const e of team) {
+    for (const e of one ? [one] : team) {
       const dx = cmd.x - e.x, dy = cmd.y - e.y, d = Math.hypot(dx, dy);
       e.latch = null;
       if (d > 1) { e.vx = (dx / d) * e.speed; e.vy = (dy / d) * e.speed; }
@@ -124,13 +126,13 @@ export function act(w, side, cmd) {
     }
     w.events.push({ type: 'dash', side, x: cmd.x, y: cmd.y });
   } else if (cmd.type === 'super') {
-    const me = team[0];
-    if (!canSuper(w, side)) return false;
+    const me = one ?? team[0];
+    if (s.meter < METER.full || BALLS[me.kind].canSuper?.(w, me) === false) return false;
     s.meter = 0;
     BALLS[me.kind].onSuper?.(w, me);
     w.events.push({ type: 'super', side, kind: me.kind, x: me.x, y: me.y });
   } else return false;
-  w.log.push(cmd.type === 'dash' ? { tick: w.tick, side, type: 'dash', x: cmd.x, y: cmd.y } : { tick: w.tick, side, type: cmd.type });
+  w.log.push({ tick: w.tick, side, type: cmd.type, ...(cmd.type === 'dash' && { x: cmd.x, y: cmd.y }), ...(one && { ent: one.id }) });
   return true;
 }
 
@@ -139,8 +141,8 @@ export function step(w, dt) {
   w.t += dt;
   w.tick++;
   for (const s of w.sides) {
-    if (s.dashes >= DASH.charges) { s.regen = 0; continue; }
-    s.regen += dt;
+    if (s.dashes >= DASH.charges * s.n) { s.regen = 0; continue; }
+    s.regen += dt * s.n;
     if (s.regen >= DASH.regen) { s.dashes++; s.regen -= DASH.regen; }
   }
   w.zones = w.zones.filter(z => !z.owner.dead && z.until > w.t);
