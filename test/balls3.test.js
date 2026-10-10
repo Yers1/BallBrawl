@@ -85,14 +85,14 @@ test('chess moves like a random piece, square to square, untouchable on the way'
   const { CHESS } = await import('../src/balls.js');
   const [w, me, foe] = duel('chess');
   let moves = 0, hurtWhileMoving = false;
-  for (let i = 0; i < 60 * 12 && w.result == null; i++) {
+  for (let i = 0; i < 60 * 16 && w.result == null; i++) {
     const hp = me.hp, moving = !!me.chess;
     step(w, 1 / 60);
     if (moving && me.hp < hp) hurtWhileMoving = true;
     if (w.events.some(e => e.type === 'chess')) moves++;
     w.events.length = 0;
   }
-  assert.ok(moves >= 3, `made ${moves} moves`);
+  assert.ok(moves >= 2, `made ${moves} moves`);
   assert.ok(!hurtWhileMoving, 'no damage during a move');
-  assert.ok(CHESS.queenMoves === 3);
+  assert.ok(CHESS.dmg <= 5, 'small hits');
 });

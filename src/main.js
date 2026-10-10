@@ -7,12 +7,12 @@ import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, s
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
-import { randomNick, nickText, validNick } from './nick.js';
+import { randomNick, nickText, validNick, validClan } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti } from './sfx.js';
 import {
   migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
-  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, gainXp, XP_WIN, XP_PLAY, SKINS,
+  claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, SHOP, levelOf, gainXp, XP_WIN, XP_PLAY, SKINS,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
@@ -307,7 +307,21 @@ async function startMatch() {
     map: arenaFor(save.maxTrophies).id, // your arena decides the map
   });
   S.aiLevel = aiLevel(save.trophies);
+  show(null);
+  await home.vs(foeCard()); // both banners first, like Clash Royale
   beginMatch();
+}
+// How the opponent looks on the VS screen: a real player's banner, clan and level; the computer shows its lead ball.
+function foeCard() {
+  const o = S.opponent, lead = S.match.b[0];
+  if (!o) return { nick: t('enemy'), banner: 'night', deco: 'none', avatar: lead.id, skin: lead.skin, level: null, trophies: save.trophies, clan: null };
+  const ok = (v, list) => (typeof v === 'string' && Object.hasOwn(list, v) ? v : null);
+  const clan = o.clan && validClan(o.clan.name) ? { name: o.clan.name, badge: Math.min(7, Math.max(0, Number(o.clan.badge) || 0)) } : null;
+  const avatar = ok(o.avatar, BALLS) ?? lead.id;
+  return {
+    nick: nickText(o.nick, lang), banner: ok(o.banner, SHOP.banner) ?? 'night', deco: ok(o.deco, SHOP.deco) ?? 'none',
+    avatar, skin: o.skins?.[avatar] ?? null, level: Number.isFinite(o.xp) ? levelOf(o.xp).lv : null, trophies: Number(o.trophies) || 0, clan,
+  };
 }
 
 function beginMatch() {

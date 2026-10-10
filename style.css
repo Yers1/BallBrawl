@@ -1125,3 +1125,40 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
   #super-btn { position: relative; }
   #super-btn::after { content: attr(data-key); position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); padding: 1px 8px; border-radius: 6px; background: var(--stroke); color: var(--muted); font: 800 11px Nunito, sans-serif; white-space: nowrap; }
 }
+
+/* ---------- the VS screen before a fight: the foe's banner slides in from the right, yours from the left ---------- */
+.vs-intro {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding-bottom: 4vh; overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(40, 60, 140, 0.55), rgba(5, 8, 20, 0.88));
+}
+.vs-intro.out { animation: vsOut 0.28s ease-in forwards; }
+.vs-card { position: relative; z-index: 0; width: min(94%, 520px); height: 104px; display: flex; align-items: center; gap: 12px; padding: 0 30px 0 18px; }
+.vs-card.foe { align-self: flex-end; flex-direction: row-reverse; padding: 0 18px 0 30px; text-align: right; animation: vsFromRight 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.vs-card.me { align-self: flex-start; animation: vsFromLeft 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) 0.12s both; }
+.vs-bg { position: absolute; inset: 0; z-index: -1; filter: drop-shadow(0 6px 0 rgba(10, 14, 31, 0.6)); }
+.vs-bg svg { display: block; width: 100%; height: 100%; }
+.vs-card.foe .vs-bg svg { transform: scaleX(-1); }
+.vs-av { position: relative; flex: none; width: 70px; height: 70px; display: grid; place-items: center; border-radius: 50%; background: rgba(10, 14, 31, 0.45); border: 3px solid var(--stroke); }
+.vs-av .lvl-badge { position: absolute; left: -6px; bottom: -6px; }
+.vs-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.vs-nick { font: 400 21px var(--display); text-shadow: var(--stroke-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vs-clan, .vs-meta { display: flex; align-items: center; gap: 5px; font-weight: 900; font-size: 13px; text-shadow: 0 2px 0 var(--stroke); }
+.vs-clan:empty { display: none; }
+.vs-card.foe .vs-clan, .vs-card.foe .vs-meta { justify-content: flex-end; }
+.vs-clan .clan-badge svg { width: 18px; height: 20px; display: block; }
+.vs-meta svg { width: 22px; height: 22px; }
+.vs-meta .trophy { width: 16px; height: 16px; }
+.vs-deco { flex: none; }
+.vs-deco svg { width: 46px; height: 46px; display: block; }
+.vs-card.me .vs-deco { margin-left: auto; }
+.vs-card.foe .vs-deco { margin-right: auto; }
+.vs-shield {
+  align-self: center; width: 96px; height: 108px; display: grid; place-items: center; animation: vsPop 0.5s 0.32s both;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 108'><path d='M48 4l40 14v30c0 26-17 46-40 56C25 94 8 74 8 48V18z' fill='%232E5BD8' stroke='%230A0E1F' stroke-width='5' stroke-linejoin='round'/><path d='M48 12l32 11v25c0 21-13 37-32 46-19-9-32-25-32-46V23z' fill='none' stroke='%23FFCC33' stroke-width='5'/><path d='M48 18l26 9v20' fill='none' stroke='%23FFFFFF' stroke-opacity='.35' stroke-width='4'/></svg>") center / contain no-repeat;
+}
+.vs-shield b { font: 400 34px var(--display); color: #FFE38A; text-shadow: var(--stroke-text); transform: translateY(-4px); }
+@keyframes vsFromLeft { from { transform: translateX(-110%); } }
+@keyframes vsFromRight { from { transform: translateX(110%); } }
+@keyframes vsPop { from { transform: scale(0) rotate(-25deg); } 70% { transform: scale(1.15); } to { transform: none; } }
+@keyframes vsOut { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .vs-card, .vs-shield { animation: none; } }

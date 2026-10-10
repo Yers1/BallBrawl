@@ -758,8 +758,9 @@ function rails(ctx, pts, alpha, steel) {
   }
   ctx.restore();
 }
-function track(ctx, z, t) { // no rails trailing the ball: they appear only under a train while it runs
-  for (const tr of z.trains) rails(ctx, tr.path.pts, Math.min(1, (t - tr.go) * 6), true);
+function track(ctx, z, t) { // the fresh rails behind the ball (they vanish after a few seconds) and the ones under a running train
+  rails(ctx, z.pts, 1, true);
+  for (const tr of z.trains) rails(ctx, tr.path.pts, 1, true);
 }
 
 // A train: a locomotive with a cab, chimney and headlight, then cars with lit windows, all following the track.
@@ -1426,7 +1427,7 @@ function legs(ctx, e, t) {
 
 // Chess: while a piece is in play the arena becomes a chessboard (like the original), red lines show where it can strike.
 const GLYPH = { rook: '♜', bishop: '♝', knight: '♞', queen: '♛' };
-const boardFade = (m, t) => (m.stage === 'go' ? Math.min(1, (t - m.at) / 0.2) : m.stage === 'aim' ? 1 : Math.max(0, 1 - (t - m.at) / 0.4));
+const boardFade = (m, t) => (m.stage === 'go' ? Math.min(1, (t - m.at) / 0.2) : 1);
 function chessBoard(ctx, w, t) {
   const m = w.ents.find(e => !e.dead && e.chess)?.chess;
   if (!m) return false;
@@ -1451,10 +1452,7 @@ function chessLines(ctx, e, t) {
   ctx.strokeStyle = `rgba(255,45,70,${0.85 * k * pulse})`;
   ctx.lineWidth = 2.5;
   for (const p of m.lines ?? []) { ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-  for (const p of m.targets ?? []) { ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI * 2); ctx.stroke(); }
-  ctx.lineWidth = 5; // the line it takes
-  ctx.strokeStyle = `rgba(255,70,90,${k})`;
-  ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(m.end.x, m.end.y); ctx.stroke();
+  for (const p of m.targets ?? []) { ctx.beginPath(); ctx.moveTo(m.from.x, m.from.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI * 2); ctx.stroke(); }
   ctx.restore();
 }
 function chessPiece(ctx, e, t) { // the piece stands on top of the ball

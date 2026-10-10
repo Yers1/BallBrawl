@@ -23,7 +23,7 @@ export const ICE = { chill: 2, slow: 0.5, freeze: 2.5, freezeSlow: 0.05, brittle
 export const POISON = { len: 28, hit: 7, tick: 1, every: 0.2, last: 2.5, max: 40, touchCd: 0.5, reach: 16 };
 export const CHAIN = { first: 1.4, every: 3, r: 70, life: 4, max: 3, dmg: 3, tick: 0.6, pull: 90, slow: 0.6, lead: 0.4 };
 // Chess: every few seconds it picks a random piece and moves like it across an 8×8 board, untouchable on the way.
-export const CHESS = { first: 1.5, every: 3.8, board: 5, aim: 0.55, speed: 900, dmg: 10, queenMoves: 3, queenDmg: 10 };
+export const CHESS = { first: 2, every: 6.5, board: 5, aim: 0.55, speed: 1600, dmg: 3, queenDmg: 4 };
 export const FORGE = { every: 2.5, dmgPerLv: 3.5, maxLv: 8, superLv: 3 };
 export const SUPER = {
   ramTime: 0.6, ramMul: 3, ramDmg: 2,
@@ -153,41 +153,37 @@ function chessMove(w, me, piece, dmg, fromHere = false) {
   me.vx = me.vy = 0;
   w.events.push({ type: 'chess', x: me.x, y: me.y, piece });
 }
+// From the middle it runs out along EVERY line of its piece and back (a knight hops to each of its squares and back):
+// small hits, but each line can catch a foe once.
 function chessAim(w, me) {
-  const m = me.chess, sq = W / CHESS.board, f = nearest(foes(w, me), me), from = { x: me.x, y: me.y };
-  let end;
-  if (m.piece === 'knight') { // a knight lands on one of its squares
-    m.targets = KNIGHT.map(([dx, dy]) => ({ x: Math.min(W - me.r, Math.max(me.r, me.x + dx * sq)), y: Math.min(W - me.r, Math.max(me.r, me.y + dy * sq)) }));
-    end = f ? nearest(m.targets, f) : m.targets[0];
-  } else { // the others sweep a whole line: the one that passes closest to the foe (behind the ball doesn't count)
-    m.lines = DIRS[m.piece].map(([dx, dy]) => rayEnd(me.x, me.y, dx, dy, me.r));
-    const miss = p => {
-      if (!f) return 0;
-      const vx = p.x - me.x, vy = p.y - me.y, L = Math.hypot(vx, vy) || 1;
-      return ((f.x - me.x) * vx + (f.y - me.y) * vy) / L < 0 ? 1e9 : Math.abs((f.x - me.x) * vy - (f.y - me.y) * vx) / L;
-    };
-    end = m.lines.reduce((x, p) => (miss(p) < miss(x) ? p : x));
-  }
-  Object.assign(m, { stage: 'aim', at: w.t, from, end, strike: pathOf([from, end]), d: 0 });
+  const m = me.chess, sq = W / CHESS.board, from = { x: me.x, y: me.y };
+  const ends = m.piece === 'knight'
+    ? KNIGHT.map(([dx, dy]) => ({ x: Math.min(W - me.r, Math.max(me.r, me.x + dx * sq)), y: Math.min(W - me.r, Math.max(me.r, me.y + dy * sq)) }))
+    : DIRS[m.piece].map(([dx, dy]) => rayEnd(me.x, me.y, dx, dy, me.r));
+  if (m.piece === 'knight') m.targets = ends; else m.lines = ends;
+  Object.assign(m, { stage: 'aim', at: w.t, from, strike: pathOf([from, ...ends.flatMap(e => [e, from])]), d: 0 });
 }
 function chessTick(w, me, dt) {
   const m = me.chess;
-  me.invulnUntil = w.t + 0.05; // nothing touches a piece in play
   me.vx = me.vy = 0;
-  if (m.stage === 'aim') { if (w.t - m.at >= CHESS.aim) Object.assign(m, { stage: 'hit', at: w.t }); return; }
+  if (m.stage === 'aim') { if (w.t - m.at >= CHESS.aim) Object.assign(m, { stage: 'hit', at: w.t }); return; } // standing on its square, it can be hit
+  me.invulnUntil = w.t + 0.05; // while it moves, nothing touches it
   const path = m.stage === 'go' ? m.path : m.strike;
   m.d += CHESS.speed * dt;
   const p = pathAt(path, m.d);
   me.x = p.x;
   me.y = p.y;
-  if (m.stage === 'hit') for (const f of foes(w, me)) if (!m.hit[f.id] && Math.hypot(f.x - me.x, f.y - me.y) < f.r + me.r) { m.hit[f.id] = true; hurt(w, f, m.dmg); }
+  if (m.stage === 'hit') {
+    let line = 0; // which line it is on: out and back along one line is one line
+    while (2 * line + 2 < path.cum.length && path.cum[2 * line + 2] <= m.d) line++;
+    for (const f of foes(w, me)) if (m.hit[f.id] !== line && Math.hypot(f.x - me.x, f.y - me.y) < f.r + me.r) { m.hit[f.id] = line; hurt(w, f, m.dmg); }
+  }
   if (m.d < path.len) return;
   if (m.stage === 'go') return chessAim(w, me);
-  me.chess = null; // the move is over: roll on the way it went
-  const f = nearest(foes(w, me), me), a = path.len > 1 ? p.a : f ? aim(me, f) : 0;
+  me.chess = null; // all lines done: back in the middle, it rolls off at the foe
+  const f = nearest(foes(w, me), me), a = f ? aim(me, f) : 0;
   me.vx = Math.cos(a) * me.speed;
   me.vy = Math.sin(a) * me.speed;
-  if (me.cd.queen > 0) { me.cd.queen--; chessMove(w, me, 'queen', CHESS.queenDmg, true); }
 }
 
 export const BALLS = {
@@ -529,8 +525,7 @@ Object.assign(BALLS, {
       chessMove(w, me, PIECES[Math.floor(w.rand() * PIECES.length)], CHESS.dmg);
     },
     canSuper: (w, me) => !me.chess,
-    onSuper(w, me) { // the queen: three moves in a row, any line, any distance
-      me.cd.queen = CHESS.queenMoves - 1;
+    onSuper(w, me) { // the queen: all eight lines
       me.cd.chess = w.t + CHESS.every;
       chessMove(w, me, 'queen', CHESS.queenDmg);
     },

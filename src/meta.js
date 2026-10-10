@@ -870,6 +870,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     box.replaceChildren(el('p', 'muted center', t('loading')));
     try {
       const mine = await online.clanInfo(null);
+      myClan = mine?.name ? { name: mine.name, badge: Number(mine.badge) || 0 } : null; // the VS screen shows it
       if (tab !== 'clan') return;
       if (mine?.id) return clanView(mine);
       const list = await online.clanList();
@@ -1349,5 +1350,44 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#l-mail').onclick = () => { sfx.click(); open('mail'); loadMail(); };
   setTimeout(loadMail, 1500); // after connecting
 
-  return { open, render, settings, hide: () => { $('#scr-home').hidden = true; } };
+  // ---------- the VS screen before a fight (Clash Royale style): both players' banners, names, clans, levels ----------
+  let myClan; // undefined: not asked yet; null: no clan
+  const loadMyClan = () => {
+    if (myClan !== undefined || !net.online) return;
+    online.clanInfo(null).then(c => { myClan = c?.name ? { name: c.name, badge: Number(c.badge) || 0 } : null; }).catch(() => {});
+  };
+  function vsCard(p, side) {
+    const card = el('div', 'vs-card ' + side);
+    card.innerHTML = `<span class="vs-bg">${bannerSvg(p.banner, 'vs' + side)}</span><span class="vs-av"></span>`
+      + `<div class="vs-txt"><b class="vs-nick"></b><span class="vs-clan"></span><span class="vs-meta">${leagueSvg(leagueFor(p.trophies))}<i class="trophy"></i>${p.trophies}</span></div>`
+      + `<span class="vs-deco">${decoSvg(p.deco)}</span>`;
+    card.querySelector('.vs-av').append(icon(p.avatar, 58, p.skin), ...(p.level ? [el('b', 'lvl-badge', String(p.level))] : []));
+    card.querySelector('.vs-nick').textContent = p.nick;
+    if (p.clan) {
+      const c = card.querySelector('.vs-clan');
+      c.innerHTML = `<span class="clan-badge">${clanBadge(p.clan.badge)}</span><small></small>`;
+      c.lastChild.textContent = clanText(p.clan.name, lang);
+    }
+    return card;
+  }
+  function vs(foe) { // shows both players, then gets out of the way (about 2.4 s, or a tap)
+    loadMyClan();
+    const me = { nick: nickText(save.nick, lang), banner: save.wear.banner, deco: save.wear.deco, avatar: save.avatar, skin: save.skinOf[save.avatar], level: levelOf(save.xp).lv, trophies: save.trophies, clan: myClan ?? null };
+    const scr = $('#scr-vs');
+    scr.replaceChildren(vsCard(foe, 'foe'), el('div', 'vs-shield', '<b>VS</b>'), vsCard(me, 'me'));
+    scr.hidden = false;
+    sfx.vs();
+    return new Promise(done => {
+      const end = () => {
+        clearTimeout(timer);
+        scr.onclick = null;
+        scr.classList.add('out');
+        setTimeout(() => { scr.hidden = true; scr.classList.remove('out'); done(); }, 280);
+      };
+      const timer = setTimeout(end, 2400);
+      scr.onclick = end;
+    });
+  }
+
+  return { open, render, settings, vs, hide: () => { $('#scr-home').hidden = true; } };
 }
