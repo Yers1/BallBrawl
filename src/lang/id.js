@@ -51,7 +51,7 @@ export default {
   acctDoneTitle: 'Akun dibuat!', acctDoneSub: 'Hadiah: skin pelangi untuk semua bolamu. Pemimpin skuadmu sudah memakainya.', acctWelcome: 'Selamat datang kembali!',
   acctTaken: 'Email ini sudah dipakai. Ketuk "Masuk".', acctWrong: 'Email atau kata sandi salah.', acctWeak: 'Kata sandi terlalu pendek: minimal 6 karakter.',
   acctBadEmail: 'Cek lagi alamat emailnya.', acctSlow: 'Terlalu banyak percobaan. Tunggu satu menit.', acctNeedOk: 'Centang kotak persetujuan.',
-  tabLeaders: 'Juara', duel: 'Duel', watchShort: 'Tonton', yourSquad: 'Skuadmu · ganti', slotFree: 'Kosong', gotGems: '+{n} permata',
+  tabLeaders: 'Juara', duel: 'Duel', watchShort: 'Tonton', yourSquad: 'Skuadmu · ganti', keySpace: 'Spasi', slotFree: 'Kosong', gotGems: '+{n} permata',
   partySolo: 'Main dengan bot', partyFriends: 'Party bareng teman', partyJoin: 'Gabung', partyTitle: 'Party', partyCode: 'kode', partyShare: 'Ajak teman',
   partyStart: 'Mulai tarung', partyWait: 'Menunggu tuan rumah memulai…', partyLeave: 'Keluar', partyFull: 'Party sudah penuh', partyGone: 'Tuan rumah keluar',
   partyBot: 'Bot', partyHost: 'tuan rumah', partyNoCode: 'Kode berisi 5 huruf dan angka', partyCopied: 'Link disalin: kirim ke teman-temanmu',

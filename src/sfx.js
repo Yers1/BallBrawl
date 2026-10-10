@@ -14,7 +14,7 @@ export function confetti(n = 36) {
 }
 
 // Tiny WebAudio synth — no audio files. The context starts on the first user gesture (browser rule).
-let ac = null, master = null, muted = false;
+let ac = null, master = null, muted = false, horn = null; // horn: a recorded diesel horn for the train
 
 export function initAudio(isMuted) {
   muted = isMuted;
@@ -26,6 +26,7 @@ export function initAudio(isMuted) {
     master = ac.createGain();
     master.gain.value = muted ? 0 : 0.5;
     master.connect(ac.destination);
+    fetch('sfx/train-horn.mp3').then(r => r.arrayBuffer()).then(b => ac.decodeAudioData(b)).then(buf => { horn = buf; }).catch(() => {});
   };
   for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, start, { once: true, capture: true });
 }
@@ -69,9 +70,15 @@ export const sfx = {
   wall: () => noise(0.04, { vol: 0.05, freq: 2400 }),
   dash: () => noise(0.22, { vol: 0.22, freq: 500, sweep: 5, q: 2 }),
   shot: () => noise(0.05, { vol: 0.06, freq: 4000, q: 3 }),
-  train: (express = false) => { // a whistle, then "choo-choo" puffs that speed up while it rolls past, over a low rumble
-    tone(740, 0.4, { type: 'triangle', vol: 0.09 });
-    tone(880, 0.4, { type: 'triangle', vol: 0.07, delay: 0.03 });
+  train: (express = false) => { // a diesel horn, then "choo-choo" puffs that speed up while it rolls past, over a low rumble
+    if (horn && ac && !muted) {
+      const src = ac.createBufferSource(), g = ac.createGain();
+      src.buffer = horn;
+      src.playbackRate.value = express ? 1.15 : 1; // the express sounds a little higher
+      g.gain.value = 0.55;
+      src.connect(g).connect(master);
+      src.start();
+    } else { tone(740, 0.4, { type: 'triangle', vol: 0.09 }); tone(880, 0.4, { type: 'triangle', vol: 0.07, delay: 0.03 }); }
     const n = express ? 14 : 10;
     let at = 0.3;
     for (let i = 0; i < n; i++) {

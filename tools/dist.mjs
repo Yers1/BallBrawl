@@ -9,6 +9,7 @@ for (const f of ['index.html', 'style.css', 'privacy.html', 'ads.txt', 'manifest
 cpSync('c', `${OUT}/c`, { recursive: true });
 for (const f of readdirSync('src')) if (f.endsWith('.js')) cpSync(`src/${f}`, `${OUT}/src/${f}`);
 cpSync('src/lang', `${OUT}/src/lang`, { recursive: true }); // the other languages
+cpSync('sfx', `${OUT}/sfx`, { recursive: true }); // recorded sounds (the train horn)
 // Cloudflare Pages headers: always revalidate code so a deploy reaches players right away
 writeFileSync(`${OUT}/_headers`, `/*
   X-Content-Type-Options: nosniff

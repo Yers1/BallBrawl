@@ -1119,3 +1119,9 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .xp-row { display: flex; align-items: center; gap: 6px; }
 .xp-row .xp-bar { flex: 1; margin-top: 0; }
 .xp-row small { font-size: 10px; font-weight: 900; color: #8EEBFF; }
+
+/* on a computer the super button says which key fires it */
+@media (hover: hover) and (pointer: fine) {
+  #super-btn { position: relative; }
+  #super-btn::after { content: attr(data-key); position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); padding: 1px 8px; border-radius: 6px; background: var(--stroke); color: var(--muted); font: 800 11px Nunito, sans-serif; white-space: nowrap; }
+}

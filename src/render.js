@@ -267,6 +267,8 @@ function absorb(w, now) {
       if (ev.amount >= 1) dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
       burst(ev.x, ev.y, 5, '#ffffff', 120, [2, 3]);
       if (ev.amount >= 15) ring(ev.x, ev.y, 10, 3.2, 0.3, '255,255,255', 4);
+    } else if (ev.type === 'tick') { // damage over time (a web): just the number, no flash
+      dmgFloat(w, ev.id, ev.amount, SIDE[1 - ev.side]);
     } else if (ev.type === 'chill') { // hit by Ice: "-50%" in ice blue, a puff of snow
       float(ev.x, ev.y - ev.r - 12, '-50%', '#8FE3FF', 22, 1.2, 26, 0);
       burst(ev.x, ev.y, 14, '#DFF7FF', 170, [2, 4]);
@@ -731,9 +733,8 @@ function rails(ctx, pts, alpha, steel) {
   }
   ctx.restore();
 }
-function track(ctx, z, t) {
-  rails(ctx, z.old, 0.5, false);
-  rails(ctx, z.pts, 1, true);
+function track(ctx, z, t) { // no rails trailing the ball: they appear only under a train while it runs
+  for (const tr of z.trains) rails(ctx, tr.path.pts, Math.min(1, (t - tr.go) * 6), true);
 }
 
 // A train: a locomotive with a cab, chimney and headlight, then cars with lit windows, all following the track.

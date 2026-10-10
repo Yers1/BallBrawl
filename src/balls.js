@@ -267,6 +267,8 @@ export const BALLS = {
           if (Math.hypot(f.x - z.x, f.y - z.y) >= z.r + f.r * 0.5) continue;
           f.slow = Math.min(f.slow, z.slow ?? WEB.slow);
           hurt(w, f, WEB.dps * dt, true);
+          f.cd.web = (f.cd.web ?? 0) + WEB.dps * dt; // shown as damage numbers, a few points at a time
+          if (f.cd.web >= 2) { w.events.push({ type: 'tick', id: f.id, amount: f.cd.web, side: f.side }); f.cd.web = 0; }
         }
       }
     },
@@ -297,7 +299,7 @@ export const BALLS = {
     onTick(w, me) {
       const z = trackOf(w, me), last = z.pts[z.pts.length - 1];
       if (!last || Math.hypot(me.x - last.x, me.y - last.y) >= TRAIN.gap) z.pts.push({ x: me.x, y: me.y, t: w.t });
-      while (z.pts.length > 1 && z.pts[0].t < w.t - TRAIN.life) { z.old.push(z.pts.shift()); if (z.old.length > 900) z.old.shift(); }
+      while (z.pts.length > 1 && z.pts[0].t < w.t - TRAIN.life) z.pts.shift();
       if ((!me.boost || me.boost.until <= w.t || me.boost.rails) && onTrack(z, me, TRAIN.warm, w.t)) { // speeds up on its own rails
         me.boost = { until: w.t + 0.1, mul: TRAIN.boostMul, dmg: TRAIN.boostDmg, rails: true };
       }

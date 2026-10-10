@@ -51,7 +51,7 @@ export default {
   acctDoneTitle: 'Conta criada!', acctDoneSub: 'Presente: uma skin arco-íris para todas as suas bolas. O líder do seu time já está usando.', acctWelcome: 'Que bom que você voltou!',
   acctTaken: 'Este e-mail já está em uso. Toque em "Entrar".', acctWrong: 'E-mail ou senha errados.', acctWeak: 'Senha muito curta: no mínimo 6 caracteres.',
   acctBadEmail: 'Confira o endereço de e-mail.', acctSlow: 'Tentativas demais. Espere um minuto.', acctNeedOk: 'Marque a caixa de consentimento.',
-  tabLeaders: 'Líderes', duel: 'Duelo', watchShort: 'Assistir', yourSquad: 'Seu time · trocar', slotFree: 'Vazio', gotGems: '+{n} gemas',
+  tabLeaders: 'Líderes', duel: 'Duelo', watchShort: 'Assistir', yourSquad: 'Seu time · trocar', keySpace: 'Espaço', slotFree: 'Vazio', gotGems: '+{n} gemas',
   partySolo: 'Jogar com bots', partyFriends: 'Sala com amigos', partyJoin: 'Entrar', partyTitle: 'Sala', partyCode: 'código', partyShare: 'Chamar amigos',
   partyStart: 'Começar a luta', partyWait: 'Esperando o dono da sala começar…', partyLeave: 'Sair', partyFull: 'A sala está cheia', partyGone: 'O dono da sala saiu',
   partyBot: 'Bot', partyHost: 'dono', partyNoCode: 'O código tem 5 letras e números', partyCopied: 'Link copiado: mande para seus amigos',

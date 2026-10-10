@@ -375,7 +375,8 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointercancel', () => { S.aiming = false; });
 addEventListener('keydown', e => {
-  if (S.mode === 'fight' && e.key === ' ') { useSuper(); e.preventDefault(); return; }
+  if (e.target.closest?.('input, textarea')) return; // typing a nick or a code
+  if (S.mode === 'fight' && (e.code === 'Space' || e.key === ' ')) { if (!e.repeat) useSuper(); e.preventDefault(); return; }
   if (S.mode !== 'aim') return;
   if (e.key === 'ArrowLeft') S.aim -= 0.08;
   else if (e.key === 'ArrowRight') S.aim += 0.08;
@@ -1034,6 +1035,7 @@ $('#w-cancel').onclick = () => goHome('lobby');
 $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
+$('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);
