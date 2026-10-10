@@ -51,7 +51,7 @@ export default {
   acctDoneTitle: 'Hesap oluşturuldu!', acctDoneSub: 'Hediye: tüm topların için gökkuşağı kostümü. Takım liderin onu çoktan giydi.', acctWelcome: 'Tekrar hoş geldin!',
   acctTaken: 'Bu e-posta zaten kullanılıyor. "Giriş yap" düğmesine dokun.', acctWrong: 'E-posta veya şifre yanlış.', acctWeak: 'Şifre çok kısa: en az 6 karakter.',
   acctBadEmail: 'E-posta adresini kontrol et.', acctSlow: 'Çok fazla deneme. Bir dakika bekle.', acctNeedOk: 'Onay kutusunu işaretle.',
-  tabLeaders: 'Liderler', duel: 'Düello', watchShort: 'İzle', yourSquad: 'Takımın · değiştir', gotGems: '+{n} mücevher',
+  tabLeaders: 'Liderler', duel: 'Düello', watchShort: 'İzle', yourSquad: 'Takımın · değiştir', slotFree: 'Boş', gotGems: '+{n} mücevher',
   partySolo: 'Botlarla oyna', partyFriends: 'Arkadaşlarla grup', partyJoin: 'Katıl', partyTitle: 'Grup', partyCode: 'kod', partyShare: 'Arkadaş çağır',
   partyStart: 'Savaşı başlat', partyWait: 'Kurucunun başlatması bekleniyor…', partyLeave: 'Ayrıl', partyFull: 'Grup dolu', partyGone: 'Grup kurucusu ayrıldı',
   partyBot: 'Bot', partyHost: 'kurucu', partyNoCode: 'Kod 5 harf ve rakamdan oluşur', partyCopied: 'Bağlantı kopyalandı: arkadaşlarına gönder',

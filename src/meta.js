@@ -337,6 +337,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const lv = levelOf(save.xp);
     $('#h-avatar').replaceChildren(icon(save.avatar, 44, save.skinOf[save.avatar]), el('b', 'lvl-badge', String(lv.lv)));
     $('#h-xp').style.width = Math.round((lv.xp / lv.need) * 100) + '%';
+    $('#h-xpn').textContent = `${lv.xp}/${lv.need}`;
     $('#h-nick').textContent = nickText(save.nick, lang);
     $('#h-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
     $('#h-tr').textContent = save.trophies;
@@ -969,7 +970,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const now = Date.now(), busy = unlocking(save, now);
     $('#l-slots').replaceChildren(...save.slots.map((sl, i) => {
       const b = el('button', 'cslot' + (sl ? ' k-' + sl.kind : ' empty'));
-      if (!sl) { b.innerHTML = '<span class="sl-empty"></span>'; b.onclick = () => toast(t('slotEmpty')); return b; }
+      if (!sl) { b.innerHTML = `<b class="sl-plus">+</b><small>${t('slotFree')}</small>`; b.onclick = () => toast(t('slotEmpty')); return b; }
       const left = slotLeft(sl, now), ready = sl.at != null && left <= 0, going = sl.at != null && !ready;
       b.classList.add(ready ? 'ready' : going ? 'busy' : 'locked');
       if (!ready && !going && !busy) b.classList.add('start'); // the one you can set unlocking now
@@ -1047,7 +1048,15 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     };
     return b;
   }
-  const section = (title, kids, cls = '') => { const sec = el('section', 'sh-sec ' + cls); sec.append(el('h3', ''), el('div', 'sh-grid')); sec.firstChild.textContent = title; sec.lastChild.append(...kids); return sec; };
+  const section = (title, kids, cls = '', note = '') => {
+    const sec = el('section', 'sh-sec ' + cls);
+    sec.append(el('h3', ''), el('div', 'sh-grid'));
+    sec.firstChild.textContent = title;
+    if (note) sec.firstChild.append(el('span', 'sh-note', note));
+    sec.lastChild.append(...kids);
+    return sec;
+  };
+  const untilMidnight = () => { const ms = new Date().setHours(24, 0, 0, 0) - Date.now(), m = Math.floor(ms / 60000); return `${CLOCK_IC}${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
   let shopAnim = 0;
   function shop() {
     const today = dayKey(), body = $('#sh-body'), lead = save.squad[0];
@@ -1087,7 +1096,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     });
     body.replaceChildren(
       top,
-      section(t('shDeals'), deals, 'deals'),
+      section(t('shDeals'), deals, 'deals', untilMidnight()), // new deals at midnight
       section(t('shEmotes'), emotes),
       section(t('shAuras'), Object.keys(SHOP.aura).map(id => shopTile('aura', id, icon(lead, 64, save.skinOf[lead], id), t('aura_' + id)))),
       section(t('shBanners'), Object.keys(SHOP.banner).map(id => shopTile('banner', id, el('span', 'banner-prev', bannerSvg(id, 'b' + id)), t('banner_' + id))), 'wide'),

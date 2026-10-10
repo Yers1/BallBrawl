@@ -1070,3 +1070,52 @@ body.record { background: #000; }
 .pt-empty { width: 44px; height: 44px; border-radius: 50%; border: 2px dashed rgba(157, 176, 214, 0.4); }
 
 .tile small .trophy { width: 14px; height: 14px; vertical-align: -2px; margin-right: 2px; }
+
+/* ---------- Stitch pass: capital display titles, price buttons, the squad card, chest hints, empty slots ---------- */
+h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: uppercase; letter-spacing: 0.02em; }
+#rw-text, #c-title, #ball-name { font-family: inherit; font-weight: 900; text-transform: none; letter-spacing: 0; }
+.sh-sec h3 { display: flex; align-items: center; gap: 8px; font-size: 18px; text-shadow: var(--stroke-text); }
+.sh-note { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: var(--stroke); color: var(--muted); font: 800 12px Nunito, sans-serif; text-transform: none; text-shadow: none; letter-spacing: 0; }
+.sh-note svg { width: 14px; height: 14px; }
+.sh-tile .sh-price { align-self: stretch; justify-content: center; padding: 5px 6px; border-radius: 10px; background: var(--gold); color: var(--gold-ink); border: 2.5px solid var(--stroke); box-shadow: 0 3px 0 var(--stroke); }
+.sh-tile .sh-price:has(.gem) { background: #B44CF0; color: #FFFFFF; }
+.sh-tile.own .sh-price { background: rgba(54, 210, 122, 0.12); color: var(--go); border-color: var(--go); box-shadow: none; }
+.sh-tile.own .sh-price::before { content: '\2713'; margin-right: 2px; }
+.sh-tile.on .sh-price { background: rgba(255, 204, 51, 0.12); color: var(--gold); border-color: var(--gold); box-shadow: none; }
+.sh-tile.confirm .sh-price { background: var(--go); color: var(--go-ink); }
+
+.versus { padding: 10px 12px; border-radius: 18px; background: rgba(10, 14, 31, 0.45); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.06); }
+.versus small { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font: 400 12px var(--display); text-transform: uppercase; letter-spacing: 0.04em; }
+.versus small::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.mine small { color: var(--you); }
+.enemy small { justify-content: flex-end; }
+.s-info { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--panel); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi); color: var(--muted); }
+.si-head { display: flex; align-items: center; gap: 8px; }
+.si-head b { font: 400 19px var(--display); color: var(--text); text-transform: uppercase; }
+.hp-pill { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: var(--stroke); color: var(--text); font-weight: 900; font-size: 13px; }
+.hp-pill svg { width: 15px; height: 15px; }
+.si-super { display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 204, 51, 0.08); border: 2px solid rgba(255, 204, 51, 0.35); }
+.si-super > i { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: var(--gold); border: 2px solid var(--stroke); }
+.si-super > i svg { width: 16px; height: 16px; fill: var(--gold-ink); }
+.si-super b { display: block; color: var(--gold); font-size: 14px; }
+.si-super span span { color: var(--text); font-size: 13px; }
+#s-cards .tile { padding-top: 18px; }
+#s-cards .tile:not(.locked) small { color: var(--muted); }
+.tile .tag { position: absolute; top: 5px; left: 8px; right: 8px; font: 400 9px var(--display); color: var(--gold); text-transform: uppercase; letter-spacing: 0.03em; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#s-cards .tile .pos { left: auto; right: -7px; }
+.tile.locked::after { /* a padlock over the ball */
+  content: ''; position: absolute; left: calc(50% - 13px); top: 29px; width: 26px; height: 26px; pointer-events: none;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10' fill='none' stroke='%230A0E1F' stroke-width='4.5'/><path d='M7.5 10V7.5a4.5 4.5 0 0 1 9 0V10' fill='none' stroke='%23C9D2E0' stroke-width='2'/><rect x='4.5' y='10' width='15' height='11.5' rx='3' fill='%23FFCC33' stroke='%230A0E1F' stroke-width='2'/><circle cx='12' cy='15.3' r='1.8' fill='%230A0E1F'/></svg>") center / contain no-repeat;
+}
+#s-cards .tile.locked::after { top: 35px; }
+
+.op-hint { padding: 8px 18px; border-radius: 999px; background: #1E9BE0; border: 3px solid var(--stroke); box-shadow: 0 4px 0 var(--stroke); font: 400 15px var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
+.op-hint:empty { visibility: hidden; }
+#op-done { background: var(--go); color: var(--go-ink); }
+
+.cslot.empty { flex-direction: column; gap: 2px; color: rgba(157, 176, 214, 0.75); }
+.cslot.empty .sl-plus { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid currentColor; font-size: 18px; line-height: 1; }
+.cslot.empty small { font: 400 10px var(--display); text-transform: uppercase; letter-spacing: 0.04em; }
+.xp-row { display: flex; align-items: center; gap: 6px; }
+.xp-row .xp-bar { flex: 1; margin-top: 0; }
+.xp-row small { font-size: 10px; font-weight: 900; color: #8EEBFF; }

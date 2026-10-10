@@ -51,7 +51,7 @@ export default {
   acctDoneTitle: '¡Cuenta creada!', acctDoneSub: 'Regalo: un skin arcoíris para todas tus pelotas. El líder de tu equipo ya lo lleva puesto.', acctWelcome: '¡Hola de nuevo!',
   acctTaken: 'Este correo ya está en uso. Toca "Entrar".', acctWrong: 'Correo o contraseña incorrectos.', acctWeak: 'Contraseña muy corta: mínimo 6 caracteres.',
   acctBadEmail: 'Revisa la dirección de correo.', acctSlow: 'Demasiados intentos. Espera un minuto.', acctNeedOk: 'Marca la casilla de permiso.',
-  tabLeaders: 'Líderes', duel: 'Duelo', watchShort: 'Ver', yourSquad: 'Tu equipo · cambiar', gotGems: '+{n} gemas',
+  tabLeaders: 'Líderes', duel: 'Duelo', watchShort: 'Ver', yourSquad: 'Tu equipo · cambiar', slotFree: 'Vacío', gotGems: '+{n} gemas',
   partySolo: 'Jugar con bots', partyFriends: 'Grupo con amigos', partyJoin: 'Unirse', partyTitle: 'Grupo', partyCode: 'código', partyShare: 'Invitar amigos',
   partyStart: 'Empezar la pelea', partyWait: 'Esperando a que el líder empiece…', partyLeave: 'Salir', partyFull: 'El grupo está lleno', partyGone: 'El líder del grupo salió',
   partyBot: 'Bot', partyHost: 'líder', partyNoCode: 'El código tiene 5 letras y números', partyCopied: 'Enlace copiado: envíalo a tus amigos',

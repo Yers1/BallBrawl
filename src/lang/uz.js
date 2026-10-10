@@ -51,7 +51,7 @@ export default {
   acctDoneTitle: "Akkaunt ochildi!", acctDoneSub: "Sovg'a: barcha sharlaring uchun kamalak skini. Jamoa lideri uni allaqachon kiygan.", acctWelcome: "Yana xush kelibsan!",
   acctTaken: "Bu pochta band. «Kirish»ni bos.", acctWrong: "Pochta yoki parol noto'g'ri.", acctWeak: "Parol juda qisqa: kamida 6 ta belgi.",
   acctBadEmail: "Pochta manzilini tekshir.", acctSlow: "Urinishlar juda ko'p. Bir daqiqa kut.", acctNeedOk: "Rozilik belgisini qo'y.",
-  tabLeaders: "Liderlar", duel: "Duel", watchShort: "Tomosha", yourSquad: "Jamoang · almashtirish", gotGems: "+{n} gem",
+  tabLeaders: "Liderlar", duel: "Duel", watchShort: "Tomosha", yourSquad: "Jamoang · almashtirish", slotFree: "Bo'sh", gotGems: "+{n} gem",
   partySolo: "Botlar bilan o'ynash", partyFriends: "Do'stlar bilan guruh", partyJoin: "Kirish", partyTitle: "Guruh", partyCode: "kod", partyShare: "Do'stlarni taklif qil",
   partyStart: "Jangni boshlash", partyWait: "Boshliq jangni boshlashini kutyapmiz…", partyLeave: "Chiqish", partyFull: "Guruh to'la", partyGone: "Guruh boshlig'i chiqib ketdi",
   partyBot: "Bot", partyHost: "boshliq", partyNoCode: "Kod — 5 ta harf va raqam", partyCopied: "Havola nusxalandi: uni do'stlaringga yubor",

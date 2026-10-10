@@ -244,10 +244,12 @@ function renderSquad() {
   note.className = 'squad-note' + (net.online ? ' live' : '');
 
   const info = S.info ?? save.squad[0]; // what the last tapped ball does
-  $('#s-info').innerHTML = `<b></b> · ${BALLS[info].hp} ${t('hp')}<br><span></span><br><em></em>`;
-  $('#s-info b').textContent = ballName(info);
-  $('#s-info span').textContent = ballAbout(info);
-  $('#s-info em').textContent = `${t('super')} · ${superName(info)}: ${superAbout(info)}`;
+  $('#s-info').innerHTML = `<span class="si-head"><b></b><span class="hp-pill">${HEART}${BALLS[info].hp} ${t('hp')}</span></span><span class="si-about"></span>`
+    + `<span class="si-super"><i>${BOLT}</i><span><b></b><span></span></span></span>`;
+  $('#s-info .si-head b').textContent = ballName(info);
+  $('#s-info .si-about').textContent = ballAbout(info);
+  $('#s-info .si-super b').textContent = `${t('super')} · ${superName(info)}`;
+  $('#s-info .si-super span span').textContent = superAbout(info);
 
   $('#s-cards').replaceChildren(...BY_UNLOCK.map(id => {
     const d = BALLS[id], ok = has(id), slots = save.squad.map((s, i) => (s === id ? i + 1 : 0)).filter(Boolean);
@@ -257,7 +259,11 @@ function renderSquad() {
     tile.append(icon(id, 60, save.skinOf[id]), el('b', ''), el('small', ''));
     tile.children[slots.length && ok ? 2 : 1].textContent = ballName(id);
     const small = tile.lastChild;
-    if (ok) small.textContent = save.owned.includes(id) ? superName(id) : '★ ' + t('trial');
+    if (ok) {
+      small.textContent = save.owned.includes(id) ? `${d.hp} ${t('hp')}` : '★ ' + t('trial');
+      tile.append(el('i', 'tag')); // its super, like a card's ability tag
+      tile.lastChild.textContent = superName(id);
+    }
     else {
       const L = lockLabel(id, save.maxTrophies);
       if (L.trophies) small.innerHTML = `<i class="trophy"></i>${L.trophies}`; else small.textContent = t('arenaN', { n: L.arena });
@@ -401,6 +407,7 @@ function hud() {
 }
 
 const BOLT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z"/></svg>';
+const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8.2 3.4 4.5 7 4.5c2 0 3.6 1.1 5 3 1.4-1.9 3-3 5-3 3.6 0 6 3.7 4.5 7.3C19.5 16.4 12 21 12 21z" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2"/></svg>';
 const pips = Array.from({ length: DASH.charges }, () => el('span', 'pip', BOLT));
 $('#dash-pips').append(...pips);
 function controls() {
