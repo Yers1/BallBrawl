@@ -1423,3 +1423,25 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 @keyframes cmdSay { 0% { opacity: 0; scale: 0.4; } 12% { opacity: 1; scale: 1.1; } 20%, 80% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.9; translate: -50% -8px; } }
 .cmd.win .cmd-say.on, .cmd.sad .cmd-say.on { animation-duration: 3s; }
 @media (prefers-reduced-motion: reduce) { .cmd-art, .cmd::before { animation: none !important; } }
+
+/* ---------- Glory Road, by arena: every arena is its own stretch, painted like it, with the arena itself at its gate ---------- */
+.vroad2 { gap: 0; padding-bottom: 96px; }
+.r2-zone { position: relative; display: flex; flex-direction: column; gap: 14px; margin: 0 -16px; padding: 26px 16px 18px;
+  background: var(--zl) left 0 top 0 / 90px 260px repeat-y, var(--zr) right 0 top 130px / 90px 260px repeat-y, var(--zsky); }
+.r2-zone::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(10, 14, 31, 0.35), transparent 60px, transparent calc(100% - 60px), rgba(10, 14, 31, 0.35)); }
+
+.r2-zone > * { position: relative; z-index: 2; }
+.r2-rail, .r2-fill { z-index: 1; }
+.r2-arena { margin: 6px 0 0; background: #0F1A33; }
+.r2-arena::before, .r2-arena::after { display: none; }
+.r2-pic { position: relative; height: 150px; overflow: hidden; border-bottom: 3px solid var(--stroke); }
+.r2-pic svg { display: block; width: 100%; height: 100%; }
+.r2-pic::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(10, 14, 31, 0.85)); }
+.r2-arena.locked .r2-pic svg { filter: grayscale(0.35) brightness(0.85); }
+.r2-gate { position: absolute; left: 0; right: 0; top: 96px; z-index: 1; padding: 0 14px; }
+.r2-gate b { font-size: 19px; }
+.r2-arena.locked .r2-lock { position: absolute; right: 14px; top: -70px; width: 48px; height: 48px; }
+.r2-arena.locked .r2-lock svg { width: 24px; height: 24px; }
+.r2-arena.cur { box-shadow: 0 0 0 3px var(--gold), 0 0 22px rgba(255, 210, 63, 0.55), 0 5px 0 var(--stroke); }
+.r2-balls { background: transparent; padding: 8px 14px 10px; }
+.r2-start { margin-top: 6px; }

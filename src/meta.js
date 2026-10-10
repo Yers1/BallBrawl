@@ -120,6 +120,50 @@ const BACKDROP = {
     <path d="M120 86 q10 -8 22 0 q-10 8 -22 0z M142 86 l7 -5 v10z" fill="#FFCC33"/><path d="M220 60 q10 -8 22 0 q-10 8 -22 0z M242 60 l7 -5 v10z" fill="#FF7A5C"/>
     <path d="M80 104 q-4 -18 4 -26 M88 104 q4 -14 -2 -22" stroke="#FF7A5C" stroke-width="4" fill="none" stroke-linecap="round"/>`,
 };
+// What lines each arena's stretch of the Glory Road (one 90×260 tile, repeated down both edges).
+const star4 = (x, y, r, c = '#FFE38A') => `<path d="M${x} ${y - r}L${x + r * 0.3} ${y - r * 0.3}L${x + r} ${y}L${x + r * 0.3} ${y + r * 0.3}L${x} ${y + r}L${x - r * 0.3} ${y + r * 0.3}L${x - r} ${y}L${x - r * 0.3} ${y - r * 0.3}Z" fill="${c}" stroke="none"/>`;
+const leaf = (x, y, rot, c = '#49B24F', s = 1) => `<path transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" d="M0 0Q10-14 24 0Q10 14 0 0Z" fill="${c}"/><path transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" d="M2 0H20" stroke-width="1.2"/>`;
+const flake = (x, y, r) => `<g stroke="#FFFFFF" stroke-width="2.2">${[0, 60, 120].map(a => `<path transform="rotate(${a} ${x} ${y})" d="M${x} ${y - r}V${y + r}M${x - 3} ${y - r + 4}L${x} ${y - r + 7}L${x + 3} ${y - r + 4}M${x - 3} ${y + r - 4}L${x} ${y + r - 7}L${x + 3} ${y + r - 4}"/>`).join('')}</g>`;
+const lolly = (x, y, c) => `<path d="M${x} ${y + 12}V${y + 40}" stroke="#FFFFFF" stroke-width="4"/><circle cx="${x}" cy="${y}" r="13" fill="${c}"/><path d="M${x - 8} ${y}a8 8 0 0 1 16 0a5 5 0 0 1-10 0" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>`;
+const ZONE_ART = {
+  night: `<path d="M34 18a20 20 0 1 0 16 34 16 16 0 1 1-16-34z" fill="#FFE38A"/>${star4(66, 90, 6)}${star4(20, 120, 4)}${star4(56, 170, 5)}${star4(14, 220, 6)}
+    <path d="M8 150q4-12 18-8q8-10 20-2q12-2 12 10z" fill="#2A3A66"/>`,
+  candy: `${lolly(26, 30, '#FF4D8D')}${lolly(60, 140, '#7FE7FF')}
+    <g transform="translate(30 210) rotate(-20)"><path d="M-14 0L-24-8V8Z M14 0L24-8V8Z" fill="#FFD23F"/><ellipse rx="15" ry="10" fill="#FF7A5C"/><path d="M-6-8V8M4-9V9" stroke="#FFFFFF" stroke-width="2.5"/></g>
+    ${[[60, 40, '#FFD23F'], [18, 100, '#A6FF4D'], [70, 200, '#FF4D8D'], [40, 250, '#7FE7FF']].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="10" height="4" rx="2" fill="${c}" stroke="none" transform="rotate(${x} ${x} ${y})"/>`).join('')}`,
+  canyon: `<g transform="translate(28 60)"><path d="M-12-6h7v12h-7zM6-14h7v12h-7z" fill="#3FA34D"/><rect x="-5" y="-26" width="11" height="40" rx="5" fill="#3FA34D"/><circle cx="0" cy="-28" r="4" fill="#FF6FA8"/></g>
+    <path d="M40 160L52 136L70 140L80 160Z" fill="#C98A4B"/><path d="M8 230L18 210L34 214L40 230Z" fill="#B0703A"/>${star4(70, 30, 5, '#FFF2B0')}
+    <path d="M10 112q20-8 40 0" fill="none" stroke="#E2B07A" stroke-width="3"/>`,
+  pirate: `<path d="M0 60q10-8 20 0t20 0t20 0t20 0t20 0" fill="none" stroke="#BFE9FF" stroke-width="3"/>
+    <g transform="translate(40 130)"><circle cy="-22" r="5" fill="none" stroke="#C9D2E0" stroke-width="3.5"/><path d="M0-17V18M-16 6q4 14 16 12q12 2 16-12M-8-8H8" fill="none" stroke="#C9D2E0" stroke-width="4"/></g>
+    <g transform="translate(26 210)"><path d="M0 0q12-10 24 0q-12 10-24 0z" fill="#FFCC33"/><path d="M24 0l8-6v12z" fill="#FFCC33"/><circle cx="6" cy="-1" r="1.6" fill="#0A0E1F"/></g>
+    <path d="M0 250q10-8 20 0t20 0t20 0t20 0t20 0" fill="none" stroke="#BFE9FF" stroke-width="3"/>`,
+  frost: `${flake(26, 34, 12)}${flake(66, 150, 9)}${flake(20, 236, 10)}
+    <g transform="translate(46 96)"><path d="M0-30L18 0H-18Z M0-14L22 18H-22Z" fill="#2E6E5A"/><path d="M0-30L8-18H-8Z M-12-2L0-8L12-2" fill="#FFFFFF"/><rect x="-4" y="18" width="8" height="8" fill="#6E4A2A"/></g>
+    <path d="M40 186l-4 18-4-18zM58 186l-3 12-3-12z" fill="#DCF5FF"/>`,
+  stadium: `<path d="M0 22Q45 40 90 22" fill="none" stroke="#C9D2E0" stroke-width="2"/>${[12, 34, 56, 78].map((x, k) => `<path d="M${x - 7} ${26 + Math.sin(k) * 3}h14l-7 14z" fill="${['#FF5C5C', '#4CC9F0', '#FFCC33', '#FFFFFF'][k]}"/>`).join('')}
+    <g transform="translate(34 120)"><circle r="16" fill="#FFFFFF"/><path d="M0-6l6 4-2 7h-8l-2-7z" fill="#0A0E1F"/></g>
+    ${[[66, 70, '#FFCC33'], [16, 180, '#FF5C5C'], [62, 220, '#4CC9F0'], [30, 250, '#FFFFFF']].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="8" height="5" fill="${c}" stroke="none" transform="rotate(${x} ${x} ${y})"/>`).join('')}`,
+  jungle: `<path d="M18 0q14 30 0 60t0 60t0 60t0 80" fill="none" stroke="#2E6E3A" stroke-width="4"/>
+    ${leaf(18, 24, -30)}${leaf(18, 66, 200, '#2E8B3A')}${leaf(18, 112, -20, '#5FD03A')}${leaf(18, 160, 190)}${leaf(18, 206, -35, '#2E8B3A')}${leaf(18, 246, 200, '#5FD03A')}
+    <g transform="translate(60 140)"><path d="M0 26Q-26 0 0-30Q26 0 0 26Z" fill="#3E8E4A"/><path d="M0 24V-24M0-6L-12-14M0 4L12-6M0 14L-10 8" stroke-width="1.6"/></g>
+    <g transform="translate(64 60)">${[0, 72, 144, 216, 288].map(r => `<ellipse transform="rotate(${r})" cy="-7" rx="4.5" ry="7" fill="#FF5C8A"/>`).join('')}<circle r="3.5" fill="#FFD23F"/></g>`,
+  temple: `<g transform="translate(40 70)"><rect x="-14" y="-40" width="28" height="80" fill="#C9A066"/><path d="M-18-40h36v-8h-36zM-18 40h36v8h-36z" fill="#B08850"/><path d="M-6-34V34M6-34V34" stroke="#6E4A1E" stroke-width="1.5"/></g>
+    <path d="M14 0q14 50-6 120" fill="none" stroke="#2E8B3A" stroke-width="3.5"/>${leaf(10, 70, 20, '#3E8E4A', 0.7)}${leaf(4, 104, -30, '#5FD03A', 0.7)}
+    <g transform="translate(56 190)"><path d="M0-14l10 14-10 14-10-14z" fill="#3FE0D0"/><path d="M-10 0h20" stroke-width="1.4"/></g>`,
+  lava: `<path d="M8 70L22 44L46 48L56 70Z" fill="#3A2420"/><path d="M20 66l8-10 6 6 8-8" fill="none" stroke="#FF7A2F" stroke-width="2.5"/>
+    <path d="M44 200L56 176L76 180L84 200Z" fill="#3A2420"/><path d="M54 196l6-8 6 4 6-6" fill="none" stroke="#FFD23F" stroke-width="2.5"/>
+    ${[[64, 30, 4], [30, 120, 5], [70, 130, 3], [20, 170, 4], [40, 250, 3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#FF7A2F" stroke="none"/><circle cx="${x}" cy="${y}" r="${r * 2.2}" fill="#FF7A2F" stroke="none" opacity=".25"/>`).join('')}
+    <path d="M10 0v14a5 5 0 0 0 10 0v-14z" fill="#FF7A2F"/>`,
+  chess: `<g transform="translate(30 60)"><path d="M-12 22h24v-6h-24zM-8 16l3-18h10l3 18z" fill="#E8DCC4"/><circle cy="-8" r="7" fill="#E8DCC4"/></g>
+    <g transform="translate(58 170)"><path d="M-12 22h26v-6h-26zM-8 16q-4-24 12-32q12 2 12 14l-8-2q2 10 4 20z" fill="#3B2A1E"/><circle cx="2" cy="-8" r="1.6" fill="#FFFFFF" stroke="none"/></g>
+    ${[[60, 20], [72, 32], [10, 120], [22, 132], [10, 230], [22, 242]].map(([x, y]) => `<rect x="${x}" y="${y}" width="12" height="12" fill="${(x + y) % 24 ? '#E8DCC4' : '#3B2A1E'}" stroke-width="1.2"/>`).join('')}`,
+  space: `<g transform="translate(36 56)"><circle r="18" fill="#FF8FB1"/><ellipse rx="32" ry="7" fill="none" stroke="#FFE38A" stroke-width="3" transform="rotate(-18)"/></g>
+    ${star4(70, 110, 5, '#FFFFFF')}${star4(16, 150, 4, '#FFFFFF')}${star4(66, 240, 6, '#FFFFFF')}
+    <g transform="translate(40 200) rotate(30)"><path d="M0-18q8 8 8 22h-16q0-14 8-22z" fill="#E8ECF4"/><path d="M-8 4l-6 8h6zM8 4l6 8h-6z" fill="#FF4D5E"/><path d="M-4 6q4 12 8 0" fill="#FFB547"/><circle cy="-4" r="3" fill="#4CC9F0"/></g>`,
+  neon: `<path d="M20 20l20 34H0z" fill="none" stroke="#00F0FF" stroke-width="3"/><circle cx="62" cy="110" r="14" fill="none" stroke="#FF2BD6" stroke-width="3"/>
+    <path d="M10 170l12-10 12 10 12-10 12 10 12-10" fill="none" stroke="#A6FF4D" stroke-width="3"/><rect x="40" y="210" width="24" height="24" rx="4" fill="none" stroke="#00F0FF" stroke-width="3" transform="rotate(20 52 222)"/>`,
+};
 // map coordinates (0–400) onto the stage floor's trapezoid
 const persp = (x, y) => { const v = y / 400, l = 62 - 48 * v, r = 296 + 48 * v; return [l + (x / 400) * (r - l), 104 + v * 322, (r - l) / 400]; };
 // the arena's floor pattern, laid onto the stage in perspective
@@ -367,6 +411,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // to the next reward, and a bar to claim everything at once.
   const LOCK_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1v11H6V10zm2 0h6V7a3 3 0 0 0-6 0z"/></svg>';
   const rewardSub = n => (n.ball ? t('rarity_' + RARITY[n.ball]) : n.skin ? ballName(n.skin[0]) : '');
+  const zoneArt = (id, flip) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 260" width="90" height="260"><g ${flip ? 'transform="translate(90 0) scale(-1 1)"' : ''} stroke="#0A0E1F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${ZONE_ART[id] ?? ZONE_ART.night}</g></svg>`;
   function road() {
     const box = $('#road'), until = Math.max(save.maxTrophies + 500, ARENAS.at(-1).at + 200);
     const ready = claimable(save), readySet = new Set(ready.map(n => n.at));
@@ -389,30 +434,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       }
       return m;
     };
-    for (const it of items) {
-      if (!marked && it.at <= save.trophies && !it.header) { rows.push(marker()); marked = true; }
-      if (it.header) { // an arena: a striped gate across the road in the arena's colours
-        const a = it.arena, th = THEMES[a.id], open = it.i <= cur, h = el('div', 'r2-arena' + (open ? '' : ' locked') + (it.i === cur ? ' cur' : ''));
-        h.style.setProperty('--a1', th.faces[0]);
-        h.style.setProperty('--a2', th.rings[1]);
-        h.style.setProperty('--ab', th.back);
-        h.innerHTML = `<div class="r2-gate"><div><b></b><small></small></div><span class="r2-lock">${open ? '' : LOCK_IC}</span></div>`
-          + `<div class="r2-balls"><small></small><span></span></div>`;
-        h.querySelector('b').textContent = `${t('arenaN', { n: it.i + 1 })} · ${t('arena_' + a.id)}`;
-        h.querySelector('.r2-gate small').innerHTML = (open ? t('roadOpen', { n: a.at }) : t('roadNeed', { n: a.at })) + ' <i class="trophy"></i>';
-        h.querySelector('.r2-balls small').textContent = t('arenaUnlocks');
-        const balls = BY_UNLOCK.filter(id => arenaFor(UNLOCK[id]).id === a.id);
-        h.querySelector('.r2-balls span').append(...balls.map(id => {
-          const c = el('span', 'r2-chip r-' + RARITY[id]);
-          c.append(icon(id, 18, save.skinOf[id]), document.createTextNode(ballName(id)));
-          return c;
-        }));
-        if (!balls.length) h.querySelector('.r2-balls').hidden = true;
-        rows.push(h);
-        if (!marked && it.at <= save.trophies) { rows.push(marker()); marked = true; }
-        continue;
-      }
-      const n = it.n, state = save.claimed.includes(n.at) ? 'done' : readySet.has(n.at) ? 'ready' : 'locked';
+    const rewardRow = n => {
+      const state = save.claimed.includes(n.at) ? 'done' : readySet.has(n.at) ? 'ready' : 'locked';
       const row = el('div', `r2-row ${side ? 'right' : 'left'} ${state}`);
       side = 1 - side;
       const card = el('div', `r2-card ${n.ball ? 'is-ball r-' + RARITY[n.ball] : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}`);
@@ -428,10 +451,43 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
         card.append(btn);
       }
       row.append(card, el('span', 'r2-node', state === 'done' ? '✓' : String(n.at)));
-      rows.push(row);
+      return row;
+    };
+    // the arena's gate: a picture of the arena itself, its name and the balls it brings
+    const gate = (a, i) => {
+      const open = i <= cur, h = el('div', 'r2-arena' + (open ? '' : ' locked') + (i === cur ? ' cur' : ''));
+      h.innerHTML = `<div class="r2-pic">${arenaSvg(a.id, 'rd' + i).replace('<svg ', '<svg preserveAspectRatio="xMidYMin slice" ')}</div>`
+        + `<div class="r2-gate"><div><b></b><small></small></div><span class="r2-lock">${open ? '' : LOCK_IC}</span></div>`
+        + `<div class="r2-balls"><small></small><span></span></div>`;
+      h.querySelector('b').textContent = `${t('arenaN', { n: i + 1 })} · ${t('arena_' + a.id)}`;
+      h.querySelector('.r2-gate small').innerHTML = (open ? t('roadOpen', { n: a.at }) : t('roadNeed', { n: a.at })) + ' <i class="trophy"></i>';
+      h.querySelector('.r2-balls small').textContent = t('arenaUnlocks');
+      const balls = BY_UNLOCK.filter(id => arenaFor(UNLOCK[id]).id === a.id);
+      h.querySelector('.r2-balls span').append(...balls.map(id => {
+        const c = el('span', 'r2-chip r-' + RARITY[id]);
+        c.append(icon(id, 18, save.skinOf[id]), document.createTextNode(ballName(id)));
+        return c;
+      }));
+      if (!balls.length) h.querySelector('.r2-balls').hidden = true;
+      return h;
+    };
+    // every arena is its own stretch of road, painted like the arena: its sky, and its things along both edges
+    for (let i = ARENAS.length - 1; i >= 0; i--) {
+      const a = ARENAS[i], hi = ARENAS[i + 1]?.at ?? Infinity, th = THEMES[a.id] ?? THEMES.night;
+      const zone = el('section', `r2-zone z-${a.id}` + (i > cur ? ' locked' : ''));
+      zone.style.setProperty('--zsky', th.sky);
+      zone.style.setProperty('--zl', `url("data:image/svg+xml,${encodeURIComponent(zoneArt(a.id, false))}")`);
+      zone.style.setProperty('--zr', `url("data:image/svg+xml,${encodeURIComponent(zoneArt(a.id, true))}")`);
+      for (const it of items) {
+        if (it.header || it.at < a.at || it.at >= hi) continue;
+        if (!marked && it.at <= save.trophies) { zone.append(marker()); marked = true; }
+        zone.append(rewardRow(it.n));
+      }
+      if (!marked && a.at <= save.trophies) { zone.append(marker()); marked = true; }
+      zone.append(gate(a, i));
+      if (!i) zone.append(el('div', 'r2-start', `⚑ ${t('roadStart')}`));
+      rows.push(zone);
     }
-    if (!marked) rows.push(marker());
-    rows.push(el('div', 'r2-start', `⚑ ${t('roadStart')}`));
     const fill = el('i', 'r2-fill');
     box.className = 'vroad2';
     box.replaceChildren(el('i', 'r2-rail'), fill, ...rows);
@@ -452,7 +508,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     setTimeout(() => { // the rail glows from the bottom up to you, and the page opens on you
       const me = box.querySelector('.r2-me'), body = $('#tab-body');
       if (!me) return;
-      fill.style.height = `${box.scrollHeight - me.offsetTop - 40}px`;
+      fill.style.height = `${box.scrollHeight - (me.getBoundingClientRect().top - box.getBoundingClientRect().top) - 40}px`; // me sits inside its arena's stretch
       if (tab === 'path') body.scrollTop += me.getBoundingClientRect().top - body.getBoundingClientRect().top - body.clientHeight / 2;
     }, 0);
   }
