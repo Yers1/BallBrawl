@@ -34,12 +34,22 @@ export async function connect(save) {
       if (error) throw error;
       session = data.session;
     }
-    net.email = session?.user && !session.user.is_anonymous ? session.user.email ?? null : null;
-    uid = session?.user?.id ?? null;
-    const p = await rpc('ensure_profile', {
+    const args = {
       p_nick: save.nick, p_squad: save.squad, p_skins: save.skinOf, p_avatar: save.avatar,
       p_local_trophies: save.profileId ? 0 : save.trophies, // offline trophies are imported only once
-    });
+    };
+    uid = session?.user?.id ?? null;
+    let p;
+    try { p = await rpc('ensure_profile', args); } catch (e) {
+      if (e?.code !== '23503') throw e; // this session's account was deleted (say, on another device): start a fresh one
+      await sb.auth.signOut({ scope: 'local' });
+      const { data, error } = await timeout(sb.auth.signInAnonymously());
+      if (error) throw error;
+      session = data.session;
+      uid = session.user.id;
+      p = await rpc('ensure_profile', args);
+    }
+    net.email = session?.user && !session.user.is_anonymous ? session.user.email ?? null : null;
     const merged = mergeSave(save, p.save || {}, p);
     merged.profileId = p.id;
     merged.nick = save.nick;
@@ -57,7 +67,7 @@ export async function connect(save) {
     return { save };
   }
 }
-let syncTimer = 0;
+let syncTimer = 0, syncSave = null;
 const upload = (save, at) => {
   const { profileId, pendingFinish, ...blob } = save; // bookkeeping stays local
   return rpc('sync_save', {
@@ -66,14 +76,20 @@ const upload = (save, at) => {
   });
 };
 const sameUser = async () => (await sb.auth.getSession()).data.session?.user?.id === uid;
+async function syncNow() {
+  const save = syncSave;
+  syncSave = null;
+  if (!save || !(await sameUser().catch(() => false))) return; // signed into another account: the reload merges instead
+  upload(save, save.savedAt || Date.now()).catch(() => {});
+}
 export function queueSync(save) {
   if (!net.online) return;
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(async () => {
-    if (!(await sameUser().catch(() => false))) return; // signed into another account: the reload merges instead
-    upload(save, save.savedAt || Date.now()).catch(() => {});
-  }, 2500);
+  syncSave = save;
+  syncTimer = setTimeout(syncNow, 2500);
 }
+// the app goes to the background (or closes): send what is waiting now, not in 2.5 s
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.hidden && syncSave) { clearTimeout(syncTimer); syncNow(); } });
 
 // Before signing out: merge in the cloud copy (another device may be ahead), upload that and check it landed.
 // Throws on any failure, so the caller keeps the local save.

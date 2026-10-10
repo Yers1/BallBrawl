@@ -7,7 +7,7 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, FRAG_NEED,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, FRAG_NEED, pay, skinPool, chestBalls,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY,
 } from './progress.js';
@@ -278,6 +278,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       hero.replaceChildren(icon(res.skin[0], 96, res.skin[1]));
       text = t('newSkin', { skin: skinName(res.skin[1]), name: ballName(res.skin[0]) });
       if (res.coins) sub = t('gotCoins', { n: res.coins });
+    } else if (res.gems) {
+      hero.innerHTML = '<i class="gem" style="width:96px;height:96px"></i>';
+      text = t('gotGems', { n: res.gems });
     } else {
       hero.innerHTML = '<i class="coin" style="width:96px;height:96px"></i>';
       text = t('gotCoins', { n: res.coins });
@@ -422,8 +425,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const all2 = el('button', 'btn primary sm claim-all', `${t('claimAll')} (${ready.length})`);
       all2.onclick = () => {
         const got = ready.map(n => claim(save, n));
-        const coins = got.reduce((s, r) => s + (r?.coins || 0), 0);
-        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || got.find(r => r?.chest) || { coins });
+        const coins = got.reduce((s, r) => s + (r?.coins || 0), 0), gems = got.reduce((s, r) => s + (r?.gems || 0), 0);
+        reward(got.find(r => r?.ball && !r.coins) || got.find(r => r?.skin && !r.coins) || got.find(r => r?.chest) || (coins ? { coins } : { gems }));
         if (got.length > 1) $('#rw-sub').textContent = t('andMore', { n: got.length - 1 });
       };
       hero.append(all2);
@@ -437,7 +440,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const own = save.owned.includes(id);
       const tile = el('button', 'tile' + (own ? '' : ' locked'));
       tile.style.setProperty('--c', BALLS[id].color);
-      tile.append(icon(id, 72, save.skinOf[id]), el('b', ''), el('small', '', own ? `${BALLS[id].hp} ${t('hp')}` : t('arenaN', { n: arenaIndex(arenaFor(UNLOCK[id]).id) + 1 })));
+      const L = !own && lockLabel(id, save.maxTrophies), small = el('small', '', own ? `${BALLS[id].hp} ${t('hp')}` : L.trophies ? '' : t('arenaN', { n: L.arena }));
+      if (L.trophies) small.innerHTML = `<i class="trophy"></i>${L.trophies}`;
+      tile.append(icon(id, 72, save.skinOf[id]), el('b', ''), small);
       tile.children[1].textContent = ballName(id);
       if (own) tile.insertAdjacentHTML('beforeend', rankBadge(ballRank(save.mastery[id] ?? 0)));
       tile.onclick = () => { sfx.click(); openBall(id); };
@@ -512,6 +517,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       if (rw.skin) step.append(icon(id, 30, rw.skin));
       else if (rw.chest) step.append(el('span', 'chest-ico', chestSvg(rw.chest)));
       else if (rw.title) step.append(el('span', 'bp-title', titleName('master_' + id)));
+      else if (rw.gems) step.append(el('span', 'bp-coins', `<i class="gem"></i>${rw.gems}`));
       else step.append(el('span', 'bp-coins', `<i class="coin"></i>${rw.coins}`));
       return step;
     }));
@@ -650,8 +656,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   };
   // ---------- chests ----------
   const odds = k => { // the real odds for this player: 0% once everything of that kind is collected
-    const c = CHESTS[k], ballsLeft = ORDER.some(id => !save.owned.includes(id));
-    const skinsLeft = save.owned.some(b => Object.keys(SKINS).some(st => !SKINS[st].gift && !hasSkin(save, b, st)));
+    const c = CHESTS[k], ballsLeft = chestBalls(save).length > 0, skinsLeft = skinPool(save).length > 0;
     return t('chestInfo', { a: c.coins[0], b: c.coins[1], f: skinsLeft ? `${c.stacks}×${c.frags[0]}–${c.frags[1]}` : 0, g: c.gems, c: ballsLeft ? Math.round(c.ball * 100) : 0, e: Math.round(c.emote * 100) });
   };
   function chestList() {
@@ -878,7 +883,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       go.disabled = true;
       try {
         await online.clanCreate({ a: clanDraft.a, n: clanDraft.n }, clanDraft.badge);
-        save.coins -= CLAN_COST; persist(); coinsUI(); sfx.coin(); confetti(40); toast(t('clanCreated')); clanDraft = null; clan();
+        pay(save, 'coins', CLAN_COST); persist(); coinsUI(); sfx.coin(); confetti(40); toast(t('clanCreated')); clanDraft = null; clan();
       } catch { go.disabled = false; toast(t('needNet')); }
     };
     make.append(reroll, el('h4', '', ''), badges, go);

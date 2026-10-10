@@ -13,7 +13,7 @@ export function aiAngle(fx, fy, tx, ty, level, rand) {
 // Modes: classic = squads take turns, one ball each (trophies); duo = two balls a side at once; boss = your whole
 // squad against one giant ball. duo and boss are a single round.
 export const MODES = ['classic', 'duo', 'boss'];
-export const BOSS = { r: 46, hpMul: 5, dmgMul: 1.4, speedMul: 0.8 };
+export const BOSS = { r: 46, hpMul: 2.5, dmgMul: 1.2, speedMul: 0.8 };
 export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night' }) {
   const spec = skins => id => (skins[id] ? { id, skin: skins[id] } : { id });
   return { a: squadA.map(spec(skinsA)), b: squadB.map(spec(skinsB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map };
@@ -23,7 +23,7 @@ export function roundWorld(m) {
   m.round++;
   const seed = m.seed * 7919 + m.round, map = m.map ?? 'night';
   if (m.mode === 'duo') return createWorld({ seed, a: m.a.slice(0, 2), b: m.b.slice(0, 2), hpMulB: m.hpMulB, map });
-  if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [{ ...m.b[0], boss: true, ...BOSS }], hpMulB: m.hpMulB, map });
+  if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [{ ...m.b[0], boss: true, ...BOSS }], map }); // its size is the challenge; trophies only sharpen its AI
   return createWorld({ seed, a: m.a[0], b: m.b[0], hpMulB: m.hpMulB, map });
 }
 

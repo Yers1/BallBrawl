@@ -32,7 +32,7 @@ test('boss: your three balls against one giant', () => {
   const w = roundWorld(m);
   const boss = w.ents.filter(e => e.side === 1);
   assert.equal(boss.length, 1);
-  assert.ok(boss[0].boss && boss[0].r > 40 && boss[0].hp > 400);
+  assert.ok(boss[0].boss && boss[0].r > 40 && boss[0].hp > 250);
   assert.equal(w.ents.filter(e => e.side === 0).length, 3);
   assert.equal(w.map, 'canyon');
 });

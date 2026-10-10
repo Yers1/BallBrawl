@@ -1516,6 +1516,19 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     ctx.restore();
   }
   drawEmotes(ctx, w, dt);
+  for (const e of w.ents) if (e.boss && !e.dead) { // the boss wears a crown, tilting a little as it rolls
+    ctx.save();
+    ctx.translate(e.x, e.y - e.r - 4);
+    ctx.rotate(Math.sin(now * 2) * 0.12);
+    ctx.beginPath();
+    ctx.moveTo(-17, 0); ctx.lineTo(-20, -18); ctx.lineTo(-9, -9); ctx.lineTo(0, -22); ctx.lineTo(9, -9); ctx.lineTo(20, -18); ctx.lineTo(17, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#FFCC33'; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FF4D6D';
+    for (const x of [-10, 0, 10]) { ctx.beginPath(); ctx.arc(x, -4, 2.6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
   const mine = me != null && w.ents.find(e => e.id === me && !e.dead);
   if (mine) { // in a party: a bobbing marker over the ball you steer
     const y = mine.y - mine.r - 12 - Math.abs(Math.sin(now * 4)) * 4;

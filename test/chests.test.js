@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rng } from '../src/sim.js';
 import { ORDER } from '../src/balls.js';
-import { freshSave, migrate, mergeSave, openChest, CHESTS, hasSkin, buySkin, equipSkin, winChest, startUnlock, openSlot, speedUp, slotLeft, gemsToOpen, CHEST_TIME, CHEST_CYCLE, FRAG_NEED, buy, owns, wear, dailyDeals, buyDeal, adGems } from '../src/progress.js';
+import { freshSave, migrate, mergeSave, openChest, CHESTS, hasSkin, buySkin, equipSkin, winChest, startUnlock, openSlot, speedUp, slotLeft, gemsToOpen, CHEST_TIME, CHEST_CYCLE, FRAG_NEED, buy, owns, wear, dailyDeals, buyDeal, adGems, SHOP } from '../src/progress.js';
 
 test('wins fill 4 slots in the published order; unlocking takes time, gems or ads skip it', () => {
   const s = freshSave();
@@ -231,4 +231,29 @@ test('every arena opens its own balls, and the road gives each one at its mark',
   const ats = PATH.map(n => n.at);
   assert.equal(new Set(ats).size, ats.length, 'one reward per mark');
   assert.deepEqual([...ats].sort((a, b) => a - b), ats, 'in order');
+});
+
+test('a purchase is never refunded by an older cloud copy', () => {
+  const cloud = freshSave(); cloud.coins = 6000; cloud.gems = 100;
+  const s = migrate(JSON.parse(JSON.stringify(cloud)));
+  assert.ok(buy(s, 'banner', Object.keys(SHOP.banner).find(id => SHOP.banner[id].coins >= 2500)));
+  const spent = 6000 - s.coins;
+  const m = mergeSave(s, cloud, { trophies: 0, max_trophies: 0 });
+  assert.equal(m.coins, 6000 - spent, 'the stale cloud copy does not give the coins back');
+  const earnedElsewhere = migrate(JSON.parse(JSON.stringify(cloud))); earnedElsewhere.coins += 50;
+  assert.equal(mergeSave(s, earnedElsewhere, { trophies: 0, max_trophies: 0 }).coins, 6050 - spent, 'coins earned on the other copy still count');
+});
+
+test('daily deals stay put all day after buying one', () => {
+  const s = freshSave(); s.coins = 99999; s.gems = 9999; s.owned = ['basic', 'leech', 'cell'];
+  const before = dailyDeals(s, '2026-10-11').map(d => d.kind + (d.id ?? d.ball + d.style));
+  assert.ok(buyDeal(s, dailyDeals(s, '2026-10-11')[1]));
+  const after = dailyDeals(migrate(JSON.parse(JSON.stringify(s))), '2026-10-11');
+  assert.deepEqual(after.map(d => d.kind + (d.id ?? d.ball + d.style)), before);
+  assert.deepEqual(after.map(d => d.sold), [false, true, false].slice(0, after.length));
+});
+
+test('the Glory Road never gives a skin for a ball still locked at that mark', async () => {
+  const { PATH, UNLOCK } = await import('../src/progress.js');
+  for (const n of PATH) if (n.skin) assert.ok(UNLOCK[n.skin[0]] <= n.at, `${n.at}: ${n.skin}`);
 });
