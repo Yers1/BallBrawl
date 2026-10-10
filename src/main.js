@@ -17,7 +17,7 @@ import {
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
 import { createHome } from './meta.js';
-import { heroSvg } from './heroes.js';
+import { heroLive } from './heroes.js';
 import * as online from './net.js';
 const { net } = online;
 
@@ -333,26 +333,27 @@ function nextBoss() {
   setBossNames(Object.fromEntries(BOSS_IDS.map(id => [id, t('boss_' + id)])));
   return BOSS_IDS[S.bossTurn % BOSS_IDS.length];
 }
+const RAIN_CLOUD = '<svg class="r-rain" viewBox="0 0 60 44" aria-hidden="true"><path d="M14 26a9 9 0 0 1 2-17 12 12 0 0 1 23-2 9 9 0 0 1 7 19z" fill="#5B6478" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path class="r-drop" d="M20 32l-2 6M31 32l-2 6M42 32l-2 6" stroke="#7FD3FF" stroke-width="3" stroke-linecap="round"/></svg>';
 // The commanders: yours on the left, theirs on the right, big, cheering and flinching with the fight.
 function commanders(fams, foeNick) {
   for (const [side, cls] of [[0, 'you'], [1, 'them']]) {
     const box = $('#cmds .cmd.' + cls), f = fams[side];
-    box.querySelector('.cmd-art').innerHTML = heroSvg(f.id);
+    box.querySelector('.cmd-art').innerHTML = heroLive(f.id);
     box.querySelector('.cmd-name').textContent = `${side ? foeNick : nickText(save.nick, lang)} · ${t('famLv', { n: f.lv })}`;
     box.className = 'cmd ' + cls;
     box.hidden = side === 1 && S.match?.mode === 'boss'; // the boss leads itself
   }
 }
-function cmdReact(side, kind) {
+function cmdReact(side, kind, talk = false) {
   const box = $('#cmds .cmd.' + (side ? 'them' : 'you'));
   if (!box || $('#cmds').hidden || box.hidden) return;
   box.classList.remove('cheer', 'ouch', 'cast', 'point', 'win', 'sad');
   void box.offsetWidth; // restart the animation
   box.classList.add(kind);
   clearTimeout(box.calm);
-  if (kind !== 'win' && kind !== 'sad') box.calm = setTimeout(() => box.classList.remove(kind), 750); // then back to breathing
+  if (kind !== 'win' && kind !== 'sad') box.calm = setTimeout(() => box.classList.remove(kind), 800); // then back to breathing
   const now = performance.now(), say = box.querySelector('.cmd-say');
-  if (kind !== 'win' && kind !== 'sad' && now < (box.saidAt ?? 0) + 2500) return; // a line now and then, not on every bump
+  if (!talk || now < (box.saidAt ?? 0) + 7000) return; // a word now and then, not on every bump
   box.saidAt = now;
   say.textContent = t('cmdSay_' + kind);
   say.classList.remove('on');
@@ -581,8 +582,8 @@ function finishMatch(r) {
   coinsUI();
   S.mode = 'result';
   playMusic(null);
-  cmdReact(0, won ? 'win' : 'sad');
-  cmdReact(1, won ? 'sad' : r === 'draw' ? 'sad' : 'win');
+  cmdReact(0, won ? 'win' : 'sad', true);
+  cmdReact(1, won ? 'sad' : r === 'draw' ? 'sad' : 'win', true);
   won ? sfx.win() : sfx.lose();
   if (won) confetti(48);
   showResult();
@@ -647,6 +648,12 @@ function showResult() {
   const squad = S.challenge ? S.challenge.squad : save.squad;
   $('#r-squad').replaceChildren(...squad.map((id, i) => icon(id, i ? 60 : 84, save.skinOf[id])));
   $('#r-squad').classList.toggle('sad', !won);
+  const rc = $('#r-cmds'), fams = S.fams;
+  rc.hidden = !fams; // challenges and parties have no commanders
+  if (fams) rc.replaceChildren(...[0, 1].filter(side => !side || S.match?.mode !== 'boss').map(side => {
+    const happy = side ? r === 1 : won;
+    return el('div', `r-cmd ${side ? 'them' : 'you'} ${happy ? 'win' : 'sad'}`, heroLive(fams[side].id) + (happy ? '' : RAIN_CLOUD));
+  }));
   const c = S.challenge, box = $('#r-ads');
   box.replaceChildren();
   $('#r-coins').textContent = '+' + S.earned;
@@ -775,7 +782,7 @@ function feel(w, now) {
   for (const ev of w.events) {
     if (ev.type === 'hit' && hits++ < 2) sfx.hit(ev.amount, w.ents.find(e => e.id === ev.id)?.kind);
     if (ev.type === 'hit' && ev.amount >= 18) S.freezeUntil = Math.max(S.freezeUntil, now + 0.05);
-    if (ev.type === 'hit' && ev.amount >= 8) { cmdReact(ev.side, 'ouch'); cmdReact(1 - ev.side, 'cheer'); }
+    if (ev.type === 'hit' && ev.amount >= 8) { cmdReact(ev.side, 'ouch', ev.amount >= 22); cmdReact(1 - ev.side, 'cheer'); }
     if (ev.type === 'wall' && now - lastWallSfx > 0.12) { lastWallSfx = now; sfx.wall(S.match?.map ?? w.map); }
     if (ev.type === 'boom') { sfx.death(); S.freezeUntil = Math.max(S.freezeUntil, now + 0.06); }
     if (ev.type === 'dash') { sfx.dash(); cmdReact(ev.side, 'point'); if (mine && ev.side === 0) S.ms.dashes++; }
@@ -788,7 +795,7 @@ function feel(w, now) {
     }
     if (ev.type === 'super') {
       sfx.super(ev.kind);
-      cmdReact(ev.side, 'cast');
+      cmdReact(ev.side, 'cast', true);
     } else if (ev.type === 'rage') {
       banner(t('bossRage'), false, 'foe');
       sfx.super('bomb');

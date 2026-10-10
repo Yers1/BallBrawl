@@ -141,7 +141,9 @@ function splitOff(w, me, hp = CELL.hp) { // two mini cells fly out sideways
 const PIECES = ['rook', 'bishop', 'knight'];
 const DIRS = { rook: [[1, 0], [-1, 0], [0, 1], [0, -1]], bishop: [[1, 1], [1, -1], [-1, 1], [-1, -1]] };
 DIRS.queen = [...DIRS.rook, ...DIRS.bishop];
-const KNIGHT = [[[0, -2], [1, 0]], [[2, 0], [0, 1]], [[0, 2], [-1, 0]], [[-2, 0], [0, -1]]]; // an L in each of 4 directions: 2 squares, then 1 aside
+// 4 L's (2 squares, then 1 aside), mirror-symmetric: up-left, up-right, down-left, down-right. Never four L's turned the
+// same way round the centre — that pinwheel looks like a hateful symbol.
+const KNIGHT = [[[0, -2], [-1, 0]], [[0, -2], [1, 0]], [[0, 2], [-1, 0]], [[0, 2], [1, 0]]];
 const rayEnd = (x, y, dx, dy, r) => { // along (dx, dy) until a ball's radius short of the wall
   const m = Math.hypot(dx, dy), ux = dx / m, uy = dy / m;
   const k = Math.max(0, Math.min(ux > 0 ? (W - r - x) / ux : ux < 0 ? (r - x) / ux : Infinity, uy > 0 ? (W - r - y) / uy : uy < 0 ? (r - y) / uy : Infinity));

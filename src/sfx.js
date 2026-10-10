@@ -137,8 +137,18 @@ export const sfx = {
   super: kind => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, { type: 'triangle', vol: 0.12, delay: i * 0.045 })); SUPER_FX[kind]?.(); },
   skill: kind => SUPER_FX[kind]?.(), // just the ball's own sound, for a boss attack
   death: () => { const j = J(0.2); noise(0.45, { vol: 0.4, freq: 200 * j, sweep: 0.3 }); tone(90 * j, 0.4, { type: 'sine', vol: 0.3, slide: 0.4 }); tone(700 * j, 0.06, { type: 'triangle', vol: 0.08 }); },
-  win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.14, delay: i * 0.09 })),
-  lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.14, delay: i * 0.14 })),
+  win: () => { // a little brass fanfare: ta-ta-ta-TAAA over a drum roll, then a cymbal and a big major chord
+    for (let i = 0; i < 8; i++) noise(0.06, { vol: 0.12 + i * 0.02, freq: 1800, q: 0.8, delay: i * 0.05 });
+    [[523, 0.4, 0.12], [523, 0.52, 0.12], [523, 0.64, 0.12], [698, 0.78, 0.5]].forEach(([f, d, l]) => { tone(f, l, { type: 'sawtooth', vol: 0.09, delay: d }); tone(f * 2, l, { type: 'square', vol: 0.04, delay: d }); });
+    [523, 659, 784, 1047].forEach(f => tone(f, 1.1, { type: 'triangle', vol: 0.1, delay: 1.3 }));
+    tone(131, 0.5, { type: 'sine', vol: 0.4, slide: 0.5, delay: 1.3 });
+    noise(1.2, { vol: 0.2, freq: 7000, q: 0.4, delay: 1.3, type: 'highpass' });
+  },
+  lose: () => { // the sad trombone: wah, wah, wah, waaah
+    [[311, 0, 0.3], [294, 0.36, 0.3], [277, 0.72, 0.3]].forEach(([f, d, l]) => { tone(f, l, { type: 'sawtooth', vol: 0.1, slide: 0.97, delay: d }); tone(f / 2, l, { type: 'triangle', vol: 0.08, delay: d }); });
+    for (let k = 0; k < 6; k++) tone(262 - k * 3, 0.2, { type: 'sawtooth', vol: 0.1 - k * 0.012, slide: k % 2 ? 1.04 : 0.96, delay: 1.08 + k * 0.17 }); // the long one wobbles down
+    tone(131, 1, { type: 'triangle', vol: 0.08, slide: 0.9, delay: 1.08 });
+  },
   click: () => tone(700 * J(0.06), 0.05, { type: 'sine', vol: 0.08 }),
   round: () => { tone(880, 0.12, { type: 'square', vol: 0.06 }); tone(1320, 0.18, { type: 'square', vol: 0.06, delay: 0.1 }); },
   count: (last = false) => tone(last ? 1320 : 880, last ? 0.3 : 0.12, { type: 'square', vol: 0.07 }),

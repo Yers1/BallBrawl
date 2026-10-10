@@ -1378,20 +1378,11 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .p-fam { width: 74px; }
 .cmds { width: var(--size); display: flex; justify-content: space-between; align-items: flex-end; margin-top: -10px; pointer-events: none; }
 .cmd { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 150px; }
-.cmd-art { display: block; width: 84px; filter: drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); animation: cmdIdle 2s ease-in-out infinite; transform-origin: 50% 100%; }
+.cmd-art { display: block; width: 84px; filter: drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); transform-origin: 50% 100%; }
 .cmd.them .cmd-art { scale: -1 1; animation-delay: -1s; }
 .cmd-name { max-width: 150px; padding: 2px 8px; border-radius: 8px; border: 2px solid var(--stroke); font: 400 10px var(--display); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cmd.you .cmd-name { background: var(--you); color: #05202B; }
 .cmd.them .cmd-name { background: var(--foe); color: #fff; }
-.cmd.cheer .cmd-art { animation: cmdCheer 0.5s ease-out; }
-.cmd.ouch .cmd-art { animation: cmdOuch 0.4s ease-out; }
-.cmd.cast .cmd-art { animation: cmdCast 0.7s ease-out; }
-.cmd.win .cmd-art { animation: cmdWin 0.6s ease-in-out infinite; }
-.cmd.sad .cmd-art { animation: none; transform: translateY(6px) rotate(-4deg); filter: grayscale(0.5) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); }
-@keyframes cmdCheer { 40% { transform: translateY(-14px) rotate(-6deg); } }
-@keyframes cmdOuch { 30% { transform: translateX(-6px) rotate(-8deg); filter: brightness(1.8) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); } 60% { transform: translateX(4px) rotate(4deg); } }
-@keyframes cmdCast { 30% { transform: scale(1.18) rotate(4deg); filter: drop-shadow(0 0 14px #FFE38A); } }
-@keyframes cmdWin { 50% { transform: translateY(-16px); } }
 @media (min-width: 760px) { /* wide screens: they stand beside the arena, bigger */
   .stage { position: relative; }
   .cmds { position: absolute; top: 50%; left: 50%; width: calc(var(--size) + 380px); translate: -50% -40%; margin: 0; }
@@ -1412,17 +1403,12 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .cmd { position: relative; }
 .cmd::before { content: ''; position: absolute; left: 50%; bottom: 18px; width: 74%; height: 16px; translate: -50% 0; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--you) 55%, transparent), transparent); animation: cmdGlow 2.4s ease-in-out infinite; }
 .cmd.them::before { background: radial-gradient(closest-side, color-mix(in srgb, var(--foe) 55%, transparent), transparent); }
-.cmd-art { position: relative; animation: cmdIdle 2.4s ease-in-out infinite; }
-@keyframes cmdIdle { 0%, 100% { transform: translateY(0) rotate(-1.5deg) scaleY(1); } 50% { transform: translateY(-4px) rotate(1.5deg) scaleY(1.03); } }
 @keyframes cmdGlow { 50% { opacity: 0.55; scale: 0.9; } }
-.cmd.point .cmd-art { animation: cmdPoint 0.45s ease-out; }
-@keyframes cmdPoint { 35% { transform: translateX(8px) rotate(9deg) scale(1.06); } }
 .cmd-say { position: absolute; z-index: 2; bottom: calc(100% - 14px); left: 50%; translate: -50% 0; padding: 4px 10px; border-radius: 12px; border: 2.5px solid var(--stroke); background: #fff; color: #0A0E1F; font: 400 12px var(--display); white-space: nowrap; pointer-events: none; opacity: 0; scale: 0.4; }
 .cmd-say::after { content: ''; position: absolute; left: 50%; top: 100%; translate: -50% -2px; border: 7px solid transparent; border-top-color: #fff; }
 .cmd-say.on { animation: cmdSay 1.6s ease-out; }
 @keyframes cmdSay { 0% { opacity: 0; scale: 0.4; } 12% { opacity: 1; scale: 1.1; } 20%, 80% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 0.9; translate: -50% -8px; } }
 .cmd.win .cmd-say.on, .cmd.sad .cmd-say.on { animation-duration: 3s; }
-@media (prefers-reduced-motion: reduce) { .cmd-art, .cmd::before { animation: none !important; } }
 
 /* ---------- Glory Road, by arena: every arena is its own stretch, painted like it, with the arena itself at its gate ---------- */
 .vroad2 { gap: 0; padding-bottom: 96px; }
@@ -1445,3 +1431,46 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .r2-arena.cur { box-shadow: 0 0 0 3px var(--gold), 0 0 22px rgba(255, 210, 63, 0.55), 0 5px 0 var(--stroke); }
 .r2-balls { background: transparent; padding: 8px 14px 10px; }
 .r2-start { margin-top: 6px; }
+
+/* ---------- living commanders: they breathe, the head nods and looks at the fight; joy and despair at the end ---------- */
+.hero-live .h-all { transform-box: view-box; transform-origin: 70px 158px; animation: hBreath 2.6s ease-in-out infinite; }
+.hero-live .h-head { transform-box: view-box; transform-origin: 70px 86px; animation: hHead 6s ease-in-out infinite; }
+.cmd.them .h-head, .r-cmd.them .h-head { animation-delay: -2.5s; }
+@keyframes hBreath { 50% { transform: scale(0.985, 1.03); } }
+@keyframes hHead { 0%, 100% { transform: rotate(-3deg); } 20% { transform: rotate(3deg) translateY(-1px); } 38% { transform: rotate(-2deg); }
+  46%, 58% { transform: rotate(10deg) translateX(2px); } /* a long look at the fight */ 68% { transform: rotate(0); } 84% { transform: rotate(4deg) translateY(-2px); } }
+.cmd-art { animation: cmdIdle 2.6s ease-in-out infinite; }
+@keyframes cmdIdle { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+.cmd.cheer .cmd-art { animation: cmdCheer 0.6s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes cmdCheer { 0% { transform: scale(1, 1); } 25% { transform: scale(1.12, 0.86); } 55% { transform: translateY(-22px) scale(0.92, 1.1) rotate(-6deg); } 100% { transform: none; } }
+.cmd.cheer .h-head { animation: hNod 0.6s ease-out; }
+@keyframes hNod { 40% { transform: rotate(-10deg) translateY(-3px); } }
+.cmd.ouch .cmd-art { animation: cmdOuch 0.5s ease-out; }
+@keyframes cmdOuch { 20% { transform: translateX(-12px) rotate(-12deg) scale(0.94); filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(4) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); } 55% { transform: translateX(5px) rotate(5deg); } }
+.cmd.ouch .h-head { animation: hJerk 0.5s ease-out; }
+@keyframes hJerk { 25% { transform: rotate(-16deg) translateX(-3px); } }
+.cmd.cast .cmd-art { animation: cmdCast 0.8s ease-out; }
+@keyframes cmdCast { 30% { transform: scale(1.22) rotate(6deg); filter: drop-shadow(0 0 18px #FFE38A) brightness(1.25); } 60% { transform: scale(1.1) rotate(-3deg); } }
+.cmd.point .cmd-art { animation: cmdPoint 0.5s ease-out; }
+@keyframes cmdPoint { 35% { transform: translateX(10px) rotate(10deg) scale(1.08, 0.95); } }
+/* joy: jumping, golden glow, sparkles; despair: dark, slumped, head down, a rain cloud */
+.cmd.win .cmd-art, .r-cmd.win .hero-live { animation: cmdWin 0.7s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(255, 210, 63, 0.9)) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); }
+@keyframes cmdWin { 0%, 100% { transform: translateY(0) scale(1.06, 0.94); } 45% { transform: translateY(-20px) scale(0.95, 1.06) rotate(-4deg); } 55% { transform: translateY(-20px) scale(0.95, 1.06) rotate(4deg); } }
+.cmd.win .h-head, .r-cmd.win .h-head { animation: hHappy 0.7s ease-in-out infinite; }
+@keyframes hHappy { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg) translateY(-2px); } }
+.cmd.sad .cmd-art, .r-cmd.sad .hero-live { animation: cmdSad 3s ease-in-out infinite; filter: grayscale(0.85) brightness(0.45) drop-shadow(0 6px 0 rgba(10, 14, 31, 0.55)); }
+@keyframes cmdSad { 0%, 100% { transform: translateY(8px) scale(1.04, 0.92) rotate(-2deg); } 50% { transform: translateY(10px) scale(1.05, 0.9) rotate(2deg); } }
+.cmd.sad .h-head, .r-cmd.sad .h-head { animation: hDroop 3s ease-in-out infinite; }
+@keyframes hDroop { 0%, 100% { transform: rotate(14deg) translateY(6px); } 50% { transform: rotate(10deg) translateY(8px); } }
+.r-cmds { position: absolute; left: -10px; right: -10px; top: -62px; height: 0; pointer-events: none; }
+.result { position: relative; margin-top: 56px; }
+.r-cmd { position: absolute; top: 0; width: 92px; }
+.r-cmd.you { left: 0; }
+.r-cmd.them { right: 0; }
+.r-cmd.them .hero-live { scale: -1 1; }
+.r-cmd.win::before { content: '✦ ✧ ✦'; position: absolute; left: 0; right: 0; top: -14px; text-align: center; color: #FFE38A; font-size: 16px; letter-spacing: 6px; text-shadow: 0 0 8px #FFD23F; animation: sparkle 0.9s ease-in-out infinite; }
+@keyframes sparkle { 50% { opacity: 0.4; transform: translateY(-4px) scale(1.15); } }
+.r-rain { position: absolute; left: 50%; top: -30px; width: 58px; translate: -50% 0; animation: rainBob 2.5s ease-in-out infinite; }
+.r-rain .r-drop { animation: rainDrop 0.7s linear infinite; }
+@keyframes rainBob { 50% { translate: -50% -3px; } }
+@keyframes rainDrop { 0% { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(8px); opacity: 0; } }
