@@ -929,16 +929,23 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   // ---------- chest slots: wins fill them; one unlocks at a time; gems open now, an ad takes 30 minutes off ----------
   let slotOpen = -1;
+  // a live countdown: "14:59" in the last hour, "2 h 30 m" before that
+  const clock = ms => { const sec = Math.ceil(ms / 1000); return sec >= 3600 ? mmss(ms) : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+  const CLOCK_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="#FFFFFF" stroke="#0A0E1F" stroke-width="2"/><path d="M12 8.5V13l3 2" stroke="#0A0E1F" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M9 2.5h6" stroke="#0A0E1F" stroke-width="2.4" stroke-linecap="round"/></svg>';
   function slots() {
-    const now = Date.now();
+    const now = Date.now(), busy = unlocking(save, now);
     $('#l-slots').replaceChildren(...save.slots.map((sl, i) => {
-      const b = el('button', 'slot' + (sl ? ' k-' + sl.kind : ' empty'));
+      const b = el('button', 'cslot' + (sl ? ' k-' + sl.kind : ' empty'));
       if (!sl) { b.innerHTML = '<span class="sl-empty"></span>'; b.onclick = () => toast(t('slotEmpty')); return b; }
-      const left = slotLeft(sl, now), ready = sl.at != null && left <= 0;
-      b.classList.toggle('ready', ready);
-      b.classList.toggle('busy', sl.at != null && !ready);
-      b.innerHTML = `${chestSvg(sl.kind)}<small></small>`;
-      b.querySelector('small').textContent = ready ? t('slotOpen') : sl.at != null ? mmss(left) : mmss(CHEST_TIME[sl.kind]);
+      const left = slotLeft(sl, now), ready = sl.at != null && left <= 0, going = sl.at != null && !ready;
+      b.classList.add(ready ? 'ready' : going ? 'busy' : 'locked');
+      if (!ready && !going && !busy) b.classList.add('start'); // the one you can set unlocking now
+      b.innerHTML = ready ? `<b class="cs-top">${t('slotReadyTop')}</b>${chestSvg(sl.kind)}<b class="cs-big"></b>`
+        : going ? `<b class="cs-top cs-clock">${CLOCK_IC}<span></span></b>${chestSvg(sl.kind)}<small class="cs-now"></small><b class="cs-gems"><i class="gem"></i>${gemsToOpen(left)}</b>`
+        : `<b class="cs-top"></b>${chestSvg(sl.kind)}<b class="cs-time"></b>`;
+      if (ready) b.querySelector('.cs-big').textContent = t('slotOpen');
+      else if (going) { b.querySelector('.cs-clock span').textContent = clock(left); b.querySelector('.cs-now').textContent = t('slotNow'); }
+      else { b.querySelector('.cs-top').textContent = busy ? t('slotLocked') : t('slotTapStart'); b.querySelector('.cs-time').textContent = mmss(CHEST_TIME[sl.kind]); }
       b.onclick = () => {
         sfx.click();
         if (ready) return openFromSlot(i, false);
@@ -955,7 +962,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const left = slotLeft(sl, Date.now()), cost = gemsToOpen(left);
     $('#sl-art').innerHTML = chestSvg(sl.kind);
     $('#sl-title').textContent = t('chest_' + sl.kind);
-    $('#sl-time').textContent = sl.at == null ? t('slotWait', { t: mmss(left) }) : t('slotLeft', { t: mmss(left) });
+    $('#sl-time').textContent = sl.at == null ? t('slotWait', { t: mmss(left) }) : t('slotLeft', { t: clock(left) });
     $('#sl-info').textContent = sl.at == null ? t('slotBusy') : '';
     $('#sl-gems').innerHTML = `${t('slotNow')} · <i class="gem"></i>${cost}`;
     $('#sl-gems').disabled = save.gems < cost;

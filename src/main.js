@@ -3,7 +3,7 @@ import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METE
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle } from './match.js';
 import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes } from './render.js';
-import { lang, t, ballName, ballAbout, superName, superAbout, skinName } from './i18n.js';
+import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
 import { initAds, offerReward, cancelReward, interstitial } from './ads.js';
@@ -484,7 +484,7 @@ function finishMatch(r) {
   S.xpGot = won ? XP_WIN : XP_PLAY;
   S.lvlUps = gainXp(save, S.xpGot); // the player level
   save.matches++;
-  track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, ...S.ms });
+  track(save, { matches: 1, wins: won ? 1 : 0, flawless: flawless ? 1 : 0, challenges: c ? 1 : 0, duoWins: won && S.match.mode === 'duo' ? 1 : 0, bossWins: won && S.match.mode === 'boss' ? 1 : 0, ...S.ms });
   S.ms = { dashes: 0, supers: 0, kills: 0 };
   persist();
   coinsUI();
@@ -744,6 +744,7 @@ function emoteTray() {
       ev.stopPropagation();
       $('#emote-tray').hidden = true;
       if (!emote(0, e.id)) return;
+      save.stats.emotes++;
       sfx.click();
       if (S.mode !== 'watch' && Math.random() < 0.55) setTimeout(() => emote(1, pickMood(REPLY[e.mood])), 700 + Math.random() * 800);
     };
@@ -778,6 +779,15 @@ $('#set-close').onclick = () => { $('#scr-settings').hidden = true; };
 $('#set-account').onclick = () => { $('#scr-settings').hidden = true; if (S.mode === 'home') home.open('profile'); };
 $('#set-version').textContent = 'BallBrawl · v1.6';
 setFoeEmotes(save.foeEmotes);
+if (!langChosen() && RECORD == null) { // first launch: choose the language before anything else
+  $('#lang-list').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {
+    const b = el('button', 'chip' + (code === lang ? ' on' : ''));
+    b.textContent = name;
+    b.onclick = () => { setLang(code); if (code !== lang) location.reload(); else $('#scr-lang').hidden = true; };
+    return b;
+  }));
+  $('#scr-lang').hidden = false;
+}
 addEventListener('resize', layout);
 initAds();
 initAudio(save.muted);

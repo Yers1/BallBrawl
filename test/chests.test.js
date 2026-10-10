@@ -209,3 +209,16 @@ test('experience: levels pay coins and gems; every 5th level pays more', async (
   for (let lv = 1; lv < 5; lv++) total += xpNeed(lv);
   assert.equal(gainXp(s, total).at(-1).gems, 10);
 });
+
+test('new achievements count chests, skins, level, ball rank', async () => {
+  const { ACHIEVEMENTS, achievementValue } = await import('../src/progress.js');
+  const s = freshSave();
+  s.chests.box = 1;
+  openChest(s, 'box', rng(2));
+  const v = id => achievementValue(s, ACHIEVEMENTS.find(a => a.id === id));
+  assert.equal(v('chests10'), 1);
+  assert.equal(v('level5'), 1);
+  s.mastery.basic = 9999;
+  assert.equal(v('rank10'), 10);
+  assert.equal(new Set(ACHIEVEMENTS.map(a => a.id)).size, ACHIEVEMENTS.length);
+});

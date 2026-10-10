@@ -131,7 +131,7 @@ export function freshSave() {
     mode: 'classic', // classic | duo | boss
     xp: 0, // experience: the player level
     quests: { day: null, list: [] }, daily: { last: null, streak: 0 }, achieved: [],
-    stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0 },
+    stats: { wins: 0, matches: 0, dashes: 0, supers: 0, kills: 0, flawless: 0, challenges: 0, chests: 0, duoWins: 0, bossWins: 0, emotes: 0 },
     // cloud bookkeeping
     profileId: null, savedAt: 0,
     pendingFinish: null, // a ranked result the server hasn't confirmed yet: { match, result, flawless }
@@ -324,6 +324,7 @@ export function rollChest(s, kind, rand) {
   }
   s.coins += out.coins;
   s.gems += out.gems;
+  s.stats.chests++;
   return out;
 }
 // Opens one chest from the stash (Glory Road, ball paths).
@@ -529,8 +530,17 @@ export const ACHIEVEMENTS = [
   { id: 'supers25', stat: 'supers', goal: 25, coins: 60 },
   { id: 'challenger', stat: 'challenges', goal: 5, coins: 60 },
   { id: 'flawless5', stat: 'flawless', goal: 5, coins: 100 },
+  { id: 'chests10', stat: 'chests', goal: 10, coins: 60 }, { id: 'chests50', stat: 'chests', goal: 50, coins: 200 },
+  { id: 'skins5', stat: 'skinsOwned', goal: 5, coins: 80 }, { id: 'skins20', stat: 'skinsOwned', goal: 20, coins: 250 },
+  { id: 'level5', stat: 'level', goal: 5, coins: 100 }, { id: 'level10', stat: 'level', goal: 10, coins: 250 },
+  { id: 'rank5', stat: 'bestRank', goal: 5, coins: 100 }, { id: 'rank10', stat: 'bestRank', goal: 10, coins: 300 },
+  { id: 'duo10', stat: 'duoWins', goal: 10, coins: 100 }, { id: 'boss5', stat: 'bossWins', goal: 5, coins: 120 },
+  { id: 'emotes20', stat: 'emotes', goal: 20, coins: 40 },
 ];
-export const achievementValue = (s, a) => (a.stat === 'maxTrophies' ? s.maxTrophies : a.stat === 'ballsOwned' ? s.owned.length : s.stats[a.stat] ?? 0);
+export const achievementValue = (s, a) => ({
+  maxTrophies: () => s.maxTrophies, ballsOwned: () => s.owned.length, skinsOwned: () => s.skins.length, level: () => levelOf(s.xp).lv,
+  bestRank: () => Math.max(1, ...s.owned.map(id => ballRank(s.mastery[id] ?? 0))),
+}[a.stat]?.() ?? s.stats[a.stat] ?? 0);
 export function claimAchievement(s, id) {
   const a = ACHIEVEMENTS.find(a => a.id === id);
   if (!a || s.achieved.includes(id) || achievementValue(s, a) < a.goal) return 0;

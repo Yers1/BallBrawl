@@ -15,6 +15,7 @@ function pickLang() {
 }
 export const lang = pickLang();
 export function setLang(code) { try { localStorage.setItem('ballbrawl.lang', code); } catch { /* no storage */ } }
+export const langChosen = () => { try { return !!LANGS[localStorage.getItem('ballbrawl.lang')]; } catch { return true; } };
 
 export const dict = {
   ru: {
@@ -70,6 +71,7 @@ export const dict = {
     acctTaken: 'Эта почта уже занята. Нажми «Войти».', acctWrong: 'Неверная почта или пароль.', acctWeak: 'Пароль слишком короткий: нужно минимум 6 символов.',
     acctBadEmail: 'Проверь, правильно ли написана почта.', acctSlow: 'Слишком много попыток. Подожди минуту.', acctNeedOk: 'Поставь галочку согласия.',
     tabLeaders: 'Лидеры', duel: 'Вызов', watchShort: 'Зритель', yourSquad: 'Твой отряд · сменить',
+    slotLocked: 'Закрыто', slotTapStart: 'Нажми!', slotReadyTop: 'Готово',
     tabClan: 'Клан', clanCreate: 'Создать клан', clanReroll: 'Другое название', clanBadge: 'Эмблема', clanJoin: 'Вступить', clanLeave: 'Покинуть клан',
     clanLeaveConfirm: 'Точно выйти из клана?', clanMembers: 'Участники: {n}/{max}', clanLeader: 'лидер', clanTop: 'Лучшие кланы', clanFull: 'Клан заполнен',
     clanSafe: 'В кланах нет чата: названия собираются из слов, как ники. Это безопасно.', clanCreated: 'Клан создан!', clanJoined: 'Ты в клане!', clanEmpty: 'Кланов пока нет — создай первый!',
@@ -112,7 +114,7 @@ export const dict = {
     
     deleteProfile: 'Удалить профиль', deleteConfirm: 'Удалить профиль насовсем? Кубки и весь прогресс пропадут.',
     quests: { win3: 'Выиграй 3 боя', dash15: 'Сделай 15 рывков', super3: 'Используй 3 супера', kills10: 'Выбей 10 вражеских шаров', flawless1: 'Выиграй бой, не потеряв ни одного шара', challenge1: 'Вызови друга или прими вызов', matches5: 'Сыграй 5 боёв' },
-    achievements: { firstWin: 'Первая победа', wins10: '10 побед', wins50: '50 побед', tr100: '100 кубков', tr500: '500 кубков', tr1000: '1000 кубков', collector: 'Собери все шары', supers25: '25 суперов', challenger: '5 вызовов', flawless5: '5 побед без потерь' },
+    achievements: { firstWin: 'Первая победа', wins10: '10 побед', wins50: '50 побед', tr100: '100 кубков', tr500: '500 кубков', tr1000: '1000 кубков', collector: 'Собери все шары', supers25: '25 суперов', challenger: '5 вызовов', flawless5: '5 побед без потерь', chests10: 'Открой 10 сундуков', chests50: 'Открой 50 сундуков', skins5: 'Собери 5 скинов', skins20: 'Собери 20 скинов', level5: 'Уровень 5', level10: 'Уровень 10', rank5: 'Ранг 5 у шара', rank10: 'Ранг 10 у шара', duo10: '10 побед 2 на 2', boss5: 'Победи 5 боссов', emotes20: 'Отправь 20 эмоций' },
     skins: { silver: 'Серебро', gold: 'Золото', neon: 'Неон', candy: 'Леденец', galaxy: 'Галактика', lava: 'Лава', mint: 'Мята', rainbow: 'Радуга' },
     names: { basic: 'Обычный', leech: 'Пиявка', cell: 'Клетка', spider: 'Паук', ninja: 'Ниндзя', train: 'Поезд', magnet: 'Магнит', bomb: 'Бомба', turtle: 'Черепаха', lightning: 'Молния', hedgehog: 'Ёж', ice: 'Лёд', poison: 'Шип', chain: 'Оковы', forge: 'Кузнец' },
     supers: { basic: 'Таран', leech: 'Прыжок', cell: 'Деление', spider: 'Ловушка', ninja: 'Веер', train: 'Экспресс', magnet: 'Притяжение', bomb: 'Ковёр', turtle: 'Крепость', lightning: 'Гроза', hedgehog: 'Иглы', ice: 'Заморозка', poison: 'Частокол', chain: 'Капкан', forge: 'Закалка' },
@@ -204,6 +206,7 @@ export const dict = {
     acctTaken: 'This email is taken. Tap "Sign in".', acctWrong: 'Wrong email or password.', acctWeak: 'Password too short: at least 6 characters.',
     acctBadEmail: 'Check the email address.', acctSlow: 'Too many tries. Wait a minute.', acctNeedOk: 'Tick the consent box.',
     tabLeaders: 'Leaders', duel: 'Duel', watchShort: 'Watch', yourSquad: 'Your squad · change',
+    slotLocked: 'Locked', slotTapStart: 'Tap!', slotReadyTop: 'Ready',
     tabClan: 'Clan', clanCreate: 'Create a clan', clanReroll: 'Another name', clanBadge: 'Emblem', clanJoin: 'Join', clanLeave: 'Leave the clan',
     clanLeaveConfirm: 'Leave the clan?', clanMembers: 'Members: {n}/{max}', clanLeader: 'leader', clanTop: 'Top clans', clanFull: 'The clan is full',
     clanSafe: 'Clans have no chat: names are made from words, like nicknames. It is safe.', clanCreated: 'Clan created!', clanJoined: 'You joined the clan!', clanEmpty: 'No clans yet: create the first one!',
@@ -246,7 +249,7 @@ export const dict = {
     
     deleteProfile: 'Delete profile', deleteConfirm: 'Delete your profile forever? Trophies and all progress will be gone.',
     quests: { win3: 'Win 3 matches', dash15: 'Dash 15 times', super3: 'Use 3 supers', kills10: 'Knock out 10 enemy balls', flawless1: 'Win without losing a ball', challenge1: 'Challenge a friend or take a challenge', matches5: 'Play 5 matches' },
-    achievements: { firstWin: 'First win', wins10: '10 wins', wins50: '50 wins', tr100: '100 trophies', tr500: '500 trophies', tr1000: '1000 trophies', collector: 'Collect every ball', supers25: '25 supers', challenger: '5 challenges', flawless5: '5 flawless wins' },
+    achievements: { firstWin: 'First win', wins10: '10 wins', wins50: '50 wins', tr100: '100 trophies', tr500: '500 trophies', tr1000: '1000 trophies', collector: 'Collect every ball', supers25: '25 supers', challenger: '5 challenges', flawless5: '5 flawless wins', chests10: 'Open 10 chests', chests50: 'Open 50 chests', skins5: 'Collect 5 skins', skins20: 'Collect 20 skins', level5: 'Level 5', level10: 'Level 10', rank5: 'Rank 5 with a ball', rank10: 'Rank 10 with a ball', duo10: '10 wins in 2 vs 2', boss5: 'Beat 5 bosses', emotes20: 'Send 20 emotes' },
     skins: { silver: 'Silver', gold: 'Gold', neon: 'Neon', candy: 'Candy', galaxy: 'Galaxy', lava: 'Lava', mint: 'Mint', rainbow: 'Rainbow' },
     names: { basic: 'Basic', leech: 'Leech', cell: 'Cell', spider: 'Spider', ninja: 'Ninja', train: 'Train', magnet: 'Magnet', bomb: 'Bomb', turtle: 'Turtle', lightning: 'Lightning', hedgehog: 'Hedgehog', ice: 'Ice', poison: 'Spike', chain: 'Shackles', forge: 'Forge' },
     supers: { basic: 'Ram', leech: 'Pounce', cell: 'Mitosis', spider: 'Trap', ninja: 'Fan', train: 'Express', magnet: 'Pull', bomb: 'Carpet', turtle: 'Fortress', lightning: 'Storm', hedgehog: 'Needles', ice: 'Freeze', poison: 'Palisade', chain: 'Snare', forge: 'Temper' },

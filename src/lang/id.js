@@ -52,6 +52,7 @@ export default {
   acctTaken: 'Email ini sudah dipakai. Ketuk "Masuk".', acctWrong: 'Email atau kata sandi salah.', acctWeak: 'Kata sandi terlalu pendek: minimal 6 karakter.',
   acctBadEmail: 'Cek lagi alamat emailnya.', acctSlow: 'Terlalu banyak percobaan. Tunggu satu menit.', acctNeedOk: 'Centang kotak persetujuan.',
   tabLeaders: 'Juara', duel: 'Duel', watchShort: 'Tonton', yourSquad: 'Skuadmu · ganti',
+  slotLocked: 'Terkunci', slotTapStart: 'Ketuk!', slotReadyTop: 'Siap',
   tabClan: 'Klan', clanCreate: 'Buat klan', clanReroll: 'Nama lain', clanBadge: 'Lambang', clanJoin: 'Gabung', clanLeave: 'Keluar dari klan',
   clanLeaveConfirm: 'Yakin keluar dari klan?', clanMembers: 'Anggota: {n}/{max}', clanLeader: 'ketua', clanTop: 'Klan terbaik', clanFull: 'Klan sudah penuh',
   clanSafe: 'Klan tidak punya chat: nama dibuat dari kata-kata, seperti nickname. Jadi aman.', clanCreated: 'Klan dibuat!', clanJoined: 'Kamu masuk klan!', clanEmpty: 'Belum ada klan: buat yang pertama!',
@@ -94,7 +95,7 @@ export default {
 
   deleteProfile: 'Hapus profil', deleteConfirm: 'Hapus profilmu selamanya? Trofi dan semua progres akan hilang.',
   quests: { win3: 'Menangkan 3 laga', dash15: 'Melesat 15 kali', super3: 'Pakai 3 super', kills10: 'Jatuhkan 10 bola lawan', flawless1: 'Menang tanpa kehilangan bola', challenge1: 'Tantang teman atau terima tantangan', matches5: 'Main 5 laga' },
-  achievements: { firstWin: 'Kemenangan pertama', wins10: '10 kemenangan', wins50: '50 kemenangan', tr100: '100 trofi', tr500: '500 trofi', tr1000: '1000 trofi', collector: 'Kumpulkan semua bola', supers25: '25 super', challenger: '5 tantangan', flawless5: '5 kemenangan sempurna' },
+  achievements: { firstWin: 'Kemenangan pertama', wins10: '10 kemenangan', wins50: '50 kemenangan', tr100: '100 trofi', tr500: '500 trofi', tr1000: '1000 trofi', collector: 'Kumpulkan semua bola', supers25: '25 super', challenger: '5 tantangan', flawless5: '5 kemenangan sempurna', chests10: 'Buka 10 peti', chests50: 'Buka 50 peti', skins5: 'Kumpulkan 5 skin', skins20: 'Kumpulkan 20 skin', level5: 'Level 5', level10: 'Level 10', rank5: 'Rank 5 dengan bola', rank10: 'Rank 10 dengan bola', duo10: '10 menang di 2 vs 2', boss5: 'Kalahkan 5 bos', emotes20: 'Kirim 20 emote' },
   skins: { silver: 'Perak', gold: 'Emas', neon: 'Neon', candy: 'Permen', galaxy: 'Galaksi', lava: 'Lava', mint: 'Mint', rainbow: 'Pelangi' },
   names: { basic: 'Biasa', leech: 'Lintah', cell: 'Sel', spider: 'Laba-laba', ninja: 'Ninja', train: 'Kereta', magnet: 'Magnet', bomb: 'Bom', turtle: 'Kura-kura', lightning: 'Petir', hedgehog: 'Landak', ice: 'Es', poison: 'Duri', chain: 'Belenggu', forge: 'Tempa' },
   supers: { basic: 'Seruduk', leech: 'Terkam', cell: 'Membelah', spider: 'Jebakan', ninja: 'Kipas', train: 'Ekspres', magnet: 'Tarikan', bomb: 'Hujan Bom', turtle: 'Benteng', lightning: 'Badai', hedgehog: 'Jarum', ice: 'Beku', poison: 'Pagar Duri', chain: 'Jerat', forge: 'Membara' },
