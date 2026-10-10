@@ -750,30 +750,64 @@ function deco(ctx, e, t) {
     ctx.beginPath(); ctx.arc(kx, ky, r * 0.12, 0, P * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.beginPath(); ctx.arc(x + C(face) * r * 0.45, y - r * 0.47, r * 0.06, 0, P * 2); ctx.fill();
-  } else if (e.kind === 'train') { // boiler bands, lit windows, a chimney, and a cowcatcher facing the way it rolls
+  } else if (e.kind === 'train') { // a steam engine head-on: smokebox door with rivets, headlight, chimney, buffer beam, cowcatcher
+    const lw = Math.max(1, r * 0.05);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = lw;
+    // chimney (behind the top edge) with a flared cap and a brass band
+    ctx.fillStyle = '#2B2F3A';
+    ctx.beginPath(); ctx.roundRect(x - r * 0.17, y - r * 1.18, r * 0.34, r * 0.4, r * 0.05); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(x - r * 0.27, y - r * 1.3, r * 0.54, r * 0.15, r * 0.06); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFCC33';
+    ctx.fillRect(x - r * 0.17, y - r * 0.98, r * 0.34, r * 0.07);
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, r, 0, P * 2); ctx.clip();
-    ctx.fillStyle = 'rgba(80,50,20,0.4)';
-    ctx.fillRect(x - r, y + r * 0.42, r * 2, r * 0.12);
-    ctx.fillRect(x - r, y + r * 0.66, r * 2, r * 0.12);
-    ctx.fillStyle = '#FFE08A';
-    for (let i = -1; i <= 1; i++) ctx.fillRect(x + i * r * 0.5 - r * 0.14, y - r * 0.2, r * 0.28, r * 0.28);
-    ctx.restore();
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = Math.max(1, r * 0.04);
-    ctx.fillStyle = '#4A3418';
-    ctx.beginPath(); ctx.roundRect(x - r * 0.2, y - r * 1.25, r * 0.4, r * 0.45, r * 0.06); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#2A2A38';
-    ctx.beginPath(); ctx.roundRect(x - r * 0.26, y - r * 1.3, r * 0.52, r * 0.14, r * 0.05); ctx.fill();
-    const cx = x + C(head) * r * 0.95, cy = y + S(head) * r * 0.95;
+    // cowcatcher stripes along the bottom
     ctx.fillStyle = '#C9302C';
-    ctx.beginPath();
-    ctx.moveTo(cx + C(head + 2.2) * r * 0.5, cy + S(head + 2.2) * r * 0.5);
-    ctx.lineTo(cx + C(head) * r * 0.35, cy + S(head) * r * 0.35);
-    ctx.lineTo(cx + C(head - 2.2) * r * 0.5, cy + S(head - 2.2) * r * 0.5);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillRect(x - r, y + r * 0.6, r * 2, r * 0.45);
+    ctx.fillStyle = '#FFCC33';
+    for (let i = -3; i <= 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x + i * r * 0.28, y + r * 0.78); ctx.lineTo(x + i * r * 0.28 + r * 0.12, y + r * 0.78);
+      ctx.lineTo(x + i * r * 0.36 + r * 0.14, y + r * 1.05); ctx.lineTo(x + i * r * 0.36, y + r * 1.05); ctx.fill();
+    }
+    // buffer beam with two buffers
+    ctx.fillStyle = '#B0201C';
+    ctx.fillRect(x - r, y + r * 0.5, r * 2, r * 0.2);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(x - r, y + r * 0.5, r * 2, r * 0.04);
+    ctx.restore();
+    for (const sx of [-0.62, 0.62]) {
+      ctx.fillStyle = '#3A3F4C';
+      ctx.beginPath(); ctx.arc(x + sx * r, y + r * 0.6, r * 0.13, 0, P * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#9AA3B5';
+      ctx.beginPath(); ctx.arc(x + sx * r - r * 0.03, y + r * 0.57, r * 0.05, 0, P * 2); ctx.fill();
+    }
+    // smokebox door: dark disc, brass ring, rivets, handle
+    const dy = y - r * 0.02, dr = r * 0.5;
+    ctx.fillStyle = '#2B2F3A';
+    ctx.beginPath(); ctx.arc(x, dy, dr, 0, P * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#FFCC33'; ctx.lineWidth = r * 0.07;
+    ctx.beginPath(); ctx.arc(x, dy, dr * 0.82, 0, P * 2); ctx.stroke();
+    ctx.fillStyle = '#FFE38A';
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * P * 2; ctx.beginPath(); ctx.arc(x + C(a) * dr * 0.82, dy + S(a) * dr * 0.82, r * 0.035, 0, P * 2); ctx.fill(); }
+    ctx.strokeStyle = '#9AA3B5'; ctx.lineWidth = r * 0.06;
+    ctx.beginPath(); ctx.moveTo(x - dr * 0.4, dy); ctx.lineTo(x + dr * 0.4, dy); ctx.stroke();
+    ctx.fillStyle = '#9AA3B5';
+    ctx.beginPath(); ctx.arc(x, dy, r * 0.07, 0, P * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.ellipse(x - dr * 0.35, dy - dr * 0.4, dr * 0.3, dr * 0.14, -0.6, 0, P * 2); ctx.fill();
+    // headlight on top, glowing
+    const hy = y - r * 0.68, glow = 0.55 + 0.25 * S(t * 6);
+    const g = ctx.createRadialGradient(x, hy, 0, x, hy, r * 0.45);
+    g.addColorStop(0, `rgba(255,246,194,${glow})`); g.addColorStop(1, 'rgba(255,246,194,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, hy, r * 0.45, 0, P * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = lw;
+    ctx.fillStyle = '#FFCC33';
+    ctx.beginPath(); ctx.arc(x, hy, r * 0.17, 0, P * 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#FFF6C2';
-    ctx.beginPath(); ctx.arc(cx, cy, r * 0.12, 0, P * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, hy, r * 0.1, 0, P * 2); ctx.fill();
   } else if (e.kind === 'magnet') { // red and blue poles with a steel band; its field shows while the super pulls
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, r, 0, P * 2); ctx.clip();

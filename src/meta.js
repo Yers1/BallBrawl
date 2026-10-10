@@ -134,6 +134,58 @@ const DECO_SVG = {
   trophy: '<path d="M11 5h18v9c0 6-4 10-9 10s-9-4-9-10z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M11 8H5v3c0 4 3 6 6 6M29 8h6v3c0 4-3 6-6 6" fill="none" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><rect x="17" y="24" width="6" height="6" fill="#E59F00" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><rect x="11" y="30" width="18" height="6" rx="2" fill="#8A5A1A" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><path d="M15 8v6" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>',
   crown: '<path d="M5 30L3 10l9 8 8-13 8 13 9-8-2 20z" fill="#FFCC33" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><rect x="5" y="29" width="30" height="6" rx="2" fill="#E59F00" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><circle cx="20" cy="22" r="3" fill="#FF4D5E" stroke="#0A0E1F" stroke-width="2.5" stroke-linejoin="round"/><circle cx="11" cy="24" r="2" fill="#7FE7FF"/><circle cx="29" cy="24" r="2" fill="#7FE7FF"/>',
 };
+// Name-card banners: a pennant (notch on the right) with a small illustrated scene, Clash Royale style.
+// `k` keeps gradient/clip ids unique when several banners are on the page at once.
+const STARS = (pts, c = '#FFFFFF') => pts.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`).join('');
+const SPARK = (x, y, s, c = '#FFFFFF') => `<path d="M${x} ${y - s}Q${x} ${y} ${x + s} ${y}Q${x} ${y} ${x} ${y + s}Q${x} ${y} ${x - s} ${y}Q${x} ${y} ${x} ${y - s}Z" fill="${c}"/>`;
+const BANNER = {
+  night: ['#1C3466', '#0F0F23', k => `${STARS([[30, 12, 1.2], [70, 22, 0.9], [110, 9, 1.3], [150, 18, 1], [175, 8, 0.8], [130, 30, 0.8], [60, 40, 0.9]])}
+    <circle cx="205" cy="20" r="12" fill="#FFF3C4"/><circle cx="211" cy="16" r="11" fill="#16285A"/>
+    <path d="M0 58 L0 44 Q30 34 60 42 T120 40 T180 44 T250 40 V58Z" fill="#0A1A33"/><path d="M0 58 L0 50 Q40 44 80 50 T160 48 T250 50 V58Z" fill="#071226"/>`],
+  red: ['#E5303F', '#9E1426', k => `<g opacity=".14" fill="#FFFFFF">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<path d="M${i * 34 - 20} 58 L${i * 34} 0 H${i * 34 + 14} L${i * 34 - 6} 58Z"/>`).join('')}</g>
+    <path d="M0 49 H250" stroke="#FFCC33" stroke-width="3"/><path d="M0 53 H250" stroke="#7A0E1C" stroke-width="2"/>
+    <path d="M196 14 l4 8 9 1.3-6.5 6.3 1.6 9-8.1-4.3-8.1 4.3 1.6-9-6.5-6.3 9-1.3z" fill="#FFCC33" stroke="#7A0E1C" stroke-width="1.5"/>`],
+  green: ['#4CC46A', '#1C6E34', k => `${STARS([[40, 16, 1.6], [90, 30, 1.4], [140, 12, 1.5], [120, 40, 1.2]], '#FFF6A8')}
+    ${[[170, 58, 26], [196, 58, 34], [222, 58, 24], [150, 58, 18]].map(([x, b, h]) => `<path d="M${x} ${b - h} L${x + 12} ${b} H${x - 12}Z M${x} ${b - h * 0.7} L${x + 14} ${b - h * 0.15} H${x - 14}Z" fill="#14552A"/>`).join('')}
+    <path d="M0 58 Q60 48 120 54 T250 52 V58Z" fill="#11471F"/>`],
+  purple: ['#9A5BEA', '#4A1F8A', k => `<g fill="none" stroke="#FFFFFF" stroke-opacity=".2" stroke-width="3">
+    <path d="M10 50 Q40 10 80 30 T150 20"/><path d="M60 58 Q100 30 140 46 T230 26"/></g>
+    ${SPARK(185, 18, 7)}${SPARK(210, 38, 5, '#FFE38A')}${SPARK(120, 14, 4)}${SPARK(40, 34, 3.5, '#FFE38A')}`],
+  orange: ['#FFB347', '#E0661A', k => `<circle cx="200" cy="26" r="14" fill="#FFE38A"/><circle cx="200" cy="26" r="19" fill="#FFE38A" opacity=".3"/>
+    <path d="M0 58 L0 46 Q50 34 110 44 T250 40 V58Z" fill="#E0782A"/><path d="M0 58 L0 52 Q70 44 150 52 T250 50 V58Z" fill="#B85414"/>
+    <path d="M150 44 v-14 M146 34 h8 M143 38 h4 M153 36 h4" stroke="#7A3A0E" stroke-width="2.5" stroke-linecap="round"/>`],
+  sunset: ['#FF5E8A', '#FFB347', k => `<circle cx="190" cy="46" r="20" fill="#FFE38A"/>
+    <path d="M0 46 H250 V58 H0Z" fill="#6E3FB0"/><path d="M150 50 h80 M165 54 h50" stroke="#FFE38A" stroke-width="2" opacity=".7"/>
+    <path d="M60 18 q4 -4 8 0 q4 -4 8 0 M95 26 q3 -3 6 0 q3 -3 6 0" fill="none" stroke="#5A1F40" stroke-width="1.8" stroke-linecap="round"/>`],
+  ocean: ['#2BA0E8', '#0A4A86', k => `<g fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.5" stroke-linecap="round">
+    ${[14, 30, 46].map((y, i) => `<path d="M${-10 + i * 12} ${y} q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0"/>`).join('')}</g>
+    ${STARS([[190, 20, 3], [200, 30, 2], [182, 36, 1.6]], 'rgba(255,255,255,0.6)')}
+    <path d="M150 36 q10 -8 22 0 q-10 8 -22 0z M172 36 l7 -5 v10z" fill="#FFCC33" stroke="#0A3460" stroke-width="1.5"/>`],
+  galaxy: ['#3B1A6E', '#120A2E', k => `<ellipse cx="80" cy="30" rx="60" ry="18" fill="#C890FF" opacity=".18"/><ellipse cx="150" cy="22" rx="50" ry="12" fill="#4CC9F0" opacity=".14"/>
+    ${STARS([[20, 10, 1], [55, 44, 1.2], [100, 12, 0.8], [130, 46, 1], [160, 8, 1.2], [235, 50, 0.9], [90, 30, 0.7]])}
+    <circle cx="200" cy="29" r="12" fill="#FF8FB1"/><ellipse cx="200" cy="29" rx="22" ry="5" fill="none" stroke="#FFE38A" stroke-width="2.5" transform="rotate(-18 200 29)"/>
+    <path d="M190 22 a12 12 0 0 1 8 -4" stroke="#FFFFFF" stroke-width="2" opacity=".6" fill="none"/>`],
+  lava: ['#4A1A10', '#1E0806', k => `<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 40 L40 34 L70 44 L110 30 L150 38 L190 26 L250 34" stroke="#FF7A2F" stroke-width="8" opacity=".35"/>
+    <path d="M0 40 L40 34 L70 44 L110 30 L150 38 L190 26 L250 34" stroke="#FFB347" stroke-width="2.5"/>
+    <path d="M110 30 L120 14 M190 26 L200 50" stroke="#FF7A2F" stroke-width="2"/></g>
+    ${STARS([[60, 18, 1.6], [140, 12, 1.3], [215, 14, 1.8], [30, 22, 1.1]], '#FFD23F')}`],
+  gold: ['#FFE07A', '#D99500', k => `<path d="M-10 58 L40 0 H62 L12 58Z M70 58 L120 0 H130 L80 58Z" fill="#FFFFFF" opacity=".28"/>
+    <g fill="none" stroke="#B07A00" stroke-width="2.5" stroke-linecap="round"><path d="M176 44 q-10 -14 0 -30"/><path d="M224 44 q10 -14 0 -30"/>
+    ${[18, 26, 34].map(y => `<path d="M${176 - (y - 14) * 0.15} ${y} l-6 -3 M${224 + (y - 14) * 0.15} ${y} l6 -3"/>`).join('')}</g>
+    <path d="M188 36 l-3 -14 7 6 8 -10 8 10 7 -6 -3 14z" fill="#FFFFFF" stroke="#B07A00" stroke-width="2" stroke-linejoin="round"/><circle cx="200" cy="30" r="2.4" fill="#FF4D5E"/>`],
+};
+export function bannerSvg(id, k) {
+  const [top, bottom, scene] = BANNER[id] ?? BANNER.night;
+  const shape = 'M8 2 H246 L232 29 L246 56 H8 Q2 56 2 50 V8 Q2 2 8 2 Z';
+  return `<svg viewBox="0 0 250 58" preserveAspectRatio="none" aria-hidden="true"><defs>
+<linearGradient id="bg${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient>
+<linearGradient id="sh${k}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0A0E1F" stop-opacity=".5"/><stop offset=".55" stop-color="#0A0E1F" stop-opacity="0"/></linearGradient>
+<clipPath id="cl${k}"><path d="${shape}"/></clipPath></defs>
+<g clip-path="url(#cl${k})"><rect width="250" height="58" fill="url(#bg${k})"/>${scene(k)}<rect width="250" height="58" fill="url(#sh${k})"/>
+<path d="M2 6 H246" stroke="#FFFFFF" stroke-opacity=".3" stroke-width="3"/></g>
+<path d="${shape}" fill="none" stroke="#0A0E1F" stroke-width="3" stroke-linejoin="round"/></svg>`;
+}
 export const decoSvg = id => (DECO_SVG[id] ? `<svg viewBox="0 0 40 40" aria-hidden="true">${DECO_SVG[id]}</svg>` : '');
 const money = ([cur, n]) => `<i class="${cur === 'gems' ? 'gem' : 'coin'}"></i>${n}`;
 const unit = (n, u) => new Intl.NumberFormat(lang, { style: 'unit', unit: u, unitDisplay: 'narrow' }).format(n); // "3 ч", "3h", "3 sa"...
@@ -197,7 +249,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#h-trophies').textContent = save.trophies;
     $('#h-title').textContent = titleName(titleOk(save, save.title) ? save.title : 'rookie');
     $('#h-league').innerHTML = leagueSvg(leagueFor(save.trophies));
-    $('.me').className = 'me bn-' + save.wear.banner;
+    $('#h-banner').innerHTML = bannerSvg(save.wear.banner, 'me');
     $('#h-deco').innerHTML = decoSvg(save.wear.deco);
   }
 
@@ -435,7 +487,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       if (c) box.scrollTop += c.getBoundingClientRect().top - box.getBoundingClientRect().top - (box.clientHeight - c.clientHeight) / 2;
     }, 0);
   }
-  $('#l-arena-btn').onclick = () => { sfx.click(); open('arenas'); };
+  $('#l-arena-btn').onclick = $('#l-arenas').onclick = () => { sfx.click(); open('arenas'); };
 
   // ---------- quests ----------
   function quests() {
@@ -815,7 +867,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     });
     const deals = dailyDeals(save, today).map(d => {
       const b = el('button', 'sh-tile deal' + (d.sold ? ' own' : ''));
-      const prev = d.kind === 'skin' ? icon(d.ball, 64, d.style) : d.kind === 'aura' ? icon(lead, 64, save.skinOf[lead], d.id) : d.kind === 'deco' ? el('span', 'deco-prev', decoSvg(d.id)) : el('span', 'banner-prev bn-' + d.id);
+      const prev = d.kind === 'skin' ? icon(d.ball, 64, d.style) : d.kind === 'aura' ? icon(lead, 64, save.skinOf[lead], d.id) : d.kind === 'deco' ? el('span', 'deco-prev', decoSvg(d.id)) : el('span', 'banner-prev', bannerSvg(d.id, 'dl'));
       b.append(el('span', 'sh-off', '-40%'), prev, el('b', ''), el('span', 'sh-price'));
       b.children[2].textContent = d.kind === 'skin' ? `${skinName(d.style)} · ${ballName(d.ball)}` : t(`${d.kind}_${d.id}`);
       b.lastChild.innerHTML = d.sold ? t('shOwned') : money(d.price);
@@ -841,7 +893,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       section(t('shDeals'), deals, 'deals'),
       section(t('shEmotes'), emotes),
       section(t('shAuras'), Object.keys(SHOP.aura).map(id => shopTile('aura', id, icon(lead, 64, save.skinOf[lead], id), t('aura_' + id)))),
-      section(t('shBanners'), Object.keys(SHOP.banner).map(id => shopTile('banner', id, el('span', 'banner-prev bn-' + id), t('banner_' + id))), 'wide'),
+      section(t('shBanners'), Object.keys(SHOP.banner).map(id => shopTile('banner', id, el('span', 'banner-prev', bannerSvg(id, 'b' + id)), t('banner_' + id))), 'wide'),
       section(t('shDecos'), Object.keys(SHOP.deco).map(id => shopTile('deco', id, el('span', 'deco-prev', decoSvg(id)), t('deco_' + id)))),
       section(t('shLooks'), Object.keys(SHOP.look).map(id => shopTile('look', id, el('span', 'look-prev', arenaSvg(id, 'sh' + id)), t('look_' + id))), 'wide'),
     );
@@ -954,10 +1006,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       setTimeout(() => reward({ arena: a }), 300);
     }
     $('#l-lead').textContent = ballName(lead);
-    const { next, p } = nextReward();
     $('#l-tr').textContent = save.trophies;
-    $('#l-bar').style.width = p + '%';
-    $('#l-next').replaceChildren(...(next ? [rewardIcon(next, 40)] : []));
     $('#l-mode').textContent = net.online ? t('modeRanked') : t('modeTraining');
     $('#l-mode').classList.toggle('live', net.online);
     const total = KINDS.reduce((n, k) => n + save.chests[k], 0), best = [...KINDS].reverse().find(k => save.chests[k] > 0);
