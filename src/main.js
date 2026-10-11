@@ -12,7 +12,7 @@ import { randomNick, nickText, validNick, validClan } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
 import {
-  migrate, tickets, useTicket, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
+  migrate, tickets, useTicket, bossChest, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
   claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS, creditPurchases,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
@@ -22,6 +22,7 @@ import { LOGO } from './logo.js';
 document.querySelector('.brand').innerHTML = LOGO; // the Stitch wordmark (the plain text stays for no-JS)
 import * as online from './net.js';
 import { initStats, stat } from './stats.js';
+import { TICKET_SVG } from './meta.js';
 const { net } = online;
 
 const $ = s => document.querySelector(s);
@@ -87,6 +88,13 @@ function show(screen) {
   if (screen || S.mode === 'home') { $('#banner').className = 'banner'; $('#cards').hidden = true; }
 }
 
+function ticketIn() { // the boss ticket goes in: it pops up in the middle, wobbles and flies off with a −1
+  const d = el('div', 'tix-fly', TICKET_SVG + '<b>−1</b>');
+  document.body.append(d);
+  setTimeout(() => d.remove(), 1700);
+  banner(t('ticketIn'), false, 'you');
+  sfx.coin();
+}
 function banner(text, stay = false, tone = '', html = false) {
   const b = $('#banner');
   b[html ? 'innerHTML' : 'textContent'] = text;
@@ -330,12 +338,15 @@ async function startMatch() {
     pool: mode === 'survival' ? [...enemySquadFor(save.trophies, Math.random), ...enemySquadFor(save.trophies, Math.random)] : null,
   });
   S.aiLevel = aiLevel(save.trophies);
+  S.ticket = mode === 'boss' && useTicket(save); // a boss ticket goes in now: win → a big chest, lose → it's gone
+  if (S.ticket) persist();
   if (mode === 'football') home.look('stadium');
   stat('match_start', { mode, trophies: save.trophies, squad: save.squad.join(',') });
   commanders(S.fams, foeCard().nick);
   show(null);
   playMusic(null); // quiet for the face-to-face and the fight
   await home.vs(foeCard(), S.fams[0]); // both banners first, like Clash Royale
+  if (S.ticket) { ticketIn(); await new Promise(r => setTimeout(r, 1400)); } // its own moment, before the round starts
   beginMatch();
 }
 // A different boss every fight, starting from the day's boss.
@@ -624,8 +635,11 @@ function finishMatch(r) {
   save.coins += S.earned;
   stat('match_end', { mode: S.match.mode, result: won ? 'won' : r === 'draw' ? 'draw' : 'lost', secs: Math.round((Date.now() - S.matchStart) / 1000), trophies: save.trophies, wave: S.match.wave ?? null });
   S.chestDrop = won || (S.match.mode === 'survival' && S.match.wave > 3) ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
-  S.ticketUsed = won && S.match.mode === 'boss' && !c && useTicket(save); // a boss beaten with a ticket: a big chest
-  if (S.ticketUsed) stat('ticket_used');
+  S.ticketWin = !!S.ticket && won; // the boss ticket: a big chest for the win, gone for a loss
+  S.ticketLost = !!S.ticket && !won;
+  if (S.ticketWin) bossChest(save);
+  if (S.ticket) stat('boss_ticket', { won });
+  S.ticket = false;
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   S.xpGot = won ? XP_WIN : XP_PLAY;
   S.lvlUps = gainXp(save, S.xpGot); // the player level
@@ -715,8 +729,8 @@ function showResult() {
   box.replaceChildren();
   $('#r-coins').textContent = '+' + S.earned;
   $('#r-trophies').hidden = !!c;
-  $('#r-chest').hidden = S.chestDrop == null;
-  if (S.chestDrop != null) $('#r-chest').textContent = (S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull')) + (S.ticketUsed ? ' ' + t('ticketWin') : '');
+  $('#r-chest').hidden = S.chestDrop == null && !S.ticketLost;
+  $('#r-chest').textContent = [S.chestDrop == null ? '' : S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull'), S.ticketWin ? t('ticketWin') : S.ticketLost ? t('ticketLost') : ''].filter(Boolean).join(' ');
   $('#r-reward').hidden = true;
   const lv = (S.lvlUps ?? []).at(-1);
   $('#r-xp').innerHTML = lv ? `${t('levelUp', { n: lv.lv })} +${lv.coins}<i class="coin"></i> +${lv.gems}<i class="gem"></i>` : t('xpGain', { n: S.xpGot });
@@ -1273,7 +1287,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.9';
+const VERSION = '1.10';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);

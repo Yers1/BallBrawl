@@ -319,27 +319,46 @@ function drawSprays(ctx, dt) {
   }
 }
 const SPLAT = Array.from({ length: 22 }, (_, i) => { const a = i * 2.4, d = 30 + ((i * 37) % 23); return [Math.cos(a) * d, Math.sin(a) * d * 0.8, 1 + ((i * 13) % 4) * 0.7]; }); // fixed speckles
+// One graffiti style for every tag: speckles, a dark 3D drop, a thick outline, a three-colour fill, paint running down, a shine.
+// `shape` is either text or a function that traces a path in a ±38 box.
+function tag(ctx, k, shape, [top, mid, low], drips, size = 78) {
+  ctx.save(); ctx.scale(k, k);
+  ctx.fillStyle = mid; ctx.globalAlpha *= 0.55;
+  for (const [x, y, r] of SPLAT) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha /= 0.55;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const text = typeof shape === 'string';
+  if (text) { ctx.font = `400 ${size}px "Russo One", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; }
+  const fillIt = (dx, dy) => (text ? ctx.fillText(shape, dx, dy) : (ctx.save(), ctx.translate(dx, dy), shape(ctx), ctx.fill(), ctx.restore()));
+  const strokeIt = (dx, dy) => (text ? ctx.strokeText(shape, dx, dy) : (ctx.save(), ctx.translate(dx, dy), shape(ctx), ctx.stroke(), ctx.restore()));
+  ctx.strokeStyle = INK; ctx.fillStyle = INK;
+  ctx.lineWidth = 16; strokeIt(5, 7); fillIt(5, 7); // the drop shadow
+  ctx.lineWidth = 12; strokeIt(0, 0);
+  const g = ctx.createLinearGradient(0, -34, 0, 34);
+  g.addColorStop(0, top); g.addColorStop(0.55, mid); g.addColorStop(1, low);
+  ctx.fillStyle = g; fillIt(0, 0);
+  for (const [x, y, len] of drips) { // paint running down
+    ctx.strokeStyle = INK; ctx.lineWidth = 8.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + len); ctx.stroke();
+    ctx.strokeStyle = low; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(x, y - 2); ctx.lineTo(x, y + len); ctx.stroke();
+  }
+  ctx.globalAlpha *= 0.8; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 3; // the shine
+  ctx.beginPath(); ctx.arc(-4, -4, 22, Math.PI * 1.05, Math.PI * 1.45); ctx.stroke();
+  ctx.restore();
+}
 const SPRAY_ART = {
-  g(ctx, k) { // a fat graffiti G: dark outline, a 3D drop, a hot gradient, a shine, drips and speckles
-    ctx.save(); ctx.scale(k, k);
-    ctx.fillStyle = 'rgba(255,140,40,0.55)';
-    for (const [x, y, r] of SPLAT) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
-    ctx.font = '400 78px "Russo One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    ctx.lineWidth = 16; ctx.strokeStyle = INK; ctx.strokeText('G', 5, 7); ctx.fillStyle = INK; ctx.fillText('G', 5, 7); // the drop shadow
-    ctx.lineWidth = 12; ctx.strokeText('G', 0, 0);
-    const g = ctx.createLinearGradient(0, -34, 0, 34);
-    g.addColorStop(0, '#FFE66B'); g.addColorStop(0.55, '#FF9A2E'); g.addColorStop(1, '#FF3D7F');
-    ctx.fillStyle = g; ctx.fillText('G', 0, 0);
-    for (const [x, len] of [[-16, 18], [4, 26], [19, 12]]) { // paint running down
-      ctx.strokeStyle = INK; ctx.lineWidth = 8.5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(x, 24); ctx.lineTo(x, 24 + len); ctx.stroke();
-      ctx.strokeStyle = '#FF3D7F'; ctx.lineWidth = 4.5;
-      ctx.beginPath(); ctx.moveTo(x, 22); ctx.lineTo(x, 24 + len); ctx.stroke();
-    }
-    ctx.globalAlpha *= 0.8; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 3; ctx.lineCap = 'round'; // the shine
-    ctx.beginPath(); ctx.arc(0, 0, 22, Math.PI * 1.05, Math.PI * 1.45); ctx.stroke();
-    ctx.restore();
-  },
+  g: (ctx, k) => tag(ctx, k, 'G', ['#FFE66B', '#FF9A2E', '#FF3D7F'], [[-16, 24, 18], [4, 24, 26], [19, 24, 12]]),
+  gg: (ctx, k) => tag(ctx, k, 'GG', ['#B8FFC9', '#2EDB8A', '#0E9AA7'], [[-24, 20, 16], [-2, 20, 24], [22, 20, 12]], 56),
+  crown: (ctx, k) => tag(ctx, k, c => { // a crown with three points
+    c.beginPath(); c.moveTo(-32, 22); c.lineTo(-36, -18); c.lineTo(-15, 2); c.lineTo(0, -30); c.lineTo(15, 2); c.lineTo(36, -18); c.lineTo(32, 22); c.closePath();
+  }, ['#FFF6B0', '#FFD23F', '#F08A00'], [[-20, 24, 14], [10, 24, 22]]),
+  bolt: (ctx, k) => tag(ctx, k, c => { // a lightning bolt
+    c.beginPath(); c.moveTo(10, -38); c.lineTo(-22, 6); c.lineTo(-2, 6); c.lineTo(-12, 38); c.lineTo(24, -8); c.lineTo(4, -8); c.closePath();
+  }, ['#E6FAFF', '#4CC9F0', '#7B5CFF'], [[-8, 30, 14]]),
+  fire: (ctx, k) => tag(ctx, k, c => { // a flame
+    c.beginPath(); c.moveTo(0, -38);
+    c.bezierCurveTo(14, -18, 30, -8, 26, 12); c.bezierCurveTo(23, 30, 10, 36, 0, 36); c.bezierCurveTo(-14, 36, -28, 28, -26, 10);
+    c.bezierCurveTo(-24, -4, -14, -8, -10, -22); c.bezierCurveTo(-6, -8, 0, -6, 3, -2); c.bezierCurveTo(6, -14, 4, -26, 0, -38); c.closePath();
+  }, ['#FFE066', '#FF7A1A', '#E6213B'], [[-12, 30, 12], [8, 32, 18]]),
 };
 export function drawSpray(canvas, id, css = 48) { // the tray button and the chest card
   const dpr = Math.min(window.devicePixelRatio || 1, 2);

@@ -41,7 +41,7 @@ const star = (cx, cy, r) => `M${[...Array(10)].map((_, i) => {
   return `${(cx + Math.cos(a) * k).toFixed(1)} ${(cy + Math.sin(a) * k).toFixed(1)}`;
 }).join(' L')}Z`;
 // A boss ticket: gold, with a crown and a notch on each side.
-const TICKET_SVG = `<svg viewBox="0 0 120 80" width="100%" aria-hidden="true"><path d="M10 14h100v18a8 8 0 0 0 0 16v18H10V48a8 8 0 0 0 0-16Z" fill="#FFD23F" stroke="#0A0F1C" stroke-width="5" stroke-linejoin="round"/><path d="M36 22v36" stroke="#0A0F1C" stroke-width="3" stroke-dasharray="5 5"/><path d="M52 52 56 32 66 42 74 28 82 42 92 32 96 52Z" fill="#FF4D5E" stroke="#0A0F1C" stroke-width="4" stroke-linejoin="round"/></svg>`;
+export const TICKET_SVG = `<svg viewBox="0 0 120 80" width="100%" aria-hidden="true"><path d="M10 14h100v18a8 8 0 0 0 0 16v18H10V48a8 8 0 0 0 0-16Z" fill="#FFD23F" stroke="#0A0F1C" stroke-width="5" stroke-linejoin="round"/><path d="M36 22v36" stroke="#0A0F1C" stroke-width="3" stroke-dasharray="5 5"/><path d="M52 52 56 32 66 42 74 28 82 42 92 32 96 52Z" fill="#FF4D5E" stroke="#0A0F1C" stroke-width="4" stroke-linejoin="round"/></svg>`;
 export function chestSvg(kind) {
   const c = CHEST_COLORS[kind] ?? CHEST_COLORS.box, ink = 'stroke="#0F1F38" stroke-linejoin="round"', o = `${ink} stroke-width="4"`;
   const rivets = (xs, ys) => xs.flatMap(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="2.2" fill="${c.trimDark}"/>`)).join('');
@@ -1275,6 +1275,15 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       top,
       section(t('shDeals'), deals, 'deals', untilMidnight()), // new deals at midnight
       section(t('shEmotes'), emotes),
+      section(t('shSprays'), SPRAYS.map(id => { // graffiti: chest-only, so the tile says where it comes from
+        const c = document.createElement('canvas'), own = save.sprays.includes(id);
+        drawSpray(c, id, 64);
+        const tile = el('div', 'sh-tile' + (own ? ' own' : ''));
+        tile.append(c, el('b', ''), el('span', 'sh-price' + (own ? '' : ' chest')));
+        tile.children[1].textContent = t('spray_' + id);
+        tile.lastChild.textContent = own ? t('shOwned') : t('shFromChest');
+        return tile;
+      })),
       section(t('shAuras'), Object.keys(SHOP.aura).map(id => shopTile('aura', id, icon(lead, 64, save.skinOf[lead], id), t('aura_' + id)))),
       section(t('shBanners'), Object.keys(SHOP.banner).map(id => shopTile('banner', id, el('span', 'banner-prev', bannerSvg(id, 'b' + id)), t('banner_' + id))), 'wide'),
       section(t('shDecos'), Object.keys(SHOP.deco).map(id => shopTile('deco', id, el('span', 'deco-prev', decoSvg(id)), t('deco_' + id)))),
@@ -1448,7 +1457,10 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }
     $('#l-lead').textContent = ballName(lead);
     const ranked = save.mode === 'classic' && net.online;
-    $('#l-mode').textContent = save.mode === 'classic' ? (net.online ? t('modeRanked') : t('modeTraining')) : save.mode === 'boss' ? t('ticketN', { n: tickets(save) }) : t('mode_' + save.mode);
+    if (save.mode === 'boss') $('#l-mode').innerHTML = `<i class="tix-ic${tickets(save) ? '' : ' none'}">${TICKET_SVG}</i>${t('ticketN', { n: tickets(save) })}`;
+    else $('#l-mode').textContent = save.mode === 'classic' ? (net.online ? t('modeRanked') : t('modeTraining')) : t('mode_' + save.mode);
+    $('#l-modebtn').querySelector('.tix-badge')?.remove(); // a gold count on the Boss button
+    if (save.mode === 'boss' && tickets(save)) $('#l-modebtn').append(el('span', 'tix-badge', String(tickets(save))));
     $('#l-mode').classList.toggle('live', ranked);
     $('#l-modeic').innerHTML = MODE_ICON[save.mode];
     $('#l-modename').textContent = t('mode_' + save.mode);

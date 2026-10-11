@@ -67,13 +67,13 @@ export default {
 • Pembelian hanya dengan izin orang tua; tidak ada hadiah acak yang dijual.
 • Akun anonim, email tidak wajib. Semua data bisa dihapus di profil.
 • Pertanyaan atau keluhan: «Laporkan masalah».`, cmdSay_cheer: 'Yes!', cmdSay_ouch: 'Aduh!', cmdSay_cast: 'Super!', cmdSay_point: 'Maju!', cmdSay_win: 'Menang!', cmdSay_sad: 'Yah…',
-  modeDesc_classic: 'Skuad lawan skuad: bola maju satu per satu.', modeDesc_duo: 'Dua bolamu melawan dua bola sekaligus. Atau bareng teman online!', modeDesc_boss: 'Ketiga bolamu melawan bos. Tiap pertarungan bos baru dengan serangannya sendiri: lihat tandanya dan menghindar! Kalahkan dengan tiket bos untuk peti besar.',
+  modeDesc_classic: 'Skuad lawan skuad: bola maju satu per satu.', modeDesc_duo: 'Dua bolamu melawan dua bola sekaligus. Atau bareng teman online!', modeDesc_boss: 'Ketiga bolamu melawan bos. Tiap pertarungan bos baru dengan serangannya sendiri: lihat tandanya dan menghindar! Tiket bos, jika ada, dipakai saat pertarungan dimulai: menang dan dapat peti besar.',
   modeTrophies: 'Dapat trofi saat online', modeNoTrophies: 'Koin dan peti, tanpa trofi',
   tabShop: 'Toko', tabMail: 'Pesan', shOwned: 'Punya', shWorn: 'Dipakai', shWear: 'Pakai', shBuy: 'Beli?', shDeals: 'Penawaran harian', shEmotes: 'Emote',
   shAuras: 'Aura', shBanners: 'Banner', shDecos: 'Teman kecil', shLooks: 'Peta arena', shAllSkins: 'Semua skin', shGems: 'Permata',
   shGemsSoon: 'Permata didapat dari peti, Jalur Kejayaan, jalur bola, dan hari ke-7 hadiah harian. Segera bisa dibeli juga.', shAnimated: 'Animasi',
   needGems: 'Permata tidak cukup', needCoins: 'Koin tidak cukup', opGems: 'permata', opEmote: 'EMOTE BARU', fragDone: 'Skin "{skin}" lengkap!', fragOf: '"{skin}": {n} dari {max}',
-  ticket: 'Tiket bos', ticketN: 'Tiket: {n}', ticketWin: 'Tiket bos: +peti besar!', opSpray: 'Grafiti baru', spray_g: 'Grafiti “G”', chestInfo: 'Koin {a}–{b} · kepingan skin: {f} · permata: {g} · bola baru: {c}% · emote: {e}% · tiket bos: {k}% · grafiti: {s}%', stashHint: 'Peti dari Jalur Kejayaan dan jalur bola langsung terbuka.',
+  ticket: 'Tiket bos', ticketN: 'Tiket: {n}', ticketIn: 'Tiket bos dipakai: menang dapat peti besar!', ticketLost: 'Tiket bos hangus.', ticketWin: 'Tiket bos: +peti besar!', shSprays: 'Grafiti', shFromChest: 'Dari peti', spray_gg: 'Grafiti “GG”', spray_crown: 'Grafiti “Mahkota”', spray_bolt: 'Grafiti “Petir”', spray_fire: 'Grafiti “Api”', opSpray: 'Grafiti baru', spray_g: 'Grafiti “G”', chestInfo: 'Koin {a}–{b} · kepingan skin: {f} · permata: {g} · bola baru: {c}% · emote: {e}% · tiket bos: {k}% · grafiti: {s}%', stashHint: 'Peti dari Jalur Kejayaan dan jalur bola langsung terbuka.',
   slotEmpty: 'Menangkan laga, peti muncul di sini', slotOpen: 'Buka!', slotWait: 'Terbuka dalam {t}', slotLeft: 'Sisa {t}', slotBusy: 'Peti lain sedang dibuka. Kamu bisa buka peti ini sekarang pakai permata.',
   slotNow: 'Buka sekarang', slotAd: 'Iklan: −30 menit', resultSlot: '{name} masuk slot!', resultSlotsFull: 'Slot penuh: buka peti untuk dapat yang baru',
   aura_fire: 'Api', aura_frost: 'Es', aura_storm: 'Badai', aura_hearts: 'Hati', aura_void: 'Hampa', aura_stars: 'Bintang',

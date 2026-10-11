@@ -180,7 +180,7 @@ export function freshSave() {
     arenaSeen: 'night', // the newest arena the player has been welcomed to (the unlock celebration shows once)
     mastery: {}, title: 'rookie', // ball rank points per ball; the title picked in the profile
     gems: 0, frags: {}, // gems; skin fragments by 'ball:style'
-    sprays: [], // graffiti you own (from chests): sprayed on the arena floor in a fight
+    sprays: ['g'], // graffiti you own (G to start, the rest from chests): sprayed on the arena floor in a fight
     tix: { got: 0, used: 0 }, // boss tickets ever found / ever used: both only grow, so a merge never duplicates one
     slots: [null, null, null, null], cycle: 0, slotsOpened: [], // the 4 chest slots, the chest order, opened slot chest ids
     own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
@@ -236,7 +236,7 @@ export function migrate(raw) {
     const [b, st] = String(k).split(':'), n = Math.min(FRAG_NEED - 1, (int(v, 1) ?? 0) * (oldFrags ? 2 : 1));
     if (BALLS[b] && SKINS[st] && !SKINS[st].gift && !SKINS[st].path && n && !s.skins.includes(k)) s.frags[k] = n;
   }
-  s.sprays = list(r.sprays, id => SPRAYS.includes(id));
+  s.sprays = ['g', ...list(r.sprays, id => SPRAYS.includes(id) && id !== 'g')];
   s.tix.got = int(r.tix?.got, 0, 1e6) ?? 0;
   s.tix.used = Math.min(s.tix.got, int(r.tix?.used, 0, 1e6) ?? 0);
   s.cycle = int(r.cycle) ?? 0;
@@ -403,7 +403,7 @@ export function equipSkin(s, ball, style) {
 // a slot chest takes time to unlock (one at a time) and can be opened at once for gems or sped up with an ad.
 // Chests from the Glory Road and ball paths are opened right away (save.chests).
 export const FRAG_NEED = 20;
-export const SPRAYS = ['g']; // graffiti, in the order they were added (the art is in render.js)
+export const SPRAYS = ['g', 'gg', 'crown', 'bolt', 'fire']; // graffiti (art in render.js). G is everyone's from the start; the rest come from chests
 export const CHESTS = {
   // frag: the chance each stack of fragments drops; skin: a whole skin; ticket: a boss ticket; spray: a graffiti you don't have
   box: { coins: [30, 55], stacks: 1, frags: [1, 2], frag: 0.5, gems: 0, ball: 0.04, emote: 0.06, ticket: 0.15, spray: 0, tiers: ['common', 'rare'] },
@@ -440,15 +440,15 @@ export function rollChest(s, kind, rand) {
   s.stats.chests++;
   return out;
 }
-// Boss tickets: a boss beaten while holding one gives a big chest. Only a won fight uses it; a lost one costs nothing.
+// Boss tickets (earned in chests only, never sold): one goes in when a boss fight starts; beat the boss and it pays a
+// big chest, lose and it is gone. Without a ticket the boss mode still plays, just without that chest.
 export const tickets = s => s.tix.got - s.tix.used;
 export function useTicket(s) {
   if (tickets(s) < 1) return false;
   s.tix.used++;
-  s.chests.big++;
-  s.chestsGot.big++;
   return true;
 }
+export function bossChest(s) { s.chests.big++; s.chestsGot.big++; }
 // Opens one chest from the stash (Glory Road, ball paths).
 export function openChest(s, kind, rand) {
   if (!CHESTS[kind] || !(s.chests[kind] > 0)) return null;
