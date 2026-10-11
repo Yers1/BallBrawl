@@ -7,7 +7,7 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, RARITY, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, tickets, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, RARITY, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY, freeGems,
 } from './progress.js';
@@ -39,6 +39,8 @@ const star = (cx, cy, r) => `M${[...Array(10)].map((_, i) => {
   const a = -Math.PI / 2 + (i * Math.PI) / 5, k = i % 2 ? r * 0.45 : r;
   return `${(cx + Math.cos(a) * k).toFixed(1)} ${(cy + Math.sin(a) * k).toFixed(1)}`;
 }).join(' L')}Z`;
+// A boss ticket: gold, with a crown and a notch on each side.
+const TICKET_SVG = `<svg viewBox="0 0 120 80" width="100%" aria-hidden="true"><path d="M10 14h100v18a8 8 0 0 0 0 16v18H10V48a8 8 0 0 0 0-16Z" fill="#FFD23F" stroke="#0A0F1C" stroke-width="5" stroke-linejoin="round"/><path d="M36 22v36" stroke="#0A0F1C" stroke-width="3" stroke-dasharray="5 5"/><path d="M52 52 56 32 66 42 74 28 82 42 92 32 96 52Z" fill="#FF4D5E" stroke="#0A0F1C" stroke-width="4" stroke-linejoin="round"/></svg>`;
 export function chestSvg(kind) {
   const c = CHEST_COLORS[kind] ?? CHEST_COLORS.box, ink = 'stroke="#0F1F38" stroke-linejoin="round"', o = `${ink} stroke-width="4"`;
   const rivets = (xs, ys) => xs.flatMap(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="2.2" fill="${c.trimDark}"/>`)).join('');
@@ -855,7 +857,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- chests ----------
   const odds = k => { // the real odds for this player: 0% once everything of that kind is collected
     const c = CHESTS[k], ballsLeft = chestBalls(save).length > 0, skinsLeft = skinPool(save).length > 0;
-    return t('chestInfo', { a: c.coins[0], b: c.coins[1], f: skinsLeft ? `${c.stacks}×${c.frags[0]}–${c.frags[1]}` : 0, g: c.gems, c: ballsLeft ? Math.round(c.ball * 100) : 0, e: Math.round(c.emote * 100) });
+    return t('chestInfo', { a: c.coins[0], b: c.coins[1], f: skinsLeft ? `${c.frag < 1 ? Math.round(c.frag * 100) + '% ' : ''}${c.stacks}×${c.frags[0]}–${c.frags[1]}` : 0, g: c.gems, c: ballsLeft ? Math.round(c.ball * 100) : 0, e: Math.round(c.emote * 100), k: Math.round(c.ticket * 100) });
   };
   function chestList() {
     $('#ch-list').replaceChildren(...KINDS.map(k => {
@@ -884,6 +886,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     ...res.frags.map(f => ({ kind: 'frag', res, f })),
     ...(res.emote ? [{ kind: 'emote', res }] : []),
     ...(res.skin ? [{ kind: 'skin', res }] : []),
+    ...(res.ticket ? [{ kind: 'ticket', res }] : []),
     ...(res.ball ? [{ kind: 'ball', res }] : []),
   ];
   const restart = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
@@ -976,6 +979,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const f = it.f;
       d.append(icon(f.ball, size, f.style), el('b', '', `+${f.n}`), el('small', ''), el('span', 'frag-bar', `<i style="width:${(f.have / FRAG_NEED) * 100}%"></i>`));
       d.children[2].textContent = f.done ? t('fragDone', { skin: skinName(f.style) }) : t('fragOf', { skin: skinName(f.style), n: f.have, max: FRAG_NEED });
+    } else if (it.kind === 'ticket') { // a boss ticket: beat a boss with it for a big chest
+      d.append(el('span', 'tix-art', TICKET_SVG), el('b', '', '+1'), el('small', '', t('ticket')));
+      d.firstChild.style.width = size + 'px';
     } else if (it.kind === 'emote') {
       const c = document.createElement('canvas');
       drawEmote(c, it.res.emote, size);
@@ -1434,7 +1440,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }
     $('#l-lead').textContent = ballName(lead);
     const ranked = save.mode === 'classic' && net.online;
-    $('#l-mode').textContent = save.mode === 'classic' ? (net.online ? t('modeRanked') : t('modeTraining')) : t('mode_' + save.mode);
+    $('#l-mode').textContent = save.mode === 'classic' ? (net.online ? t('modeRanked') : t('modeTraining')) : save.mode === 'boss' ? t('ticketN', { n: tickets(save) }) : t('mode_' + save.mode);
     $('#l-mode').classList.toggle('live', ranked);
     $('#l-modeic').innerHTML = MODE_ICON[save.mode];
     $('#l-modename').textContent = t('mode_' + save.mode);
@@ -1471,7 +1477,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   let shownArena = '';
   function applyArena() {
     const a = save.wear.look && owns(save, 'look', save.wear.look) ? save.wear.look : arenaFor(save.maxTrophies).id;
-    if (a === shownArena) return;
+    if (a !== shownArena) look(a);
+  }
+  function look(a) { // football borrows the stadium for its match; the menu puts your arena back
     shownArena = a;
     document.documentElement.style.setProperty('--sky', THEMES[a].sky);
     setArena(a);
@@ -1737,5 +1745,5 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       }))));
   };
 
-  return { open, render, settings, vs, reward, loadFriends, onlineFriends: () => frData.filter(f => f.rel === 'friend' && f.online), hide: () => { $('#scr-home').hidden = true; } };
+  return { open, render, settings, vs, reward, look, loadFriends, onlineFriends: () => frData.filter(f => f.rel === 'friend' && f.online), hide: () => { $('#scr-home').hidden = true; } };
 }

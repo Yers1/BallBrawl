@@ -12,7 +12,7 @@ import { randomNick, nickText, validNick, validClan } from './nick.js';
 import { encodeChallenge, decodeChallenge, newSeed } from './challenge.js';
 import { initAudio, setMuted, sfx, confetti, playMusic, setMusicOn } from './sfx.js';
 import {
-  migrate, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
+  migrate, tickets, useTicket, aiLevel, enemyHpMulFor, enemySquadFor, winCoinsFor, LOSE_COINS, UNLOCK, trophyLoss, winChest,
   claimable, pathNodes, track, dayKey, refreshQuests, gainMastery, EMOTE_LIST, owns, arenaFor, ARENAS, lockLabel, BY_UNLOCK, RARITY, SHOP, levelOf, FAMILIARS, famCap, famPar, famBuff, famXp, gainXp, XP_WIN, XP_PLAY, SKINS, creditPurchases,
 } from './progress.js';
 const anyMap = () => { const k = Object.keys(MAPS); return k[Math.floor(Math.random() * k.length)]; };
@@ -231,14 +231,18 @@ function goSquad() {
 function place(id) {
   S.info = id;
   save.squad[S.slot] = id;
-  S.slot = (S.slot + 1) % 3;
+  S.slot = (S.slot + 1) % teamSize();
   persist();
   renderSquad();
 }
 
+const teamSize = () => (save.mode === 'duo' || save.mode === 'football' ? 2 : 3); // 2 vs 2 and football field two balls a side
 function renderSquad() {
+  const team = teamSize();
+  S.slot = Math.min(S.slot, team - 1);
+  $('#s-hint').textContent = t(team === 2 ? 'squadHint2' : 'squadHint');
   $('#s-level').innerHTML = `<i class="trophy" style="vertical-align:-3px"></i> ${save.trophies}`;
-  $('#s-slots').replaceChildren(...save.squad.map((id, i) => {
+  $('#s-slots').replaceChildren(...save.squad.slice(0, team).map((id, i) => {
     const b = el('button', 'slot' + (i === S.slot ? ' active' : ''));
     b.append(el('b', '', String(i + 1)), icon(id, 46, save.skinOf[id]));
     b.title = ballName(id);
@@ -247,7 +251,7 @@ function renderSquad() {
   }));
 
   const mul = enemyHpMulFor(save.trophies), o = S.opponent;
-  $('#s-enemy').replaceChildren(...enemySquad().map(id => icon(id, 34, o?.skins?.[id] ?? null)));
+  $('#s-enemy').replaceChildren(...enemySquad().slice(0, team).map(id => icon(id, 34, o?.skins?.[id] ?? null)));
   $('#scr-squad .enemy small').textContent = t('enemy') + (mul > 1 ? ` · HP ×${mul.toFixed(2).replace(/0$/, '')}` : '');
   const note = $('#s-note');
   note.textContent = !net.online ? t('training') : o ? t('vsPlayer', { nick: nickText(o.nick, lang), n: o.trophies }) : t('vsBots');
@@ -263,7 +267,7 @@ function renderSquad() {
   $('#s-info .si-super span span').textContent = superAbout(info);
 
   $('#s-cards').replaceChildren(...BY_UNLOCK.map(id => {
-    const d = BALLS[id], ok = has(id), slots = save.squad.map((s, i) => (s === id ? i + 1 : 0)).filter(Boolean);
+    const d = BALLS[id], ok = has(id), slots = save.squad.slice(0, team).map((s, i) => (s === id ? i + 1 : 0)).filter(Boolean);
     const tile = el('div', `tile r-${RARITY[id]}` + (ok ? '' : ' locked') + (id === info ? ' info' : ''));
     tile.style.setProperty('--c', d.color);
     if (ok && slots.length) tile.append(el('i', 'pos', slots.join('·')));
@@ -320,11 +324,12 @@ async function startMatch() {
     skinsA: save.skinOf,
     skinsB: S.opponent?.skins ?? {},
     mode,
-    map: arenaFor(save.maxTrophies).id, // your arena decides the map
+    map: mode === 'football' ? 'stadium' : arenaFor(save.maxTrophies).id, // your arena decides the map; football is always played in the stadium
     boss: nextBoss(),
     pool: mode === 'survival' ? [...enemySquadFor(save.trophies, Math.random), ...enemySquadFor(save.trophies, Math.random)] : null,
   });
   S.aiLevel = aiLevel(save.trophies);
+  if (mode === 'football') home.look('stadium');
   commanders(S.fams, foeCard().nick);
   show(null);
   playMusic(null); // quiet for the face-to-face and the fight
@@ -616,6 +621,7 @@ function finishMatch(r) {
   }
   save.coins += S.earned;
   S.chestDrop = won || (S.match.mode === 'survival' && S.match.wave > 3) ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
+  S.ticketUsed = won && S.match.mode === 'boss' && !c && useTicket(save); // a boss beaten with a ticket: a big chest
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   S.xpGot = won ? XP_WIN : XP_PLAY;
   S.lvlUps = gainXp(save, S.xpGot); // the player level
@@ -706,7 +712,7 @@ function showResult() {
   $('#r-coins').textContent = '+' + S.earned;
   $('#r-trophies').hidden = !!c;
   $('#r-chest').hidden = S.chestDrop == null;
-  if (S.chestDrop != null) $('#r-chest').textContent = S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull');
+  if (S.chestDrop != null) $('#r-chest').textContent = (S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull')) + (S.ticketUsed ? ' ' + t('ticketWin') : '');
   $('#r-reward').hidden = true;
   const lv = (S.lvlUps ?? []).at(-1);
   $('#r-xp').innerHTML = lv ? `${t('levelUp', { n: lv.lv })} +${lv.coins}<i class="coin"></i> +${lv.gems}<i class="gem"></i>` : t('xpGain', { n: S.xpGot });
@@ -1229,7 +1235,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.7';
+const VERSION = '1.8';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);

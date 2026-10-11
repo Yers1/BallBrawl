@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rng } from '../src/sim.js';
 import { ORDER } from '../src/balls.js';
-import { freshSave, migrate, mergeSave, openChest, CHESTS, hasSkin, buySkin, equipSkin, winChest, startUnlock, openSlot, speedUp, slotLeft, gemsToOpen, CHEST_TIME, CHEST_CYCLE, FRAG_NEED, buy, owns, wear, dailyDeals, buyDeal, adGems, SHOP } from '../src/progress.js';
+import { freshSave, migrate, mergeSave, openChest, tickets, useTicket, CHESTS, hasSkin, buySkin, equipSkin, winChest, startUnlock, openSlot, speedUp, slotLeft, gemsToOpen, CHEST_TIME, CHEST_CYCLE, FRAG_NEED, buy, owns, wear, dailyDeals, buyDeal, adGems, SHOP } from '../src/progress.js';
 
 test('wins fill 4 slots in the published order; unlocking takes time, gems or ads skip it', () => {
   const s = freshSave();
@@ -131,18 +131,20 @@ test('ball ranks, leagues and titles', async () => {
   assert.deepEqual(m.mastery, { ninja: 9, ice: 1 });
 });
 
-test('chests give fragments; 10 fragments make the skin', () => {
+test('chests sometimes give fragments; 20 fragments make the skin', () => {
   const s = freshSave();
   s.frags['basic:neon'] = FRAG_NEED - 1;
   let done = false;
-  for (let i = 0; i < 20 && !done; i++) {
+  for (let i = 0; i < 60 && !done; i++) {
     s.chests.box = 1;
     const r = openChest(s, 'box', rng(i + 3));
-    assert.ok(r.frags.length >= 1 && r.frags.length <= CHESTS.box.stacks);
+    assert.ok(r.frags.length <= CHESTS.box.stacks);
     done = r.frags.some(f => f.key === 'basic:neon' && f.done);
   }
   assert.ok(done && hasSkin(s, 'basic', 'neon') && !('basic:neon' in s.frags), 'the skin was assembled');
-  assert.equal(migrate({ frags: { 'basic:neon': 3, 'basic:gold': 2, 'nope:x': 1, 'basic:rainbow': 4 } }).frags['basic:neon'], 3);
+  assert.equal(migrate({ frags: { 'basic:neon': 3, 'basic:gold': 2, 'nope:x': 1, 'basic:rainbow': 4 } }).frags['basic:neon'], 6, 'a v2 save (10 per skin) keeps its progress');
+  assert.equal(migrate({ v: 3, frags: { 'basic:neon': 3 } }).frags['basic:neon'], 3, 'v3 is taken as is');
+  assert.equal(migrate(migrate({ frags: { 'basic:neon': 3 } })).frags['basic:neon'], 6, 'doubled only once');
   assert.deepEqual(Object.keys(migrate({ frags: { 'basic:gold': 2, 'nope:x': 1, 'basic:rainbow': 4 } }).frags), [], 'gold, gift and junk rejected');
 });
 
@@ -306,4 +308,39 @@ test('bought gems: each payment once, cosmetics spend them first, never a chest'
   t.slots[0] = { id: 'c2', kind: 'box', start: Date.now() };
   assert.equal(openSlot(t, 0, Date.now(), Math.random, true), null, 'only bought gems: no chest');
   assert.deepEqual(migrate(JSON.parse(JSON.stringify(t))).bought, [{ id: 'pay_2', gems: 1000 }], 'survives a reload');
+});
+
+test('skins are not handed out every chest: a dozen wins bring about one', () => {
+  const s = freshSave();
+  s.owned = [...ORDER]; // every ball, so the pool of skins is big
+  const rand = rng(5);
+  let skins = 0;
+  for (let i = 0; i < 1200; i++) { // 100 cycles of slot chests
+    const kind = CHEST_CYCLE[i % CHEST_CYCLE.length], before = s.skins.length;
+    s.chests[kind] = 1;
+    openChest(s, kind, rand);
+    skins += s.skins.length - before;
+  }
+  const perCycle = skins / 100;
+  assert.ok(perCycle > 0.6 && perCycle < 2.5, `skins per 12 chests: ${perCycle}`);
+});
+
+test('boss tickets: found in chests, used only by a won boss fight for a big chest, merge-safe', () => {
+  const s = freshSave();
+  assert.equal(tickets(s), 0);
+  assert.equal(useTicket(s), false, 'no ticket, nothing');
+  s.chests.mega = 1;
+  const r = openChest(s, 'mega', rng(3));
+  assert.equal(r.ticket, 1, 'a mega chest always has one');
+  assert.equal(tickets(s), 1);
+  assert.ok(useTicket(s));
+  assert.equal(tickets(s), 0);
+  assert.equal(s.chests.big, 1, 'the big chest is in the stash');
+  const a = { ...freshSave(), tix: { got: 3, used: 1 } }, b = { ...freshSave(), tix: { got: 2, used: 2 } };
+  assert.equal(tickets(mergeSave(a, b, { trophies: 0, max_trophies: 0 })), 1, 'a ticket used on one device stays used');
+  assert.deepEqual(migrate({ tix: { got: 2, used: 9 } }).tix, { got: 2, used: 2 }, 'never below zero');
+  let found = 0;
+  const rand = rng(9);
+  for (let i = 0; i < 400; i++) { s.chests.box = 1; found += openChest(s, 'box', rand).ticket; }
+  assert.ok(found > 30 && found < 100, `boxes with a ticket: ${found}/400`);
 });

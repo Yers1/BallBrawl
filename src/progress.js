@@ -170,7 +170,7 @@ export function freshSave() {
   return {
     bought: [], // gem packs paid with money, by payment id
     nickChanges: 0, // the first nickname change is free
-    v: 2, coins: 0, spent: { coins: 0, gems: 0, chest: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
+    v: 3, coins: 0, spent: { coins: 0, gems: 0, chest: 0 }, owned: ['basic'], squad: ['basic', 'basic', 'basic'], trophies: 0, maxTrophies: 0, matches: 0,
     nick: null, muted: false, music: true, avatar: 'basic', fav: null, // fav: the ball on the profile stand (null: the avatar)
     created: [], answered: [], // challenge link seeds I made / already got the bonus for
     claimed: [], skins: [], skinOf: {},
@@ -180,6 +180,7 @@ export function freshSave() {
     arenaSeen: 'night', // the newest arena the player has been welcomed to (the unlock celebration shows once)
     mastery: {}, title: 'rookie', // ball rank points per ball; the title picked in the profile
     gems: 0, frags: {}, // gems; skin fragments by 'ball:style'
+    tix: { got: 0, used: 0 }, // boss tickets ever found / ever used: both only grow, so a merge never duplicates one
     slots: [null, null, null, null], cycle: 0, slotsOpened: [], // the 4 chest slots, the chest order, opened slot chest ids
     own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
     deals: [], adGems: { day: null, n: 0 },
@@ -229,10 +230,13 @@ export function migrate(raw) {
   if (ARENAS.some(a => a.id === r.arenaSeen)) s.arenaSeen = r.arenaSeen;
   if (TITLES.some(x => x.id === r.title)) s.title = r.title;
   s.gems = int(r.gems, 0, 1e6) ?? 0;
+  const oldFrags = (int(r.v) ?? 2) < 3; // a skin took 10 fragments before v3, now 20: double what was collected, so no bar goes back
   for (const [k, v] of Object.entries(r.frags || {})) {
-    const [b, st] = String(k).split(':'), n = int(v, 1, FRAG_NEED - 1);
+    const [b, st] = String(k).split(':'), n = Math.min(FRAG_NEED - 1, (int(v, 1) ?? 0) * (oldFrags ? 2 : 1));
     if (BALLS[b] && SKINS[st] && !SKINS[st].gift && !SKINS[st].path && n && !s.skins.includes(k)) s.frags[k] = n;
   }
+  s.tix.got = int(r.tix?.got, 0, 1e6) ?? 0;
+  s.tix.used = Math.min(s.tix.got, int(r.tix?.used, 0, 1e6) ?? 0);
   s.cycle = int(r.cycle) ?? 0;
   if (Array.isArray(r.slots)) s.slots = [0, 1, 2, 3].map(i => {
     const x = r.slots[i];
@@ -392,28 +396,30 @@ export function equipSkin(s, ball, style) {
 }
 
 // ---------- chests ----------
-// Earned only, never sold, odds shown on the chest screen. A chest gives coins, skin fragments (10 make a skin),
-// sometimes gems and a new ball. Wins put chests into 4 slots in a fixed, published order (no random drops);
+// Earned only, never sold, odds shown on the chest screen. A chest gives coins, sometimes skin fragments (20 make a skin),
+// gems, a boss ticket and a new ball: never empty, rarely huge. Wins put chests into 4 slots in a fixed, published order (no random drops);
 // a slot chest takes time to unlock (one at a time) and can be opened at once for gems or sped up with an ad.
 // Chests from the Glory Road and ball paths are opened right away (save.chests).
-export const FRAG_NEED = 10;
+export const FRAG_NEED = 20;
 export const CHESTS = {
-  box: { coins: [25, 45], stacks: 1, frags: [2, 4], gems: 0, ball: 0.04, emote: 0.08, tiers: ['common', 'rare'] },
-  big: { coins: [70, 110], stacks: 2, frags: [3, 5], gems: 2, ball: 0.12, emote: 0.2, tiers: ['common', 'rare', 'epic'] },
-  mega: { coins: [180, 260], stacks: 3, frags: [4, 6], gems: 5, ball: 0.35, skin: true, emote: 0.45, tiers: ['common', 'rare', 'epic', 'legend'] },
+  // frag: the chance each stack of fragments drops; skin: a whole skin; ticket: a boss ticket
+  box: { coins: [30, 55], stacks: 1, frags: [1, 2], frag: 0.5, gems: 0, ball: 0.04, emote: 0.06, ticket: 0.15, tiers: ['common', 'rare'] },
+  big: { coins: [80, 130], stacks: 1, frags: [2, 4], frag: 1, gems: 2, ball: 0.1, emote: 0.15, ticket: 0.35, tiers: ['common', 'rare', 'epic'] },
+  mega: { coins: [200, 300], stacks: 2, frags: [3, 5], frag: 1, gems: 5, ball: 0.3, skin: 0.2, emote: 0.35, ticket: 1, tiers: ['common', 'rare', 'epic', 'legend'] },
 };
 export const skinPool = s => s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !SKINS[st].path && !hasSkin(s, b, st)).map(st => `${b}:${st}`));
 export const chestBalls = s => ORDER.filter(id => !s.owned.includes(id) && UNLOCK[id] <= s.maxTrophies + 150); // a chest can bring a ball a little ahead of you
 // What one chest of `kind` gives; `rand` is injected so tests are repeatable.
 export function rollChest(s, kind, rand) {
   const c = CHESTS[kind], pickR = a => a[Math.floor(rand() * a.length)];
-  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), gems: c.gems, frags: [], ball: null, skin: null, emote: null };
+  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), gems: c.gems, frags: [], ball: null, skin: null, emote: null, ticket: 0 };
   const emotes = EMOTE_LIST.filter(e => c.tiers.includes(e.tier) && !s.own.emote.includes(e.id));
   if (emotes.length && rand() < c.emote) { out.emote = pickR(emotes).id; s.own.emote.push(out.emote); }
   const balls = chestBalls(s);
   if (balls.length && rand() < c.ball) { out.ball = pickR(balls); s.owned.push(out.ball); }
-  if (c.skin) { const pool = skinPool(s); if (pool.length) { out.skin = pickR(pool).split(':'); s.skins.push(out.skin.join(':')); delete s.frags[out.skin.join(':')]; } }
+  if (c.skin && rand() < c.skin) { const pool = skinPool(s); if (pool.length) { out.skin = pickR(pool).split(':'); s.skins.push(out.skin.join(':')); delete s.frags[out.skin.join(':')]; } }
   for (let i = 0; i < c.stacks; i++) { // half the time the stack goes to the skin you're closest to finishing
+    if (rand() >= c.frag) continue;
     const pool = skinPool(s).filter(k => !out.frags.some(f => f.key === k));
     if (!pool.length) { out.coins += 10 * c.frags[1]; continue; } // nothing left to collect: coins instead
     const best = [...pool].sort((a, b) => (s.frags[b] ?? 0) - (s.frags[a] ?? 0))[0];
@@ -423,10 +429,20 @@ export function rollChest(s, kind, rand) {
     if (done) { s.skins.push(key); delete s.frags[key]; } else s.frags[key] = have;
     out.frags.push({ key, ball: key.split(':')[0], style: key.split(':')[1], n, have, done });
   }
+  if (rand() < c.ticket) { out.ticket = 1; s.tix.got++; }
   s.coins += out.coins;
   s.gems += out.gems;
   s.stats.chests++;
   return out;
+}
+// Boss tickets: a boss beaten while holding one gives a big chest. Only a won fight uses it; a lost one costs nothing.
+export const tickets = s => s.tix.got - s.tix.used;
+export function useTicket(s) {
+  if (tickets(s) < 1) return false;
+  s.tix.used++;
+  s.chests.big++;
+  s.chestsGot.big++;
+  return true;
 }
 // Opens one chest from the stash (Glory Road, ball paths).
 export function openChest(s, kind, rand) {
@@ -686,6 +702,7 @@ export function mergeSave(local, cloudRaw, server) {
   for (const k of Object.keys(s.stats)) s.stats[k] = Math.max(s.stats[k], cloud.stats[k]);
   for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;
   for (const [k, v] of Object.entries(cloud.frags)) if (!s.skins.includes(k)) s.frags[k] = Math.max(s.frags[k] ?? 0, v);
+  s.tix = { got: Math.max(s.tix.got, cloud.tix.got), used: Math.max(s.tix.used, cloud.tix.used) };
   for (const k of Object.keys(s.frags)) if (s.skins.includes(k)) delete s.frags[k];
   // slot chests: union by id, minus any opened on either copy
   s.cycle = Math.max(s.cycle, cloud.cycle);

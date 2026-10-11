@@ -65,6 +65,7 @@ function float(x, y, text, color, size = 22, life = 1.5, rise = 30, tilt = rnd(-
 // Quick repeat hits on the same ball add up into one growing number that pops again.
 const dmgSize = v => Math.min(40, 21 + v * 0.55);
 function dmgFloat(w, id, amount, color, sign = '-') {
+  if (w.ball) return; // football: nobody takes damage, so no numbers (webs and leeches still tick visually)
   const e = w.ents.find(x => x.id === id);
   if (!e) return;
   const key = id + sign, old = fx.floats.find(f => f.key === key && f.age - f.popAt < 0.5);
@@ -438,7 +439,7 @@ export function setArena(id) {
   const n = { ice: 12, grass: 34, cracks: 9, stars: 70, temple: 10 }[THEME.pattern] ?? 0;
   DECOR = Array.from({ length: n }, () => ({ x: r() * W, y: r() * H, a: r() * Math.PI, s: r(), k: Array.from({ length: 4 }, () => r() * 2 - 1) }));
 }
-function floorPattern(ctx, now) {
+function floorPattern(ctx, now, foot = false) { // foot: a football match draws its own pitch lines (goals())
   const p = THEME.pattern;
   ctx.save();
   if (p === 'grid') {
@@ -517,6 +518,7 @@ function floorPattern(ctx, now) {
     ctx.closePath(); ctx.fill(); ctx.stroke();
   } else if (p === 'pitch') { // football pitch: mowing stripes and the lines
     ctx.fillStyle = 'rgba(0,0,0,0.07)';
+    if (foot) { for (let y = 0; y < H; y += 50) ctx.fillRect(0, y, W, 25); ctx.restore(); return; } // stripes across the goals; the lines come from goals()
     for (let x = 0; x < W; x += 80) ctx.fillRect(x, 0, 40, H);
     ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
@@ -543,7 +545,7 @@ function floorPattern(ctx, now) {
   ctx.restore();
 }
 // Each arena dresses its walls differently, so they don't look like one template in other colours.
-function wallScenery(ctx, now) {
+function wallScenery(ctx, now, foot = false) {
   const P = Math.PI;
   ctx.save();
   if (ARENA === 'night') { // lamps along the top wall
@@ -627,7 +629,7 @@ function wallScenery(ctx, now) {
       ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(10,14,31,0.55)';
       ctx.beginPath(); ctx.arc(x + 25, -M / 2, 3, 0, P * 2); ctx.arc(W - x - 25, H + M / 2, 3, 0, P * 2); ctx.fill();
     }
-    for (const [x, c] of [[-M, '#4C8DFF'], [W, '#FF4D5E']]) {
+    for (const [x, c] of foot ? [] : [[-M, '#4C8DFF'], [W, '#FF4D5E']]) { // football has its goals top and bottom instead
       ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, 165, M, 70);
       ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, 165, M - 3, 70);
       ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
@@ -794,9 +796,9 @@ function arena(ctx, w, now) {
   });
   ctx.fillStyle = THEME.floor;
   ctx.fillRect(0, 0, W, H);
-  floorPattern(ctx, now);
+  floorPattern(ctx, now, !!w.ball);
   obstacles(ctx, w, now);
-  wallScenery(ctx, now);
+  wallScenery(ctx, now, !!w.ball);
   for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
     const g = ctx.createLinearGradient(0, 0, gx * 18, gy * 18);
     g.addColorStop(0, 'rgba(8,16,32,0.4)');
@@ -1058,14 +1060,21 @@ function bossBar(ctx, w, now) {
 function goals(ctx, w, now) { // pitch markings, and a net behind each mouth: yours at the bottom (blue), theirs at the top (red)
   const g = FOOT.goal, x0 = W / 2 - g / 2;
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 3;
+  ctx.strokeRect(6, 6, W - 12, H - 12); // the touchline
+  ctx.beginPath(); ctx.moveTo(6, H / 2); ctx.lineTo(W - 6, H / 2); ctx.stroke();
   ctx.beginPath(); ctx.arc(W / 2, H / 2, 46, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, 4, 0, Math.PI * 2); ctx.fill(); // the centre spot
+  for (const [cx, cy, a] of [[6, 6, 0], [W - 6, 6, Math.PI / 2], [W - 6, H - 6, Math.PI], [6, H - 6, -Math.PI / 2]]) { ctx.beginPath(); ctx.arc(cx, cy, 12, a, a + Math.PI / 2); ctx.stroke(); } // corner arcs
   for (const [y, dir, side] of [[0, 1, 1], [H, -1, 0]]) {
-    const glow = ctx.createLinearGradient(0, y, 0, y + dir * 60);
-    glow.addColorStop(0, side ? 'rgba(255,77,94,0.45)' : 'rgba(76,201,240,0.45)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow; ctx.fillRect(x0 - 20, dir > 0 ? y : y - 60, g + 40, 60);
-    ctx.strokeRect(x0 - 20, dir > 0 ? y : y - 52, g + 40, 52); // the box
+    const glow = ctx.createLinearGradient(0, y, 0, y + dir * 70);
+    glow.addColorStop(0, side ? 'rgba(255,77,94,0.4)' : 'rgba(76,201,240,0.4)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.fillRect(x0 - 26, dir > 0 ? y : y - 70, g + 52, 70);
+    ctx.strokeRect(x0 - 26, dir > 0 ? y + 6 : y - 70, g + 52, 64); // the penalty box
+    ctx.strokeRect(x0 + 8, dir > 0 ? y + 6 : y - 30, g - 16, 24); // the goal area
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath(); ctx.arc(W / 2, y + dir * 50, 3.5, 0, Math.PI * 2); ctx.fill(); // the penalty spot
+    ctx.beginPath(); ctx.arc(W / 2, y + dir * 50, 34, dir > 0 ? 0.25 * Math.PI : 1.25 * Math.PI, dir > 0 ? 0.75 * Math.PI : 1.75 * Math.PI); ctx.stroke(); // the D
   }
   ctx.restore();
   for (const [y, side] of [[-M, 1], [H, 0]]) {

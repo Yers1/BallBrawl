@@ -1648,3 +1648,5 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .nk-err { margin: 6px 0 0; color: #FF7A85; font-weight: 800; font-size: 13px; }
 .fr-find { grid-template-columns: 1fr auto; }
 .fr-find .btn { grid-column: auto; }
+.op-card .tix-art { display: block; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.35)); }
+.op-card.small .tix-art svg { width: 100%; }
