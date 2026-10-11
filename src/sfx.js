@@ -190,6 +190,10 @@ export const sfx = {
     noise(0.3, { vol: 0.25, freq: 600, sweep: 0.3, q: 0.6, delay: 0.12 });
     noise(1.2, { vol: 0.14, freq: 7000, q: 0.4, delay: 0.14, type: 'highpass' });
   },
+  spray: () => { // rattle, rattle, psssht
+    tone(1800, 0.03, { type: 'square', vol: 0.05 }); tone(1650, 0.03, { type: 'square', vol: 0.05, delay: 0.07 });
+    noise(0.45, { vol: 0.2, freq: 5200, q: 0.6, delay: 0.14, type: 'highpass' });
+  },
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
 };
 

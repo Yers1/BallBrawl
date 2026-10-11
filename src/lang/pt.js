@@ -73,7 +73,7 @@ export default {
   shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Companheiros', shLooks: 'Mapas de arena', shAllSkins: 'Todas as skins', shGems: 'Gemas',
   shGemsSoon: 'Gemas vêm de baús, da Rota da Glória, das trilhas das bolas e do dia 7 dos prêmios diários. Em breve dá para comprar.', shAnimated: 'Animado',
   needGems: 'Faltam gemas', needCoins: 'Faltam moedas', opGems: 'gemas', opEmote: 'EMOTE NOVO', fragDone: 'Skin "{skin}" completa!', fragOf: '"{skin}": {n} de {max}',
-  ticket: 'Bilhete de chefe', ticketN: 'Bilhetes: {n}', ticketWin: 'Bilhete de chefe: +baú grande!', chestInfo: 'Moedas {a}–{b} · pedaços de skin: {f} · gemas: {g} · bola nova: {c}% · emote: {e}% · bilhete de chefe: {k}%', stashHint: 'Baús da Rota da Glória e das trilhas das bolas abrem na hora.',
+  ticket: 'Bilhete de chefe', ticketN: 'Bilhetes: {n}', ticketWin: 'Bilhete de chefe: +baú grande!', opSpray: 'Grafite novo', spray_g: 'Grafite “G”', chestInfo: 'Moedas {a}–{b} · pedaços de skin: {f} · gemas: {g} · bola nova: {c}% · emote: {e}% · bilhete de chefe: {k}% · grafite: {s}%', stashHint: 'Baús da Rota da Glória e das trilhas das bolas abrem na hora.',
   slotEmpty: 'Vença lutas e os baús aparecem aqui', slotOpen: 'Abrir!', slotWait: 'Abre em {t}', slotLeft: 'Faltam {t}', slotBusy: 'Outro baú já está abrindo. Você pode abrir este agora com gemas.',
   slotNow: 'Abrir agora', slotAd: 'Anúncio: −30 minutos', resultSlot: '{name} foi para um slot!', resultSlotsFull: 'Slots cheios: abra um baú para ganhar novos',
   aura_fire: 'Chama', aura_frost: 'Geada', aura_storm: 'Tempestade', aura_hearts: 'Corações', aura_void: 'Vazio', aura_stars: 'Estrelas',

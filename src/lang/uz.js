@@ -73,7 +73,7 @@ export default {
   shAuras: "Auralar", shBanners: "Bannerlar", shDecos: "Hamrohlar", shLooks: "Arena xaritalari", shAllSkins: "Barcha skinlar", shGems: "Gemlar",
   shGemsSoon: "Gemlar sandiqlardan, Shon yo'lidan, shar yo'lidan va kunlik mukofotlarning 7-kunidan keladi. Tez orada ularni sotib olish mumkin bo'ladi.", shAnimated: "Animatsiyali",
   needGems: "Gem yetmaydi", needCoins: "Tanga yetmaydi", opGems: "gem", opEmote: "YANGI EMOTSIYA", fragDone: "«{skin}» skini yig'ildi!", fragOf: "«{skin}»: {n} / {max}",
-  ticket: "Boss chiptasi", ticketN: "Chiptalar: {n}", ticketWin: "Boss chiptasi: +katta sandiq!", chestInfo: "Tangalar {a}–{b} · skin bo'laklari: {f} · gemlar: {g} · yangi shar: {c}% · emotsiya: {e}% · boss chiptasi: {k}%", stashHint: "Shon yo'li va shar yo'lidagi sandiqlar darhol ochiladi.",
+  ticket: "Boss chiptasi", ticketN: "Chiptalar: {n}", ticketWin: "Boss chiptasi: +katta sandiq!", opSpray: "Yangi graffiti", spray_g: "“G” graffitisi", chestInfo: "Tangalar {a}–{b} · skin bo'laklari: {f} · gemlar: {g} · yangi shar: {c}% · emotsiya: {e}% · boss chiptasi: {k}% · graffiti: {s}%", stashHint: "Shon yo'li va shar yo'lidagi sandiqlar darhol ochiladi.",
   slotEmpty: "G'alaba qozon — sandiqlar shu yerga tushadi", slotOpen: "Ochish!", slotWait: "Ochilishiga: {t}", slotLeft: "Qoldi: {t}", slotBusy: "Boshqa sandiq ochilmoqda. Buni hozir gemlar evaziga ochish mumkin.",
   slotNow: "Hozir ochish", slotAd: "Reklama: −30 daqiqa", resultSlot: "{name} slotga tushdi!", resultSlotsFull: "Slotlar to'la: yangilarini olish uchun sandiq och",
   aura_fire: "Alanga", aura_frost: "Qirov", aura_storm: "Bo'ron", aura_hearts: "Yuraklar", aura_void: "Zulmat", aura_stars: "Yulduzlar",

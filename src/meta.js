@@ -7,14 +7,14 @@ import {
   pathNodes, claimable, claim, UNLOCK, SKINS, skinPrice, hasSkin, buySkin, equipSkin,
   RANKS, BALL_PATH, ballRank, rankTier, leagueFor, TITLES, titleOk, levelOf,
   dayKey, refreshQuests, questDef, claimQuest, dailyState, claimDaily, DAILY,
-  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, tickets, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, RARITY, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
+  ACHIEVEMENTS, achievementValue, claimAchievement, CHESTS, openChest, tickets, SPRAYS, ARENAS, arenaFor, arenaIndex, lockLabel, BY_UNLOCK, RARITY, FRAG_NEED, pay, skinPool, chestBalls, FAMILIARS, FAM_COST, famNeed, famCap, famBuff, famUpgrade, famBuy,
   SLOTS, CHEST_TIME, CHEST_CYCLE, AD_SPEEDUP, gemsToOpen, slotLeft, unlocking, startUnlock, speedUp, openSlot,
   SHOP, EMOTE_LIST, owns, priceOf, buy, wear, dailyDeals, buyDeal, adGems, AD_GEMS, AD_GEMS_DAY, freeGems,
 } from './progress.js';
 import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
 import { heroSvg, heroLive } from './heroes.js';
-import { setArena, drawEmote, drawFamiliar } from './render.js';
+import { setArena, drawEmote, drawFamiliar, drawSpray } from './render.js';
 import { MAPS } from './sim.js';
 import { PAY } from './config.js';
 import { offerReward } from './ads.js';
@@ -857,7 +857,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // ---------- chests ----------
   const odds = k => { // the real odds for this player: 0% once everything of that kind is collected
     const c = CHESTS[k], ballsLeft = chestBalls(save).length > 0, skinsLeft = skinPool(save).length > 0;
-    return t('chestInfo', { a: c.coins[0], b: c.coins[1], f: skinsLeft ? `${c.frag < 1 ? Math.round(c.frag * 100) + '% ' : ''}${c.stacks}×${c.frags[0]}–${c.frags[1]}` : 0, g: c.gems, c: ballsLeft ? Math.round(c.ball * 100) : 0, e: Math.round(c.emote * 100), k: Math.round(c.ticket * 100) });
+    return t('chestInfo', { a: c.coins[0], b: c.coins[1], f: skinsLeft ? `${c.frag < 1 ? Math.round(c.frag * 100) + '% ' : ''}${c.stacks}×${c.frags[0]}–${c.frags[1]}` : 0, g: c.gems, c: ballsLeft ? Math.round(c.ball * 100) : 0, e: Math.round(c.emote * 100), k: Math.round(c.ticket * 100), s: SPRAYS.some(id => !save.sprays.includes(id)) ? Math.round(c.spray * 100) : 0 });
   };
   function chestList() {
     $('#ch-list').replaceChildren(...KINDS.map(k => {
@@ -886,6 +886,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     ...res.frags.map(f => ({ kind: 'frag', res, f })),
     ...(res.emote ? [{ kind: 'emote', res }] : []),
     ...(res.skin ? [{ kind: 'skin', res }] : []),
+    ...(res.spray ? [{ kind: 'spray', res }] : []),
     ...(res.ticket ? [{ kind: 'ticket', res }] : []),
     ...(res.ball ? [{ kind: 'ball', res }] : []),
   ];
@@ -979,6 +980,11 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       const f = it.f;
       d.append(icon(f.ball, size, f.style), el('b', '', `+${f.n}`), el('small', ''), el('span', 'frag-bar', `<i style="width:${(f.have / FRAG_NEED) * 100}%"></i>`));
       d.children[2].textContent = f.done ? t('fragDone', { skin: skinName(f.style) }) : t('fragOf', { skin: skinName(f.style), n: f.have, max: FRAG_NEED });
+    } else if (it.kind === 'spray') { // a graffiti for the fights
+      const c = document.createElement('canvas');
+      drawSpray(c, it.res.spray, size);
+      d.append(el('span', 'ribbon', t('opSpray')), c, el('small', ''));
+      d.children[2].textContent = t('spray_' + it.res.spray);
     } else if (it.kind === 'ticket') { // a boss ticket: beat a boss with it for a big chest
       d.append(el('span', 'tix-art', TICKET_SVG), el('b', '', '+1'), el('small', '', t('ticket')));
       d.firstChild.style.width = size + 'px';

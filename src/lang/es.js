@@ -73,7 +73,7 @@ export default {
   shAuras: 'Auras', shBanners: 'Banners', shDecos: 'Compañeros', shLooks: 'Mapas de arena', shAllSkins: 'Todos los skins', shGems: 'Gemas',
   shGemsSoon: 'Las gemas salen de cofres, la Ruta de gloria, el camino de cada pelota y el día 7 de premios diarios. Pronto podrás comprarlas.', shAnimated: 'Animado',
   needGems: 'Faltan gemas', needCoins: 'Faltan monedas', opGems: 'gemas', opEmote: 'GESTO NUEVO', fragDone: '¡Skin "{skin}" completo!', fragOf: '"{skin}": {n} de {max}',
-  ticket: 'Boleto de jefe', ticketN: 'Boletos: {n}', ticketWin: 'Boleto de jefe: ¡+cofre grande!', chestInfo: 'Monedas {a}–{b} · fragmentos de skin: {f} · gemas: {g} · pelota nueva: {c}% · gesto: {e}% · boleto de jefe: {k}%', stashHint: 'Los cofres de la Ruta de gloria y del camino de la pelota se abren al instante.',
+  ticket: 'Boleto de jefe', ticketN: 'Boletos: {n}', ticketWin: 'Boleto de jefe: ¡+cofre grande!', opSpray: 'Grafiti nuevo', spray_g: 'Grafiti «G»', chestInfo: 'Monedas {a}–{b} · fragmentos de skin: {f} · gemas: {g} · pelota nueva: {c}% · gesto: {e}% · boleto de jefe: {k}% · grafiti: {s}%', stashHint: 'Los cofres de la Ruta de gloria y del camino de la pelota se abren al instante.',
   slotEmpty: 'Gana peleas y los cofres llegarán aquí', slotOpen: '¡Abrir!', slotWait: 'Se abre en {t}', slotLeft: 'Quedan {t}', slotBusy: 'Ya se está abriendo otro cofre. Puedes abrir este ahora con gemas.',
   slotNow: 'Abrir ya', slotAd: 'Anuncio: −30 minutos', resultSlot: '¡{name} ya está en un espacio!', resultSlotsFull: 'Espacios llenos: abre un cofre para recibir más',
   aura_fire: 'Llama', aura_frost: 'Escarcha', aura_storm: 'Tormenta', aura_hearts: 'Corazones', aura_void: 'Vacío', aura_stars: 'Estrellas',

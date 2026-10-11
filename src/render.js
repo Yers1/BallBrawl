@@ -10,7 +10,7 @@ const SIDE_RGB = ['76,201,240', '255,77,94'];
 const FONT = 'Nunito, system-ui, sans-serif';
 const INK = '#0A0F1C'; // outline for numbers and small shapes
 export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
-const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {} };
+const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {}, sprays: {} };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 const shade = (hex, k) => { // k > 0 lightens toward white, k < 0 darkens
@@ -33,7 +33,7 @@ const COMIC = ['BAM!', 'POW!', 'WHAM!', 'BOOM!', 'SMASH!'];
 export const setShakeOn = on => { shakeOn = on; }; // settings: some players get dizzy
 export function resetFx() {
   fx.parts.length = fx.floats.length = fx.rings.length = 0;
-  fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {}; fx.emotes = {}; fx.bump = {};
+  fx.flash = {}; fx.face = {}; fx.drain = {}; fx.frozen = {}; fx.emotes = {}; fx.bump = {}; fx.sprays = {};
   fx.shake = 0;
 }
 
@@ -297,6 +297,56 @@ function emoteArt(ctx, id, R, t) {
   drawBall(ctx, art(id), 0, 0, { rim: false });
   face(ctx, em.mood, a, em.anim);
   ctx.restore();
+}
+// ---------- graffiti: a spray painted on the floor under the balls, like a tag on a wall. One per side at a time ----------
+const SPRAY_LIFE = 6;
+export function spray(side, id, x, y) {
+  const cur = fx.sprays[side];
+  if (!SPRAY_ART[id] || (cur && cur.age < 2)) return false; // no spam
+  fx.sprays[side] = { id, x: Math.max(50, Math.min(W - 50, x)), y: Math.max(50, Math.min(H - 50, y)), age: 0, rot: rnd(-0.25, 0.25) };
+  return true;
+}
+function drawSprays(ctx, dt) {
+  for (const [side, s] of Object.entries(fx.sprays)) {
+    s.age += dt;
+    if (s.age > SPRAY_LIFE) { delete fx.sprays[side]; continue; }
+    const pop = s.age < 0.15 ? 0.6 + (s.age / 0.15) * 0.4 : 1; // a quick "psst" as it lands
+    ctx.save();
+    ctx.globalAlpha = s.age > SPRAY_LIFE - 1 ? SPRAY_LIFE - s.age : 0.92;
+    ctx.translate(s.x, s.y); ctx.rotate(s.rot); ctx.scale(pop, pop);
+    SPRAY_ART[s.id](ctx, 1);
+    ctx.restore();
+  }
+}
+const SPLAT = Array.from({ length: 22 }, (_, i) => { const a = i * 2.4, d = 30 + ((i * 37) % 23); return [Math.cos(a) * d, Math.sin(a) * d * 0.8, 1 + ((i * 13) % 4) * 0.7]; }); // fixed speckles
+const SPRAY_ART = {
+  g(ctx, k) { // a fat graffiti G: dark outline, a 3D drop, a hot gradient, a shine, drips and speckles
+    ctx.save(); ctx.scale(k, k);
+    ctx.fillStyle = 'rgba(255,140,40,0.55)';
+    for (const [x, y, r] of SPLAT) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+    ctx.font = '400 78px "Russo One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 16; ctx.strokeStyle = INK; ctx.strokeText('G', 5, 7); ctx.fillStyle = INK; ctx.fillText('G', 5, 7); // the drop shadow
+    ctx.lineWidth = 12; ctx.strokeText('G', 0, 0);
+    const g = ctx.createLinearGradient(0, -34, 0, 34);
+    g.addColorStop(0, '#FFE66B'); g.addColorStop(0.55, '#FF9A2E'); g.addColorStop(1, '#FF3D7F');
+    ctx.fillStyle = g; ctx.fillText('G', 0, 0);
+    for (const [x, len] of [[-16, 18], [4, 26], [19, 12]]) { // paint running down
+      ctx.strokeStyle = INK; ctx.lineWidth = 8.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, 24); ctx.lineTo(x, 24 + len); ctx.stroke();
+      ctx.strokeStyle = '#FF3D7F'; ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.moveTo(x, 22); ctx.lineTo(x, 24 + len); ctx.stroke();
+    }
+    ctx.globalAlpha *= 0.8; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 3; ctx.lineCap = 'round'; // the shine
+    ctx.beginPath(); ctx.arc(0, 0, 22, Math.PI * 1.05, Math.PI * 1.45); ctx.stroke();
+    ctx.restore();
+  },
+};
+export function drawSpray(canvas, id, css = 48) { // the tray button and the chest card
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.height = Math.round(css * dpr); canvas.style.width = canvas.style.height = css + 'px';
+  const c = canvas.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, (css / 2) * dpr, (css / 2 - css * 0.06) * dpr);
+  SPRAY_ART[id]?.(c, css / 100);
 }
 export function drawEmote(canvas, id, css = 40, t = 0) { // the emote buttons and shop tiles
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1935,6 +1985,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   }
   fx.shake = Math.max(0, fx.shake - dt * 40);
   arena(ctx, w, now);
+  drawSprays(ctx, dt);
   if (chessBoard(ctx, w, w.t)) obstacles(ctx, w, now); // rocks and pools stay visible on the board
   for (const z of w.zones) {
     if (z.kind === 'web') web(ctx, z, w.t);

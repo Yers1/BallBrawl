@@ -1650,3 +1650,4 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .fr-find .btn { grid-column: auto; }
 .op-card .tix-art { display: block; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.35)); }
 .op-card.small .tix-art svg { width: 100%; }
+.emote-tray button.spray { background: #26304A; box-shadow: inset 0 -3px 0 #141B2E; }

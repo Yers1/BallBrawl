@@ -73,7 +73,7 @@ export default {
   shAuras: 'Aura', shBanners: 'Banner', shDecos: 'Teman kecil', shLooks: 'Peta arena', shAllSkins: 'Semua skin', shGems: 'Permata',
   shGemsSoon: 'Permata didapat dari peti, Jalur Kejayaan, jalur bola, dan hari ke-7 hadiah harian. Segera bisa dibeli juga.', shAnimated: 'Animasi',
   needGems: 'Permata tidak cukup', needCoins: 'Koin tidak cukup', opGems: 'permata', opEmote: 'EMOTE BARU', fragDone: 'Skin "{skin}" lengkap!', fragOf: '"{skin}": {n} dari {max}',
-  ticket: 'Tiket bos', ticketN: 'Tiket: {n}', ticketWin: 'Tiket bos: +peti besar!', chestInfo: 'Koin {a}–{b} · kepingan skin: {f} · permata: {g} · bola baru: {c}% · emote: {e}% · tiket bos: {k}%', stashHint: 'Peti dari Jalur Kejayaan dan jalur bola langsung terbuka.',
+  ticket: 'Tiket bos', ticketN: 'Tiket: {n}', ticketWin: 'Tiket bos: +peti besar!', opSpray: 'Grafiti baru', spray_g: 'Grafiti “G”', chestInfo: 'Koin {a}–{b} · kepingan skin: {f} · permata: {g} · bola baru: {c}% · emote: {e}% · tiket bos: {k}% · grafiti: {s}%', stashHint: 'Peti dari Jalur Kejayaan dan jalur bola langsung terbuka.',
   slotEmpty: 'Menangkan laga, peti muncul di sini', slotOpen: 'Buka!', slotWait: 'Terbuka dalam {t}', slotLeft: 'Sisa {t}', slotBusy: 'Peti lain sedang dibuka. Kamu bisa buka peti ini sekarang pakai permata.',
   slotNow: 'Buka sekarang', slotAd: 'Iklan: −30 menit', resultSlot: '{name} masuk slot!', resultSlotsFull: 'Slot penuh: buka peti untuk dapat yang baru',
   aura_fire: 'Api', aura_frost: 'Es', aura_storm: 'Badai', aura_hearts: 'Hati', aura_void: 'Hampa', aura_stars: 'Bintang',

@@ -180,6 +180,7 @@ export function freshSave() {
     arenaSeen: 'night', // the newest arena the player has been welcomed to (the unlock celebration shows once)
     mastery: {}, title: 'rookie', // ball rank points per ball; the title picked in the profile
     gems: 0, frags: {}, // gems; skin fragments by 'ball:style'
+    sprays: [], // graffiti you own (from chests): sprayed on the arena floor in a fight
     tix: { got: 0, used: 0 }, // boss tickets ever found / ever used: both only grow, so a merge never duplicates one
     slots: [null, null, null, null], cycle: 0, slotsOpened: [], // the 4 chest slots, the chest order, opened slot chest ids
     own: { aura: [], banner: [], deco: [], look: [], emote: [] }, wear: { aura: null, banner: 'night', deco: 'none', look: null },
@@ -235,6 +236,7 @@ export function migrate(raw) {
     const [b, st] = String(k).split(':'), n = Math.min(FRAG_NEED - 1, (int(v, 1) ?? 0) * (oldFrags ? 2 : 1));
     if (BALLS[b] && SKINS[st] && !SKINS[st].gift && !SKINS[st].path && n && !s.skins.includes(k)) s.frags[k] = n;
   }
+  s.sprays = list(r.sprays, id => SPRAYS.includes(id));
   s.tix.got = int(r.tix?.got, 0, 1e6) ?? 0;
   s.tix.used = Math.min(s.tix.got, int(r.tix?.used, 0, 1e6) ?? 0);
   s.cycle = int(r.cycle) ?? 0;
@@ -401,18 +403,19 @@ export function equipSkin(s, ball, style) {
 // a slot chest takes time to unlock (one at a time) and can be opened at once for gems or sped up with an ad.
 // Chests from the Glory Road and ball paths are opened right away (save.chests).
 export const FRAG_NEED = 20;
+export const SPRAYS = ['g']; // graffiti, in the order they were added (the art is in render.js)
 export const CHESTS = {
-  // frag: the chance each stack of fragments drops; skin: a whole skin; ticket: a boss ticket
-  box: { coins: [30, 55], stacks: 1, frags: [1, 2], frag: 0.5, gems: 0, ball: 0.04, emote: 0.06, ticket: 0.15, tiers: ['common', 'rare'] },
-  big: { coins: [80, 130], stacks: 1, frags: [2, 4], frag: 1, gems: 2, ball: 0.1, emote: 0.15, ticket: 0.35, tiers: ['common', 'rare', 'epic'] },
-  mega: { coins: [200, 300], stacks: 2, frags: [3, 5], frag: 1, gems: 5, ball: 0.3, skin: 0.2, emote: 0.35, ticket: 1, tiers: ['common', 'rare', 'epic', 'legend'] },
+  // frag: the chance each stack of fragments drops; skin: a whole skin; ticket: a boss ticket; spray: a graffiti you don't have
+  box: { coins: [30, 55], stacks: 1, frags: [1, 2], frag: 0.5, gems: 0, ball: 0.04, emote: 0.06, ticket: 0.15, spray: 0, tiers: ['common', 'rare'] },
+  big: { coins: [80, 130], stacks: 1, frags: [2, 4], frag: 1, gems: 2, ball: 0.1, emote: 0.15, ticket: 0.35, spray: 0.08, tiers: ['common', 'rare', 'epic'] },
+  mega: { coins: [200, 300], stacks: 2, frags: [3, 5], frag: 1, gems: 5, ball: 0.3, skin: 0.2, emote: 0.35, ticket: 1, spray: 0.2, tiers: ['common', 'rare', 'epic', 'legend'] },
 };
 export const skinPool = s => s.owned.flatMap(b => Object.keys(SKINS).filter(st => !SKINS[st].gift && !SKINS[st].path && !hasSkin(s, b, st)).map(st => `${b}:${st}`));
 export const chestBalls = s => ORDER.filter(id => !s.owned.includes(id) && UNLOCK[id] <= s.maxTrophies + 150); // a chest can bring a ball a little ahead of you
 // What one chest of `kind` gives; `rand` is injected so tests are repeatable.
 export function rollChest(s, kind, rand) {
   const c = CHESTS[kind], pickR = a => a[Math.floor(rand() * a.length)];
-  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), gems: c.gems, frags: [], ball: null, skin: null, emote: null, ticket: 0 };
+  const out = { kind, coins: c.coins[0] + Math.floor(rand() * (c.coins[1] - c.coins[0] + 1)), gems: c.gems, frags: [], ball: null, skin: null, emote: null, ticket: 0, spray: null };
   const emotes = EMOTE_LIST.filter(e => c.tiers.includes(e.tier) && !s.own.emote.includes(e.id));
   if (emotes.length && rand() < c.emote) { out.emote = pickR(emotes).id; s.own.emote.push(out.emote); }
   const balls = chestBalls(s);
@@ -430,6 +433,8 @@ export function rollChest(s, kind, rand) {
     out.frags.push({ key, ball: key.split(':')[0], style: key.split(':')[1], n, have, done });
   }
   if (rand() < c.ticket) { out.ticket = 1; s.tix.got++; }
+  const sprays = SPRAYS.filter(id => !s.sprays.includes(id));
+  if (sprays.length && rand() < c.spray) { out.spray = pickR(sprays); s.sprays.push(out.spray); }
   s.coins += out.coins;
   s.gems += out.gems;
   s.stats.chests++;
@@ -703,6 +708,7 @@ export function mergeSave(local, cloudRaw, server) {
   for (const [b, st] of Object.entries(cloud.skinOf)) s.skinOf[b] ??= st;
   for (const [k, v] of Object.entries(cloud.frags)) if (!s.skins.includes(k)) s.frags[k] = Math.max(s.frags[k] ?? 0, v);
   s.tix = { got: Math.max(s.tix.got, cloud.tix.got), used: Math.max(s.tix.used, cloud.tix.used) };
+  s.sprays = union(s.sprays, cloud.sprays);
   for (const k of Object.keys(s.frags)) if (s.skins.includes(k)) delete s.frags[k];
   // slot chests: union by id, minus any opened on either copy
   s.cycle = Math.max(s.cycle, cloud.cycle);

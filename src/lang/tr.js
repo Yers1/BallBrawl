@@ -73,7 +73,7 @@ export default {
   shAuras: 'Auralar', shBanners: 'Afişler', shDecos: 'Yoldaşlar', shLooks: 'Arena haritaları', shAllSkins: 'Tüm kostümler', shGems: 'Mücevherler',
   shGemsSoon: "Mücevherler sandıklardan, Şan Yolu'ndan, top yollarından ve günlük ödüllerin 7. gününden gelir. Yakında satın da alınabilecek.", shAnimated: 'Hareketli',
   needGems: 'Yeterli mücevher yok', needCoins: 'Yeterli jeton yok', opGems: 'mücevher', opEmote: 'YENİ İFADE', fragDone: '"{skin}" kostümü tamamlandı!', fragOf: '"{skin}": {n} / {max}',
-  ticket: 'Patron bileti', ticketN: 'Bilet: {n}', ticketWin: 'Patron bileti: +büyük sandık!', chestInfo: 'Jeton {a}–{b} · kostüm parçası: {f} · mücevher: {g} · yeni top: %{c} · ifade: %{e} · patron bileti: %{k}', stashHint: 'Şan Yolu ve top yollarından gelen sandıklar hemen açılır.',
+  ticket: 'Patron bileti', ticketN: 'Bilet: {n}', ticketWin: 'Patron bileti: +büyük sandık!', opSpray: 'Yeni grafiti', spray_g: '“G” grafitisi', chestInfo: 'Jeton {a}–{b} · kostüm parçası: {f} · mücevher: {g} · yeni top: %{c} · ifade: %{e} · patron bileti: %{k} · grafiti: %{s}', stashHint: 'Şan Yolu ve top yollarından gelen sandıklar hemen açılır.',
   slotEmpty: 'Kazan, sandıklar buraya gelsin', slotOpen: 'Aç!', slotWait: '{t} sonra açılır', slotLeft: '{t} kaldı', slotBusy: 'Başka bir sandık açılıyor. Bunu mücevherle hemen açabilirsin.',
   slotNow: 'Hemen aç', slotAd: 'Reklam: −30 dakika', resultSlot: '{name} yuvada!', resultSlotsFull: 'Yuvalar dolu: yenilerini almak için bir sandık aç',
   aura_fire: 'Alev', aura_frost: 'Kırağı', aura_storm: 'Fırtına', aura_hearts: 'Kalpler', aura_void: 'Hiçlik', aura_stars: 'Yıldızlar',

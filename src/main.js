@@ -3,7 +3,7 @@ import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METE
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec, upgradeChoices, applyUpgrade, SURVIVAL } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, spray, drawSpray, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen, langFromPhone } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -1096,6 +1096,7 @@ function partyMsg(m) {
       }
     } else if (m.t === 'end' && fromHost && !P.host && [0, 1, 'draw'].includes(m.r)) { S.world.result = m.r; F.final = true; } // the host's word decides the fight
     else if (m.t === 'emote' && Number.isInteger(m.ent)) emote(m.side === 1 ? 1 : 0, String(m.id), m.ent);
+    else if (m.t === 'spray' && Number.isFinite(m.x) && Number.isFinite(m.y) && spray(m.side === 1 ? 1 : 0, String(m.id), m.x, m.y)) sfx.spray();
   } catch (e) { console.warn('[party] bad message', e); }
 }
 function partyFix(m) { // the host's truth about the balls (positions, speed, health, meters), taken right after turn m.n
@@ -1210,8 +1211,24 @@ if (lang !== 'ru') document.title = 'BallBrawl — ball battle';
 
 // Emotes: the tray holds the emotes you own; the computer sometimes answers in kind.
 const REPLY = { laugh: ['laugh', 'cool'], cool: ['wow', 'cool'], wow: ['laugh', 'wow'], angry: ['laugh', 'cool'], cry: ['laugh', 'gg'], gg: ['gg'], love: ['love', 'laugh'], sleepy: ['angry', 'laugh'] };
+function sprayButton(id) { // graffiti: your ball paints it on the floor where it is right now
+  const b = el('button', 'spray');
+  b.setAttribute('aria-label', 'graffiti ' + id);
+  const c = document.createElement('canvas');
+  drawSpray(c, id, 48);
+  b.append(c);
+  b.onclick = ev => {
+    ev.stopPropagation();
+    $('#emote-tray').hidden = true;
+    const F = S.party?.fight, w = S.world, me = w?.ents.find(e => !e.dead && (F ? e.id === F.me.ent : e.side === 0));
+    if (!me || !spray(F ? F.me.side : 0, id, me.x, me.y)) return;
+    if (F) S.party.chan.send({ t: 'spray', side: F.me.side, id, x: me.x, y: me.y });
+    sfx.spray();
+  };
+  return b;
+}
 function emoteTray() {
-  $('#emote-tray').replaceChildren(...EMOTE_LIST.filter(e => owns(save, 'emote', e.id)).map(e => {
+  $('#emote-tray').replaceChildren(...save.sprays.map(sprayButton), ...EMOTE_LIST.filter(e => owns(save, 'emote', e.id)).map(e => {
     const b = el('button', '');
     b.setAttribute('aria-label', e.id);
     const c = document.createElement('canvas');
@@ -1251,7 +1268,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.8.1';
+const VERSION = '1.9';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);

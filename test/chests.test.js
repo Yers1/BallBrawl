@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rng } from '../src/sim.js';
 import { ORDER } from '../src/balls.js';
-import { freshSave, migrate, mergeSave, openChest, tickets, useTicket, CHESTS, hasSkin, buySkin, equipSkin, winChest, startUnlock, openSlot, speedUp, slotLeft, gemsToOpen, CHEST_TIME, CHEST_CYCLE, FRAG_NEED, buy, owns, wear, dailyDeals, buyDeal, adGems, SHOP } from '../src/progress.js';
+import { freshSave, migrate, mergeSave, openChest, tickets, useTicket, SPRAYS, CHESTS, hasSkin, buySkin, equipSkin, winChest, startUnlock, openSlot, speedUp, slotLeft, gemsToOpen, CHEST_TIME, CHEST_CYCLE, FRAG_NEED, buy, owns, wear, dailyDeals, buyDeal, adGems, SHOP } from '../src/progress.js';
 
 test('wins fill 4 slots in the published order; unlocking takes time, gems or ads skip it', () => {
   const s = freshSave();
@@ -343,4 +343,17 @@ test('boss tickets: found in chests, used only by a won boss fight for a big che
   const rand = rng(9);
   for (let i = 0; i < 400; i++) { s.chests.box = 1; found += openChest(s, 'box', rand).ticket; }
   assert.ok(found > 30 && found < 100, `boxes with a ticket: ${found}/400`);
+});
+
+test('graffiti: chests drop the ones you lack, once each; saves and merges keep them', () => {
+  const s = freshSave();
+  const rand = rng(21);
+  let got = [];
+  for (let i = 0; i < 60; i++) { s.chests.mega = 1; const r = openChest(s, 'mega', rand); if (r.spray) got.push(r.spray); }
+  assert.deepEqual(got, [...SPRAYS], 'every graffiti once, then never again');
+  assert.deepEqual(s.sprays, [...SPRAYS]);
+  s.chests.box = 1;
+  assert.equal(openChest(s, 'box', rng(1)).spray, null, 'a small chest never has one');
+  assert.deepEqual(migrate({ sprays: ['g', 'g', 'nope', 5] }).sprays, ['g'], 'validated, no duplicates');
+  assert.deepEqual(mergeSave({ ...freshSave(), sprays: ['g'] }, freshSave(), { trophies: 0, max_trophies: 0 }).sprays, ['g'], 'kept by a merge');
 });
