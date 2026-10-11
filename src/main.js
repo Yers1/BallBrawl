@@ -443,11 +443,11 @@ canvas.addEventListener('pointerdown', e => {
   }
   if (S.mode !== 'aim') return;
   S.aiming = true;
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch { /* some phones refuse (a pointer already gone): aim anyway */ }
   aimAt(e);
 });
 canvas.addEventListener('pointermove', e => { if (S.mode === 'aim' && (S.aiming || e.pointerType === 'mouse')) aimAt(e); });
-canvas.addEventListener('pointerup', e => {
+addEventListener('pointerup', e => { // on the page, not the canvas: without the capture the finger may lift off the arena
   if (!S.aiming) return;
   S.aiming = false;
   aimAt(e);
@@ -530,7 +530,7 @@ function mid() {
   else if (S.mode === 'aim') txt = t('aimTimer', { n: Math.max(0, Math.ceil(S.aimLeft)) });
   else if (S.match && ['aim', 'fight', 'ending'].includes(S.mode)) {
     const left = Math.ceil(SUDDEN - w.t);
-    if (w.ball) { const l = Math.ceil(FOOT.time - w.t); txt = `${w.goals[0]} : ${w.goals[1]} · ${!w.launched ? '' : l > 0 ? l : t('goldenGoal')}`; } // football: the score and the clock
+    if (w.ball) { const l = Math.ceil(FOOT.time - w.t); txt = `${w.goals[0]} : ${w.goals[1]} · ${!w.launched ? '' : l > 0 ? l : `${t('goldenGoal')} ${Math.max(0, Math.ceil(FOOT.time + FOOT.golden - w.t))}`}`; } // football: the score and the clock
     else txt = (S.match.mode === 'survival' ? t('wave', { n: S.match.wave }) : t('round', { n: S.match.round })) + (w.launched ? ` · ${left > 0 ? left : t('sudden')}` : '');
   }
   if (txt === midText) return;
@@ -907,8 +907,24 @@ function tick(ms) {
     hints();
   }
 }
+// Bugs nobody writes about: an error in the game sends one short report (no nick or personal data), 3 a day per device at most.
+const errSeen = new Set();
+function reportError(err) {
+  const msg = String(err?.stack || err?.message || err || '').slice(0, 480);
+  if (!msg || errSeen.has(msg)) return;
+  errSeen.add(msg);
+  const day = new Date().toISOString().slice(0, 10);
+  let n = { day, n: 0 };
+  try { const k = JSON.parse(localStorage.getItem('ballbrawl.errs')); if (k?.day === day) n = k; } catch { /* no storage */ }
+  if (n.n >= 3 || !net.online) return;
+  n.n++;
+  try { localStorage.setItem('ballbrawl.errs', JSON.stringify(n)); } catch { /* no storage */ }
+  online.sendFeedback('bug', 'auto: ' + msg, null, { auto: true, v: VERSION, mode: S.mode, lang, ua: navigator.userAgent.slice(0, 160), screen: `${innerWidth}x${innerHeight}` }).catch(() => {});
+}
+addEventListener('error', e => reportError(e.error || e.message));
+addEventListener('unhandledrejection', e => reportError(e.reason));
 function frame(ms) {
-  try { tick(ms); } catch (e) { console.error(e); } // one bad frame must never stop the game loop
+  try { tick(ms); } catch (e) { console.error(e); reportError(e); } // one bad frame must never stop the game loop
   requestAnimationFrame(frame);
 }
 // a hidden tab gets no animation frames — keep a party fight going so friends aren't frozen waiting for you
@@ -1235,7 +1251,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.8';
+const VERSION = '1.8.1';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);

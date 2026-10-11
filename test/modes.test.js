@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createWorld, launch, step, MAPS, rng } from '../src/sim.js';
+import { createWorld, launch, step, MAPS, rng, FOOT } from '../src/sim.js';
 import { createMatch, roundWorld, endRound } from '../src/match.js';
 import { BOSS_IDS } from '../src/boss.js';
 
@@ -129,6 +129,8 @@ test('football: nobody gets hurt, goals count, the same seed replays the same ma
   };
   const a = play(), b = play();
   assert.notEqual(a.result, null);
-  assert.ok(a.goals[a.result] > a.goals[1 - a.result] || a.goals[a.result] === 3, 'the winner scored more');
+  if (a.result === 'draw') assert.equal(a.goals[0], a.goals[1], 'a draw only on equal goals, after the golden goal ran out');
+  else assert.ok(a.goals[a.result] > a.goals[1 - a.result] || a.goals[a.result] === 3, 'the winner scored more');
+  assert.ok(a.t <= FOOT.time + FOOT.golden + 0.1, 'never an endless match');
   assert.equal(a.t, b.t);
 });
