@@ -1,6 +1,7 @@
 // Home: the lobby (main menu) and the pages it opens — Glory Road, chests, balls with skins, quests, leaders, profile.
 // All game rules live in progress.js; this file only draws them and wires taps.
 import { BALLS, ORDER } from './balls.js';
+import { stat } from './stats.js';
 import { t, lang, LANGS, setLang, ballName, ballAbout, superName, superAbout, questName, achievementName, skinName } from './i18n.js';
 import { nickText, randomNick, validNick, clanText, validClan, NICK_RANGE, checkNick, parseNick } from './nick.js';
 import {
@@ -904,6 +905,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   function crack(kind, ready = null) { // a stash chest, or a slot chest already opened (`ready`)
     const res = ready ?? openChest(save, kind, random);
     if (!res) return;
+    stat('chest_open', { kind, skin: !!res.skin, ticket: !!res.ticket, spray: res.spray ?? null });
     persist(); // saved before the show, so closing the tab mid-animation loses nothing
     coinsUI();
     op = { kind, res, taps: 0, items: opItems(res), idx: -1, phase: 'drop' };

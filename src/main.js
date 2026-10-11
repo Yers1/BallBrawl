@@ -21,6 +21,7 @@ import { heroLive } from './heroes.js';
 import { LOGO } from './logo.js';
 document.querySelector('.brand').innerHTML = LOGO; // the Stitch wordmark (the plain text stays for no-JS)
 import * as online from './net.js';
+import { initStats, stat } from './stats.js';
 const { net } = online;
 
 const $ = s => document.querySelector(s);
@@ -330,6 +331,7 @@ async function startMatch() {
   });
   S.aiLevel = aiLevel(save.trophies);
   if (mode === 'football') home.look('stadium');
+  stat('match_start', { mode, trophies: save.trophies, squad: save.squad.join(',') });
   commanders(S.fams, foeCard().nick);
   show(null);
   playMusic(null); // quiet for the face-to-face and the fight
@@ -620,8 +622,10 @@ function finishMatch(r) {
     }
   }
   save.coins += S.earned;
+  stat('match_end', { mode: S.match.mode, result: won ? 'won' : r === 'draw' ? 'draw' : 'lost', secs: Math.round((Date.now() - S.matchStart) / 1000), trophies: save.trophies, wave: S.match.wave ?? null });
   S.chestDrop = won || (S.match.mode === 'survival' && S.match.wave > 3) ? winChest(save) ?? false : null; // a win puts the next chest into a free slot (false = slots full)
   S.ticketUsed = won && S.match.mode === 'boss' && !c && useTicket(save); // a boss beaten with a ticket: a big chest
+  if (S.ticketUsed) stat('ticket_used');
   S.ups = gainMastery(save, c ? c.squad : save.squad, won); // each ball's own path
   S.xpGot = won ? XP_WIN : XP_PLAY;
   S.lvlUps = gainXp(save, S.xpGot); // the player level
@@ -1224,6 +1228,7 @@ function sprayButton(id) { // graffiti: your ball paints it on the floor where i
     if (!me || !spray(F ? F.me.side : 0, id, me.x, me.y)) return;
     if (F) S.party.chan.send({ t: 'spray', side: F.me.side, id, x: me.x, y: me.y });
     sfx.spray();
+    stat('spray', { id });
   };
   return b;
 }
@@ -1366,4 +1371,5 @@ setTimeout(async () => {
   if (S.mode === 'home') home.render();
   if (S.mode === 'squad') renderSquad();
 }, 300);
+initStats();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is a bonus */ });
