@@ -75,7 +75,7 @@ export default {
   needGems: 'Yeterli mücevher yok', needCoins: 'Yeterli jeton yok', opGems: 'mücevher', opEmote: 'YENİ İFADE', fragDone: '"{skin}" kostümü tamamlandı!', fragOf: '"{skin}": {n} / {max}',
   ticket: 'Patron bileti', ticketN: 'Bilet: {n}', ticketIn: 'Patron bileti kullanıldı: kazan, büyük sandık al!', ticketLost: 'Patron bileti yandı.', ticketWin: 'Patron bileti: +büyük sandık!', shSprays: 'Grafitiler', shFromChest: 'Sandıklardan', spray_gg: '“GG” grafitisi', spray_crown: '“Taç” grafitisi', spray_bolt: '“Şimşek” grafitisi', spray_fire: '“Ateş” grafitisi', opSpray: 'Yeni grafiti', spray_g: '“G” grafitisi', chestInfo: 'Jeton {a}–{b} · kostüm parçası: {f} · mücevher: {g} · yeni top: %{c} · ifade: %{e} · patron bileti: %{k} · grafiti: %{s}', stashHint: 'Şan Yolu ve top yollarından gelen sandıklar hemen açılır.',
   slotEmpty: 'Kazan, sandıklar buraya gelsin', slotOpen: 'Aç!', slotWait: '{t} sonra açılır', slotLeft: '{t} kaldı', slotBusy: 'Başka bir sandık açılıyor. Bunu mücevherle hemen açabilirsin.',
-  slotNow: 'Hemen aç', slotAd: 'Reklam: −30 dakika', resultSlot: '{name} yuvada!', resultSlotsFull: 'Yuvalar dolu: yenilerini almak için bir sandık aç',
+  slotNow: 'Hemen aç', slotAd: 'Reklam: −30 dakika', resultSlot: '{name} yuvada!', resultSlotsFull: 'Yuvalar dolu: yenilerini almak için bir sandık aç', coinsWord: 'altın', xpWord: 'TP', slotsFull: 'Yuvalar dolu',
   aura_fire: 'Alev', aura_frost: 'Kırağı', aura_storm: 'Fırtına', aura_hearts: 'Kalpler', aura_void: 'Hiçlik', aura_stars: 'Yıldızlar',
   banner_night: 'Gece', banner_red: 'Kırmızı', banner_green: 'Yeşil', banner_purple: 'Mor', banner_orange: 'Turuncu', banner_sunset: 'Gün Batımı',
   banner_ocean: 'Okyanus', banner_galaxy: 'Galaksi', banner_lava: 'Lav', banner_gold: 'Altın',

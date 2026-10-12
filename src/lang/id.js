@@ -75,7 +75,7 @@ export default {
   needGems: 'Permata tidak cukup', needCoins: 'Koin tidak cukup', opGems: 'permata', opEmote: 'EMOTE BARU', fragDone: 'Skin "{skin}" lengkap!', fragOf: '"{skin}": {n} dari {max}',
   ticket: 'Tiket bos', ticketN: 'Tiket: {n}', ticketIn: 'Tiket bos dipakai: menang dapat peti besar!', ticketLost: 'Tiket bos hangus.', ticketWin: 'Tiket bos: +peti besar!', shSprays: 'Grafiti', shFromChest: 'Dari peti', spray_gg: 'Grafiti “GG”', spray_crown: 'Grafiti “Mahkota”', spray_bolt: 'Grafiti “Petir”', spray_fire: 'Grafiti “Api”', opSpray: 'Grafiti baru', spray_g: 'Grafiti “G”', chestInfo: 'Koin {a}–{b} · kepingan skin: {f} · permata: {g} · bola baru: {c}% · emote: {e}% · tiket bos: {k}% · grafiti: {s}%', stashHint: 'Peti dari Jalur Kejayaan dan jalur bola langsung terbuka.',
   slotEmpty: 'Menangkan laga, peti muncul di sini', slotOpen: 'Buka!', slotWait: 'Terbuka dalam {t}', slotLeft: 'Sisa {t}', slotBusy: 'Peti lain sedang dibuka. Kamu bisa buka peti ini sekarang pakai permata.',
-  slotNow: 'Buka sekarang', slotAd: 'Iklan: −30 menit', resultSlot: '{name} masuk slot!', resultSlotsFull: 'Slot penuh: buka peti untuk dapat yang baru',
+  slotNow: 'Buka sekarang', slotAd: 'Iklan: −30 menit', resultSlot: '{name} masuk slot!', resultSlotsFull: 'Slot penuh: buka peti untuk dapat yang baru', coinsWord: 'koin', xpWord: 'XP', slotsFull: 'Slot penuh',
   aura_fire: 'Api', aura_frost: 'Es', aura_storm: 'Badai', aura_hearts: 'Hati', aura_void: 'Hampa', aura_stars: 'Bintang',
   banner_night: 'Malam', banner_red: 'Merah', banner_green: 'Hijau', banner_purple: 'Ungu', banner_orange: 'Oranye', banner_sunset: 'Senja',
   banner_ocean: 'Samudra', banner_galaxy: 'Galaksi', banner_lava: 'Lava', banner_gold: 'Emas',

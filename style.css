@@ -202,11 +202,6 @@ body.record { background: #000; }
   background: var(--panel); border-top: 3px solid var(--stroke); border-radius: 0 0 13px 13px;
 }
 .result { text-align: center; }
-#r-title { font-size: 40px; margin-top: 4px; text-shadow: 0 3px 0 var(--stroke); }
-#r-title.win { color: var(--gold); }
-#r-title.lose { color: #FF8F9B; }
-.coins-big { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 8px 0; font-size: 30px; font-weight: 900; }
-.coins-big .coin { width: 34px; height: 34px; }
 .trophy-line { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 4px 0; font-size: 24px; font-weight: 900; }
 .trophy-line .up { color: var(--go); }
 .trophy-line .down { color: #FF8F9B; }
@@ -226,10 +221,6 @@ body.record { background: #000; }
 .skin.on { border-color: var(--gold); color: var(--text); }
 .skin .price { font-size: 11px; }
 .skin.locked canvas { opacity: 0.55; }
-#r-squad { margin: -6px 0 6px; }
-#r-squad canvas:nth-child(1) { order: 2; position: relative; z-index: 1; margin: 0 -14px; }
-#r-squad canvas:nth-child(2) { order: 1; margin: 0 0 10px; }
-#r-squad canvas:nth-child(3) { order: 3; margin: 0 0 10px; }
 #r-squad.sad canvas { animation: none; filter: grayscale(0.7) brightness(0.8); }
 
 /* squad picker */
@@ -625,7 +616,6 @@ body.record { background: #000; }
 @keyframes bob2 { 50% { transform: translateY(-4px); } }
 .op-btns { position: relative; display: flex; flex-direction: column; gap: 10px; width: min(100%, 320px); }
 .op-btns .btn { width: 100%; }
-.chest-line { margin: 0 0 10px; font-weight: 900; color: var(--gold); }
 .small { font-size: 12px; }
 .rcard.is-chest { background: #3B2C7A; }
 .reward .ball-hero .chest-svg { width: 160px; height: auto; }
@@ -717,7 +707,6 @@ body.record { background: #000; }
 .bp-coins { display: flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 900; color: var(--gold); }
 .bp-coins .coin { width: 14px; height: 14px; }
 .bp-title { font-size: 10px; font-weight: 900; line-height: 1.1; text-align: center; color: var(--gold); }
-.rank-line { color: #8EEBFF; }
 /* skins page */
 .sk-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; }
 .sk-row { padding: 10px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
@@ -916,8 +905,6 @@ body.record { background: #000; }
 .xp-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4CC9F0, #8EEBFF); }
 .p-level { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-direction: column; }
 .p-level .xp-bar { width: 90px; }
-.xp-line { color: #8EEBFF; }
-.xp-line.up { color: var(--gold); font-size: 18px; }
 
 /* clans */
 .clan-head, .clan-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
@@ -1317,11 +1304,6 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 @keyframes cmdSad { 0%, 100% { transform: translateY(8px) scale(1.04, 0.92) rotate(-2deg); } 50% { transform: translateY(10px) scale(1.05, 0.9) rotate(2deg); } }
 .cmd.sad .h-head, .r-cmd.sad .h-head { animation: hDroop 3s ease-in-out infinite; }
 @keyframes hDroop { 0%, 100% { transform: rotate(14deg) translateY(6px); } 50% { transform: rotate(10deg) translateY(8px); } }
-.r-cmds { position: absolute; left: -10px; right: -10px; top: -62px; height: 0; pointer-events: none; }
-.result { position: relative; margin-top: 56px; }
-.r-cmd { position: absolute; top: 0; width: 92px; }
-.r-cmd.you { left: 0; }
-.r-cmd.them { right: 0; }
 .r-cmd.them .hero-live { scale: -1 1; }
 .r-cmd.win::before { content: '✦ ✧ ✦'; position: absolute; left: 0; right: 0; top: -14px; text-align: center; color: #FFE38A; font-size: 16px; letter-spacing: 6px; text-shadow: 0 0 8px #FFD23F; animation: sparkle 0.9s ease-in-out infinite; }
 @keyframes sparkle { 50% { opacity: 0.4; transform: translateY(-4px) scale(1.15); } }
@@ -1590,3 +1572,51 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
   border-radius: 16px; background: var(--panel); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke); }
 .r3-bar > span { flex: 1; min-width: 0; font: 400 13px var(--display); text-transform: uppercase; color: var(--go); }
 .r3-bar .btn { margin: 0; font: 400 18px var(--display); text-transform: uppercase; }
+
+/* ---------- the result: a ribbon, the squad on a little stage, reward tiles that pop in, one big button ---------- */
+.result { position: relative; width: min(100%, 420px); padding: 0 18px 18px; overflow: visible; }
+.r-ribbon { position: relative; margin: 16px -30px 0; padding: 14px 40px 16px; background: #2F6FE0; border: 3px solid var(--stroke); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.25), 0 5px 0 var(--stroke);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 50%, 100% 100%, 0 100%, 18px 50%); }
+.result:has(#r-title.lose) .r-ribbon { background: #5B2A3A; }
+#r-title { margin: 0; font: 400 40px/1 var(--display); text-transform: uppercase; letter-spacing: 0.03em; text-shadow: var(--stroke-text); }
+#r-title.win { color: var(--gold); }
+#r-title.lose { color: #FFB3BD; }
+.r-stage { position: relative; display: flex; align-items: flex-end; justify-content: center; min-height: 150px; margin: 10px 0 2px; padding: 0 70px; }
+.r-stage::before { content: ''; position: absolute; left: 50%; top: 52%; width: 300px; height: 300px; translate: -50% -50%; z-index: 0; pointer-events: none; opacity: 0.35;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 227, 138, 0.9) 0deg 10deg, transparent 10deg 30deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%);
+  animation: rRays 12s linear infinite; }
+.result:has(#r-title.lose) .r-stage::before { display: none; }
+@keyframes rRays { to { rotate: 360deg; } }
+#r-squad { position: relative; z-index: 1; }
+#r-squad canvas:nth-child(1) { order: 2; position: relative; z-index: 1; margin: 0 -16px; }
+#r-squad canvas:nth-child(2) { order: 1; margin-bottom: 8px; }
+#r-squad canvas:nth-child(3) { order: 3; margin-bottom: 8px; }
+.r-cmds { position: absolute; inset: auto 0 0; z-index: 2; height: 0; pointer-events: none; }
+.r-cmd { position: absolute; bottom: 0; width: 74px; }
+.r-cmd.you { left: -6px; }
+.r-cmd.them { right: -6px; }
+.r-sub { margin: 8px 0 6px; font-size: 14px; font-weight: 900; color: var(--muted); }
+.r-loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 8px 0 10px; }
+.r-tile { width: 92px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px 9px; border-radius: 12px;
+  background: var(--panel-2); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke);
+  animation: rPop 0.35s cubic-bezier(.3, 1.4, .6, 1) both; animation-delay: calc(0.25s + var(--i, 0) * 0.18s); }
+@keyframes rPop { from { opacity: 0; scale: 0.4; } to { opacity: 1; scale: 1; } }
+.r-art { display: grid; place-items: center; height: 44px; }
+.r-art .coin { width: 38px; height: 38px; }
+.r-art svg { display: block; width: 50px; height: 44px; }
+.r-tile b { display: inline-flex; align-items: center; gap: 3px; font: 900 20px/1.1 Rubik, sans-serif; }
+.r-tile b .coin, .r-tile b .gem { width: 15px; height: 15px; }
+.r-tile.level b { font-size: 14px; }
+.r-tile small { font-size: 11px; font-weight: 900; line-height: 1.15; color: var(--muted); }
+.r-xp, .r-lv { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #2F6FE0; border: 3px solid var(--stroke); font: 900 14px Rubik, sans-serif; color: #FFFFFF; }
+.r-lv { background: var(--gold); color: var(--gold-ink); font-size: 18px; }
+.r-tile.coins { box-shadow: inset 0 2px 0 var(--hi), inset 0 -4px 0 var(--gold), 0 4px 0 var(--stroke); }
+.r-tile.chest, .r-tile.ticket { box-shadow: inset 0 2px 0 var(--hi), inset 0 -4px 0 var(--go), 0 4px 0 var(--stroke); }
+.r-tile.full, .r-tile.lost { opacity: 0.75; box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
+.r-tile.full .r-art svg, .r-tile.lost .r-art svg { filter: grayscale(1) brightness(0.8); }
+.r-note { margin: 0 0 10px; font-size: 14px; font-weight: 900; color: #8EEBFF; }
+.result #r-next { margin: 4px 0 10px; font: 400 26px var(--display); text-transform: uppercase; }
+.r-more { gap: 10px; }
+.r-more .btn { margin: 0; }
+
+.r-more > .btn { flex: 1; }

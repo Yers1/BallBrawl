@@ -454,21 +454,21 @@
 
   <section id="scr-result" class="overlay" hidden>
     <div class="card result">
-      <div id="r-cmds" class="r-cmds" hidden></div>
-      <div id="r-squad" class="trio"></div>
-      <h2 id="r-title"></h2>
-      <p id="r-sub" class="muted"></p>
+      <div class="r-ribbon"><h2 id="r-title"></h2></div>
+      <div class="r-stage">
+        <div id="r-cmds" class="r-cmds" hidden></div>
+        <div id="r-squad" class="trio"></div>
+      </div>
+      <p id="r-sub" class="r-sub"></p>
       <div id="r-trophies" class="trophy-line" hidden></div>
-      <p id="r-chest" class="chest-line" hidden></p>
-      <p id="r-rank" class="chest-line rank-line" hidden></p>
-      <p id="r-xp" class="chest-line xp-line"></p>
-      <div class="coins-big"><i class="coin"></i><span id="r-coins"></span></div>
+      <div id="r-loot" class="r-loot"></div>
+      <p id="r-rank" class="r-note" hidden></p>
       <p id="r-reward" class="reply-note" hidden></p>
       <div id="r-ads" class="col"></div>
-      <button class="btn share" id="r-share" data-t="challengeFriend" hidden></button>
-      <div class="row">
+      <button class="btn primary big wide-btn" id="r-next"></button>
+      <div class="row r-more">
         <button class="btn ghost" id="r-menu" data-t="menu"></button>
-        <button class="btn primary grow" id="r-next"></button>
+        <button class="btn grow" id="r-share" data-t="challengeFriend" hidden></button>
       </div>
     </div>
   </section>

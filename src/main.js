@@ -22,7 +22,7 @@ import { LOGO } from './logo.js';
 document.querySelector('.brand').innerHTML = LOGO; // the Stitch wordmark (the plain text stays for no-JS)
 import * as online from './net.js';
 import { initStats, stat } from './stats.js';
-import { TICKET_SVG } from './meta.js';
+import { TICKET_SVG, chestSvg } from './meta.js';
 import { get3d, set3d } from './ball3d.js';
 const { net } = online;
 
@@ -743,14 +743,20 @@ function showResult() {
   }));
   const c = S.challenge, box = $('#r-ads');
   box.replaceChildren();
-  $('#r-coins').textContent = '+' + S.earned;
   $('#r-trophies').hidden = !!c;
-  $('#r-chest').hidden = S.chestDrop == null && !S.ticketLost;
-  $('#r-chest').textContent = [S.chestDrop == null ? '' : S.chestDrop ? t('resultSlot', { name: t('chest_' + S.chestDrop) }) : t('resultSlotsFull'), S.ticketWin ? t('ticketWin') : S.ticketLost ? t('ticketLost') : ''].filter(Boolean).join(' ');
   $('#r-reward').hidden = true;
-  const lv = (S.lvlUps ?? []).at(-1);
-  $('#r-xp').innerHTML = lv ? `${t('levelUp', { n: lv.lv })} +${lv.coins}<i class="coin"></i> +${lv.gems}<i class="gem"></i>` : t('xpGain', { n: S.xpGot });
-  $('#r-xp').classList.toggle('up', !!lv);
+  // what you got, as tiles that pop in one after another: coins, experience (or a new level), the chest, the boss ticket
+  const lv = (S.lvlUps ?? []).at(-1), tiles = [];
+  const tile = (cls, art, value, caption) => { const d = el('div', 'r-tile ' + cls, `<span class="r-art">${art}</span><b></b><small></small>`); d.querySelector('b').innerHTML = value; d.querySelector('small').textContent = caption; tiles.push(d); return d; };
+  tile('coins', '<i class="coin"></i>', `<span id="r-coins">+${S.earned}</span>`, t('coinsWord'));
+  if (lv) tile('level', `<span class="r-lv">${lv.lv}</span>`, `+${lv.coins}<i class="coin"></i> +${lv.gems}<i class="gem"></i>`, t('levelUp', { n: lv.lv }));
+  else tile('xp', '<span class="r-xp">XP</span>', `+${S.xpGot}`, t('xpWord'));
+  if (S.chestDrop) tile('chest', chestSvg(S.chestDrop), '+1', t('chest_' + S.chestDrop));
+  else if (S.chestDrop === false) tile('chest full', chestSvg('box'), '—', t('slotsFull'));
+  if (S.ticketWin) tile('ticket', TICKET_SVG, '+1', t('chest_big'));
+  else if (S.ticketLost) tile('ticket lost', TICKET_SVG, '−1', t('ticket'));
+  tiles.forEach((d, i) => d.style.setProperty('--i', i));
+  $('#r-loot').replaceChildren(...tiles);
   const ups = S.ups ?? [];
   $('#r-rank').hidden = !ups.length;
   $('#r-rank').innerHTML = ups.map(u => t('rankUp', { name: ballName(u.id), n: u.rank })
@@ -1305,7 +1311,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.17';
+const VERSION = '1.18';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);
