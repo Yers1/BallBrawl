@@ -101,6 +101,23 @@ export function warm3d(e, skin = null, paint = null, live = false) {
   if (idle) requestAnimationFrame(pump);
 }
 
+// A chest in 3D (the classic wooden kind) as an image URL for HTML: the whole chest, or its body or lid alone for the
+// opening, where the lid flies off. null until the models are in: then the 2D drawing is used.
+const urls = {};
+export function chestUrl(kind, part = 'whole') {
+  const key = kind + ':' + part;
+  if (urls[key]) return urls[key];
+  if (!ready()) return null;
+  const m = model('chest:' + kind, () => gl.kit.chest(kind, 'classic'));
+  const c = sprite('chest:' + key, SIZE, () => {
+    show(m);
+    m.rotation.set(0.42, -0.5, 0);
+    for (const ch of m.children) ch.visible = part === 'whole' || (part === 'lid') === (ch === m.userData.lid);
+  });
+  for (const ch of m.children) ch.visible = true;
+  return (urls[key] = c.toDataURL('image/png'));
+}
+
 // An obstacle seen from above (rocks, crystals, mushrooms, spike traps, saws, lollipops, barrels, idols, the stadium's
 // match ball) as a picture; the caller turns it for the ones that spin.
 export function prop3d(kind, v) {

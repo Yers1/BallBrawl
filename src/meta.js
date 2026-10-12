@@ -15,7 +15,9 @@ import {
 import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
 import { heroSvg, heroLive } from './heroes.js';
-import { setArena, drawEmote, drawFamiliar, drawSpray, arenaThumb } from './render.js';
+import { setArena, drawEmote, drawFamiliar, drawSpray, arenaThumb, drawIcon } from './render.js';
+import { BOSSES, BOSS_IDS } from './boss.js';
+import { chestUrl } from './ball3d.js';
 import { MAPS } from './sim.js';
 import { PAY } from './config.js';
 import { offerReward } from './ads.js';
@@ -42,7 +44,12 @@ const star = (cx, cy, r) => `M${[...Array(10)].map((_, i) => {
 }).join(' L')}Z`;
 // A boss ticket: gold, with a crown and a notch on each side.
 export const TICKET_SVG = `<svg viewBox="0 0 120 80" width="100%" aria-hidden="true"><path d="M10 14h100v18a8 8 0 0 0 0 16v18H10V48a8 8 0 0 0 0-16Z" fill="#FFD23F" stroke="#0A0F1C" stroke-width="5" stroke-linejoin="round"/><path d="M36 22v36" stroke="#0A0F1C" stroke-width="3" stroke-dasharray="5 5"/><path d="M52 52 56 32 66 42 74 28 82 42 92 32 96 52Z" fill="#FF4D5E" stroke="#0A0F1C" stroke-width="4" stroke-linejoin="round"/></svg>`;
+// The chest picture: the 3D one once the models are in, the drawing before that (and with 3D off).
 export function chestSvg(kind) {
+  const url = chestUrl(kind);
+  return url ? `<img class="chest-svg chest-3d" src="${url}" alt="">` : chestDrawing(kind);
+}
+function chestDrawing(kind) {
   const c = CHEST_COLORS[kind] ?? CHEST_COLORS.box, ink = 'stroke="#0F1F38" stroke-linejoin="round"', o = `${ink} stroke-width="4"`;
   const rivets = (xs, ys) => xs.flatMap(x => ys.map(y => `<circle cx="${x}" cy="${y}" r="2.2" fill="${c.trimDark}"/>`)).join('');
   const lock = {
@@ -848,7 +855,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#scr-open').hidden = false;
     $('#scr-open').className = 'opener k-' + kind;
     $('#op-title').textContent = t('chest_' + kind);
-    $('#op-chest').innerHTML = chestSvg(kind) + '<i class="op-beam"></i>';
+    const body = chestUrl(kind, 'body'), lid = body && chestUrl(kind, 'lid'); // 3D: the lid is its own picture, so it can fly off
+    $('#op-chest').innerHTML = (lid ? `<span class="chest-svg op3d"><img class="body" src="${body}" alt=""><img class="lid" src="${lid}" alt=""></span>` : chestSvg(kind)) + '<i class="op-beam"></i>';
     $('#op-chest').className = 'op-chest drop';
     $('#op-chest').style.setProperty('--k', 0);
     $('#op-chest').hidden = false;
@@ -1346,8 +1354,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // Big screens have room on both sides of the lobby: today's quests and the next road reward on the left; today's deal,
   // your commander and (once ads run) a banner on the right. Every card opens its screen.
   function wings() {
-    const L = $('#wing-l'), R = $('#wing-r'), on = tab === 'lobby' && innerWidth >= 1180;
-    L.hidden = R.hidden = !on;
+    const L = $('#wing-l'), R = $('#wing-r'), on = tab === 'lobby' && innerWidth >= 1180, scene = on && innerHeight >= 680;
+    document.body.classList.toggle('scene', scene); // a big screen: the lobby spreads out over it, like a console game's
+    L.hidden = R.hidden = !on || scene;
     if (!on) return;
     const card = (title, go, ...body) => {
       const c = el('button', 'wcard');
@@ -1370,7 +1379,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       road.lastChild.innerHTML = `<b></b><small>${t('roadToNext', { n: next.at - save.trophies })} <i class="trophy"></i></small><span class="wq-bar"><i style="width:${p}%"></i></span>`;
       road.querySelector('b').textContent = next.gems ? t('gotGems', { n: next.gems }) : next.coins && !next.ball && !next.skin && !next.chest ? t('gotCoins', { n: next.coins }) : rewardName(next);
     }
-    L.replaceChildren(card(t('tabQuests'), () => open('quests'), ...qs), ...(next ? [card(t('tabPath'), () => open('path'), road)] : []));
+    if (!scene) L.replaceChildren(card(t('tabQuests'), () => open('quests'), ...qs), ...(next ? [card(t('tabPath'), () => open('path'), road)] : []));
     const d = dailyDeals(save, today).find(x => !x.sold), deal = el('div', 'wdeal');
     if (d) {
       const lead = save.squad[0];
@@ -1381,7 +1390,45 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     const f = save.fam, cmd = el('div', 'wcmd');
     cmd.innerHTML = `<span class="wc-art">${heroLive(f.skin)}</span><div><b></b><small>${t('famLv', { n: f.lv })}</small></div>`;
     cmd.querySelector('b').textContent = t('fam_' + f.skin);
+    if (scene) return bigLobby(next ? road : null, d ? card(t('shDeals'), () => open('shop'), deal) : null);
     R.replaceChildren(...(d ? [card(t('shDeals'), () => open('shop'), deal)] : []), card(t('tabFam'), () => open('fam'), cmd), el('div', 'ad-wing'));
+  }
+
+  // The big-screen lobby: a rail of round buttons on the left, the modes as cards and the day's deal on the right,
+  // the Glory Road under the stage; the profile, the chests and Play take the corners (style.css, body.scene).
+  const RAIL = ['shop', 'balls', 'quests', 'fam', 'clan', 'friends', 'leaders', 'profile'];
+  function bigLobby(road, deal) {
+    $('#l-rail').replaceChildren(...RAIL.map(id => {
+      const src = document.querySelector(`#lobby .dock [data-tab="${id}"], #lobby .side [data-tab="${id}"]`), b = el('button', 'rail-btn');
+      b.dataset.tab = id;
+      b.innerHTML = `<span class="ic">${id === 'fam' ? heroSvg(save.fam.skin) : src.querySelector('.ic').innerHTML.replace(/(id="|url\(#)ic-/g, '$1rl-ic-')}</span><span></span><i class="badge"></i>`;
+      b.children[1].textContent = src.querySelector('[data-t]').textContent;
+      b.lastChild.hidden = src.querySelector('.badge').hidden; // badges() refreshes it right after a render
+      b.onclick = () => { sfx.click(); open(id); };
+      return b;
+    }));
+    const boss = BOSS_IDS[(Math.floor(Date.now() / 864e5) + 1) % BOSS_IDS.length]; // the next boss fight's boss (main.js nextBoss)
+    const art = m => {
+      if (m === 'duel') return el('span', 'lm-ic', $('#l-challenge .ic').innerHTML);
+      if (m === 'classic' || m === 'duo') { const s = el('span', 'lm-balls'); s.append(...save.squad.slice(0, m === 'duo' ? 2 : 1).map(id => icon(id, m === 'duo' ? 58 : 72, save.skinOf[id]))); return s; }
+      const c = document.createElement('canvas');
+      if (m === 'boss') { drawIcon(c, BOSSES[boss].ball, 76, BOSSES[boss].skin ?? null, null, boss); return c; }
+      arenaThumb(c, m === 'football' ? 'stadium' : arenaFor(save.maxTrophies).id, 64); c.className = 'lm-pic';
+      return c;
+    };
+    $('#l-modes').replaceChildren(...['classic', 'duo', 'boss', 'survival', 'football', 'duel'].map(m => {
+      const b = el('button', 'lm-card m-' + m + (save.mode === m ? ' on' : ''));
+      b.append(art(m), el('b', ''), el('small', ''));
+      b.children[1].textContent = m === 'duel' ? t('duel') : t('mode_' + m);
+      b.children[2].textContent = m === 'duel' ? t('challengeFriend').replace(/^[^\p{L}]+/u, '') : m === 'boss' ? t('ticketN', { n: tickets(save) }) : m === 'classic' ? t('modeTrophies')
+        : m === 'survival' && save.best.survival ? t('survBest', { n: save.best.survival }) : m === 'football' ? t('modeTest') : t('modeNoTrophies');
+      b.onclick = () => { sfx.click(); if (m === 'duel') return onChallenge(); save.mode = m; persist(); render(); };
+      return b;
+    }));
+    $('#l-deal').replaceChildren(...(deal ? [deal] : []));
+    $('#l-road').hidden = !road;
+    $('#l-road').onclick = () => { sfx.click(); open('path'); };
+    $('#l-road').replaceChildren(...(road ? [road] : []));
   }
   addEventListener('resize', () => { if (!$('#scr-home').hidden) wings(); });
 

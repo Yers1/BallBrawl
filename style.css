@@ -1620,3 +1620,70 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .r-more .btn { margin: 0; }
 
 .r-more > .btn { flex: 1; }
+
+/* ---------- 3D chests: pictures of the models (ball3d.js), sized a little bigger than the drawings they replace ---------- */
+.chest-3d { display: block; width: 100%; height: auto; filter: drop-shadow(0 5px 3px rgba(8, 16, 32, 0.35)); }
+.chest-art .chest-3d { width: 70px; margin: -7px; }
+.chest-btn.has .chest-art .chest-3d { animation: wiggle 2s ease-in-out infinite; }
+.ch-row .chest-3d { width: 80px; margin: -8px 0; }
+.ch-row.empty .chest-3d { filter: grayscale(0.8) brightness(0.7); }
+.reward .ball-hero .chest-3d { width: 200px; }
+.bp-step .chest-ico .chest-3d { width: 50px; }
+.cslot .chest-3d { width: 64px; margin: -9px 0 -11px; }
+.sl-art .chest-3d { width: 190px; margin: -12px auto; }
+.vr-row .chest-ico .chest-3d { width: 66px; }
+.dcell .d-gift .chest-3d { width: 42px; }
+.wr-ic .chest-ico .chest-3d { width: 58px; }
+.slot-hint .chest-3d { width: 46px; flex: none; opacity: 0.6; filter: grayscale(1); }
+.r3-ic .chest-ico .chest-3d { width: 58px; margin: -8px; }
+.r-art .chest-3d { width: 64px; margin: -9px 0; }
+.r-tile.full .r-art .chest-3d, .r-tile.lost .r-art .chest-3d { filter: grayscale(1) brightness(0.8); }
+.op3d { position: relative; display: block; filter: drop-shadow(0 10px 6px rgba(8, 16, 32, 0.4)); }
+.op3d img { display: block; width: 100%; height: auto; }
+.op3d .lid { position: absolute; inset: 0; }
+
+/* ---------- the big-screen lobby (body.scene, set by wings() in meta.js at 1180×680 and up): variant A on the canvas ---------- */
+.l-rail, .l-side, .l-road { display: none; }
+body.scene { --side: clamp(300px, 26vw, 380px); }
+body.scene .bar { position: fixed; inset: 0 0 auto; width: auto; padding: 18px 28px; pointer-events: none; }
+body.scene .bar > * { pointer-events: auto; }
+body.scene .bar .brand { position: absolute; left: 50%; top: 12px; translate: -50% 0; }
+body.scene .bar > .row { margin-left: auto; }
+body.scene .page { padding-top: 0; }
+body.scene .page-in { width: 100%; }
+body.scene .lobby-top { position: fixed; left: 28px; top: 16px; z-index: 6; }
+body.scene .lobby-top .me { width: 360px; height: 70px; }
+body.scene .hero-wrap { position: fixed; left: calc(var(--side) + 48px); right: calc(var(--side) + 48px); top: 100px; bottom: 136px; }
+body.scene .hero-wrap .side, body.scene .dock, body.scene #l-modebtn { display: none; }
+body.scene .play-line { position: fixed; right: 28px; bottom: 28px; width: var(--side); z-index: 5; }
+body.scene .play { height: 104px; }
+body.scene .pl-txt b { font-size: 40px; }
+body.scene #l-slots { position: fixed; left: 28px; bottom: 28px; width: calc(var(--side) + 30px); z-index: 5; }
+body.scene .l-rail { position: fixed; left: 28px; top: 112px; z-index: 5; display: flex; flex-direction: column; gap: 10px; }
+.rail-btn { position: relative; display: flex; align-items: center; gap: 12px; padding: 0; background: none; border: 0; color: var(--text); cursor: pointer;
+  font: 400 15px var(--display); text-transform: uppercase; text-shadow: var(--stroke-text); }
+.rail-btn .ic { width: 60px; height: 60px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--panel-2);
+  border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
+.rail-btn .ic svg { width: 32px; height: 32px; }
+.rail-btn .ic .hero-svg { width: 54px; height: 62px; margin-top: 12px; }
+.rail-btn .badge { left: 44px; right: auto; top: -3px; }
+.rail-btn:active .ic { transform: translateY(3px); box-shadow: inset 0 2px 0 var(--hi), 0 1px 0 var(--stroke); }
+body.scene .l-side { position: fixed; right: 28px; top: 100px; width: var(--side); z-index: 5; display: flex; flex-direction: column; gap: 12px; }
+.l-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lm-card { position: relative; min-height: 124px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border-radius: 16px;
+  background: var(--panel); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke); color: var(--text); cursor: pointer; }
+.lm-card > :first-child { margin-bottom: auto; }
+.lm-card b { font: 400 16px var(--display); text-transform: uppercase; }
+.lm-card small { font-size: 12px; line-height: 1.2; font-weight: 800; color: var(--muted); }
+.lm-card.on { border-color: var(--gold); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke), 0 0 0 3px var(--gold); }
+.lm-card.m-boss { background: #3A1A24; } .lm-card.m-survival { background: #1F3A2A; } .lm-card.m-boss small { color: var(--gold); }
+.lm-card:active { transform: translateY(3px); }
+.lm-pic { border-radius: 8px; border: 2px solid var(--stroke); }
+.lm-balls { display: flex; } .lm-balls canvas + canvas { margin-left: -18px; }
+.lm-ic { display: grid; place-items: center; height: 62px; } .lm-ic svg { width: 54px; height: 54px; }
+body.scene .l-road { position: fixed; left: 50%; translate: -50% 0; bottom: 30px; z-index: 5; display: flex; width: min(440px, calc(100vw - 2 * (var(--side) + 80px)));
+  padding: 8px 14px; border-radius: 14px; background: rgba(10, 14, 31, 0.6); border: 0; color: var(--text); cursor: pointer; text-align: left; }
+body.scene .l-road[hidden] { display: none; }
+.l-road .wroad { width: 100%; }
+.l-road .wr-ic { width: 48px; height: 48px; }
+@media (max-height: 820px) { body.scene .l-rail { gap: 6px; } body.scene .rail-btn .ic { width: 52px; height: 52px; } .lm-card { min-height: 104px; } .lm-card canvas { height: 56px !important; width: auto !important; } body.scene #l-deal { display: none; } }

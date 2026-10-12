@@ -2271,7 +2271,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
 }
 
 // Static card icon: the same ball art without HP or team rim.
-export function drawIcon(canvas, kind, css = 56, skin = null, aura = null) {
+export function drawIcon(canvas, kind, css = 56, skin = null, aura = null, boss = null) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = canvas.height = Math.round(css * dpr);
   canvas.style.width = canvas.style.height = css + 'px';
@@ -2279,5 +2279,5 @@ export function drawIcon(canvas, kind, css = 56, skin = null, aura = null) {
   const k = canvas.width / 64;
   c.setTransform(k, 0, 0, k, 0, 0);
   const r = kind === 'hedgehog' ? 18 : 21; // leave room for spikes
-  drawBall(c, { id: -1, side: 0, kind, skin, x: 32, y: 34, r: aura ? r * 0.85 : r, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0, poisonUntil: 0 }, 0.4, 0, { rim: false, aura });
+  drawBall(c, { id: -1, side: 0, kind, skin, boss, x: 32, y: 34, r: aura ? r * 0.85 : r, vx: 1, vy: -1, hp: 0, cd: {}, latch: null, chillUntil: 0, shieldUntil: 0, poisonUntil: 0 }, 0.4, 0, { rim: false, aura });
 }

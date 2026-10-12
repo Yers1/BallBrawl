@@ -480,8 +480,88 @@ export function createKit(THREE) {
     return { scene, camera };
   }
 
+  // ---------- chests: a wooden treasure chest (classic) or a ball that splits open (capsule); the lid is a child that can open ----------
+  const CHEST = {
+    box: { body: '#B5763A', lid: '#C98A4B', band: '#5A6478', trim: '#9AA3B5', gem: null },
+    big: { body: '#2F6FE0', lid: '#4C8DFF', band: '#C9D1DE', trim: '#F2C12E', gem: '#FFFFFF' },
+    mega: { body: '#6E36C8', lid: '#8E55EE', band: '#F2C12E', trim: '#FFE27A', gem: '#FF4D6D' },
+  };
+  const rbox = (w, h, d, r) => { // a rounded box, centred
+    const s = new THREE.Shape(), x = w / 2, y = h / 2;
+    s.moveTo(-x + r, -y); s.lineTo(x - r, -y); s.quadraticCurveTo(x, -y, x, -y + r); s.lineTo(x, y - r); s.quadraticCurveTo(x, y, x - r, y);
+    s.lineTo(-x + r, y); s.quadraticCurveTo(-x, y, -x, y - r); s.lineTo(-x, -y + r); s.quadraticCurveTo(-x, -y, -x + r, -y);
+    const g = new THREE.ExtrudeGeometry(s, { depth: d - 0.12, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 3 });
+    return g.translate(0, 0, -(d - 0.12) / 2);
+  };
+  const crownOn = (fill, gem) => {
+    const g = group(mesh(new THREE.CylinderGeometry(0.34, 0.3, 0.14, 40, 1, true), metal(fill, { side: THREE.DoubleSide })));
+    for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2, pt = mesh(new THREE.ConeGeometry(0.07, 0.22, 12), metal(fill)); pt.position.set(Math.sin(a) * 0.32, 0.17, Math.cos(a) * 0.32); g.add(pt, sphere(0.045, gloss(gem), [Math.sin(a) * 0.35, 0, Math.cos(a) * 0.35])); }
+    return g;
+  };
+  const emblem = (kind, c, depth) => { // the lock plate on the front: a keyhole, a star or a ruby
+    const g = group(mesh(rbox(0.44, 0.5, 0.1, 0.08), metal(c.trim, { roughness: 0.3 }), [0, 0, depth]));
+    if (kind === 'box') g.add(mesh(upZ(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 16)), gloss(INK), [0, 0.05, depth + 0.07]), mesh(new THREE.BoxGeometry(0.06, 0.14, 0.05), gloss(INK), [0, -0.06, depth + 0.07]));
+    if (kind === 'big') { const st = []; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 0.08 : 0.18; st.push([Math.cos(a) * r, -Math.sin(a) * r]); } g.add(mesh(new THREE.ExtrudeGeometry(shape(st), { depth: 0.05, bevelEnabled: false }), gloss('#1E4FB0'), [0, 0, depth + 0.05])); }
+    if (kind === 'mega') g.add(mesh(new THREE.OctahedronGeometry(0.15), gloss(c.gem, { emissive: c.gem, emissiveIntensity: 0.25 }), [0, 0, depth + 0.1]));
+    return g;
+  };
+  function treasure(kind) {
+    const c = CHEST[kind] ?? CHEST.box, W = 2.2, H = 0.95, D = 1.4, R = D / 2;
+    const wood = col => gloss(col, { roughness: 0.55, clearcoat: 0.3 }), strap = metal(c.band, { roughness: 0.35 });
+    const g = group(mesh(rbox(W, H, D, 0.12), wood(c.body), [0, H / 2, 0]));
+    for (const x of [-0.7, 0.7]) g.add(mesh(new THREE.BoxGeometry(0.2, H + 0.02, D + 0.05), strap, [x, H / 2, 0]));
+    g.add(mesh(new THREE.BoxGeometry(W + 0.05, 0.12, D + 0.05), strap, [0, H - 0.04, 0]));
+    for (const x of [-1, 1]) for (const z of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), metal(c.trim, { roughness: 0.3 }), [x * (W / 2 - 0.08), 0.12, z * (D / 2 - 0.08)])); // corner caps
+    g.add(emblem(kind, c, D / 2 + 0.02).translateY(H * 0.62));
+    const lid = new THREE.Group(); lid.position.set(0, H, -R); g.add(lid); // hinged at the back
+    const shell = mesh(new THREE.CylinderGeometry(R, R, W, 40, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), wood(c.lid), [0, 0, R]);
+    lid.add(shell);
+    for (const x of [-0.7, 0.7]) lid.add(mesh(new THREE.TorusGeometry(R + 0.03, 0.09, 10, 32, Math.PI).rotateY(Math.PI / 2), strap, [x, 0, R]));
+    if (kind === 'mega') { const cr = crownOn(c.trim, c.gem); cr.position.set(0, R + 0.04, R); lid.add(cr); }
+    if (kind === 'big') lid.add(mesh(new THREE.TorusGeometry(R + 0.02, 0.05, 8, 32, Math.PI).rotateY(Math.PI / 2), metal(c.trim), [0, 0, R]));
+    for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = 0.25 + (k % 5) * 0.12; const coin = mesh(upZ(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 20)), metal('#FFC93B', { roughness: 0.25, emissive: '#7A4A08', emissiveIntensity: 0.3 })); coin.rotation.set(Math.PI / 2 + Math.sin(k) * 0.4, 0, k); coin.position.set(Math.cos(a) * rr * 1.6, H + 0.02 + (k % 3) * 0.05, Math.sin(a) * rr * 0.8); g.add(coin); } // treasure, seen when it opens
+    g.userData.lid = lid;
+    g.position.y = -0.85;
+    return g;
+  }
+  function cube(kind) { // a chunky rounded box with a ball on its front
+    const c = CHEST[kind] ?? CHEST.box, S = 1.8, H = 1.05;
+    const g = group(mesh(rbox(S, H, S, 0.24), gloss(c.body, { roughness: 0.35 }), [0, H / 2, 0]));
+    g.add(mesh(rbox(S + 0.06, 0.18, S + 0.06, 0.08), metal(c.band, { roughness: 0.3 }), [0, H - 0.1, 0]));
+    const ball = group(sphere(0.38, gloss(c.trim, { metalness: 0.3 })), mesh(new THREE.TorusGeometry(0.38, 0.05, 10, 40), gloss(INK)));
+    if (kind === 'mega') ball.add(mesh(new THREE.OctahedronGeometry(0.16), gloss(c.gem, { emissive: c.gem, emissiveIntensity: 0.25 }), [0, 0, 0.36]));
+    else if (kind === 'big') ball.add(sphere(0.12, gloss('#1E4FB0'), [0, 0, 0.32]));
+    else ball.add(mesh(upZ(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 16)), gloss(INK), [0, 0.04, 0.37]), mesh(new THREE.BoxGeometry(0.06, 0.12, 0.05), gloss(INK), [0, -0.06, 0.37]));
+    ball.position.set(0, H * 0.42, S / 2 + 0.06); g.add(ball);
+    const lid = new THREE.Group(); lid.position.set(0, H, -S / 2); g.add(lid);
+    lid.add(mesh(rbox(S + 0.1, 0.42, S + 0.1, 0.24), gloss(c.lid, { roughness: 0.3 }), [0, 0.21, S / 2]));
+    if (kind === 'mega') { const cr = crownOn(c.trim, c.gem); cr.position.set(0, 0.5, S / 2); lid.add(cr); }
+    if (kind === 'big') lid.add(mesh(new THREE.TorusGeometry(0.5, 0.06, 10, 40).rotateX(Math.PI / 2), metal(c.trim), [0, 0.44, S / 2]));
+    for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = 0.2 + (k % 5) * 0.12; const coin = mesh(upZ(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 20)), metal('#FFC93B', { roughness: 0.25, emissive: '#7A4A08', emissiveIntensity: 0.3 })); coin.rotation.set(Math.PI / 2 + Math.sin(k) * 0.4, 0, k); coin.position.set(Math.cos(a) * rr * 1.4, H + 0.02 + (k % 3) * 0.05, Math.sin(a) * rr * 1.2); g.add(coin); }
+    g.userData.lid = lid;
+    g.position.y = -0.75;
+    return g;
+  }
+  function capsule(kind) {
+    const c = CHEST[kind] ?? CHEST.box, top = { box: '#F4EFE6', big: '#EAF2FF', mega: '#FFF0B8' }[kind] ?? '#F4EFE6';
+    const g = group(mesh(new THREE.SphereGeometry(1, 64, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), gloss(c.body), [0, 0, 0]));
+    g.add(mesh(new THREE.TorusGeometry(1.01, 0.09, 12, 64).rotateX(Math.PI / 2), metal(c.band, { roughness: 0.3 }), [0, 0, 0])); // the band round the middle
+    const lid = new THREE.Group(); lid.position.set(0, 0, -1); g.add(lid);
+    lid.add(mesh(new THREE.SphereGeometry(1, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2), gloss(top), [0, 0, 1]));
+    if (kind === 'mega') { const cr = crownOn(c.trim, c.gem); cr.position.set(0, 0.98, 1); lid.add(cr); }
+    if (kind === 'big') lid.add(mesh(new THREE.TorusGeometry(0.72, 0.05, 10, 48).rotateX(Math.PI / 2), metal(c.trim), [0, 0.68, 1]));
+    const btn = group(mesh(upZ(new THREE.CylinderGeometry(0.3, 0.32, 0.14, 32)), metal(c.trim, { roughness: 0.3 })));
+    if (kind === 'box') btn.add(mesh(upZ(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 16)), gloss(INK), [0, 0.04, 0.09]), mesh(new THREE.BoxGeometry(0.06, 0.12, 0.05), gloss(INK), [0, -0.06, 0.09]));
+    if (kind === 'big') btn.add(sphere(0.12, gloss('#1E4FB0'), [0, 0, 0.08]));
+    if (kind === 'mega') btn.add(mesh(new THREE.OctahedronGeometry(0.15), gloss(c.gem, { emissive: c.gem, emissiveIntensity: 0.25 }), [0, 0, 0.12]));
+    btn.position.set(0, 0, 1.03); g.add(btn);
+    g.userData.lid = lid;
+    return g;
+  }
+
   return {
     skin, walls,
+    chest: (kind, style = 'classic', open = 0) => { const g = style === 'capsule' ? capsule(kind) : style === 'cube' ? cube(kind) : treasure(kind); g.userData.lid.rotation.x = -open; return g; },
     prop: (kind, v) => (PROP[kind] ?? PROP.rock)(v),
     ball: id => (B[id] ?? B.basic)(),
     boss: id => { const g = (BOSS[id] ?? BOSS.slime)(); g.scale.setScalar(1.25); return g; },
