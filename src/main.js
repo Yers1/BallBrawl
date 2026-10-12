@@ -3,7 +3,7 @@ import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METE
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec, upgradeChoices, applyUpgrade, SURVIVAL } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, spray, drawSpray, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, spray, drawSpray, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText, warmBall } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen, langFromPhone } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -23,6 +23,7 @@ document.querySelector('.brand').innerHTML = LOGO; // the Stitch wordmark (the p
 import * as online from './net.js';
 import { initStats, stat } from './stats.js';
 import { TICKET_SVG } from './meta.js';
+import { get3d, set3d } from './ball3d.js';
 const { net } = online;
 
 const $ = s => document.querySelector(s);
@@ -336,6 +337,7 @@ async function startMatch() {
     map: mode === 'football' ? 'stadium' : arenaFor(save.maxTrophies).id, // your arena decides the map; football is always played in the stadium
     boss: nextBoss(),
     pool: mode === 'survival' ? [...enemySquadFor(save.trophies, Math.random), ...enemySquadFor(save.trophies, Math.random)] : null,
+    tour: mode === 'survival' ? ARENAS.map((_, k) => ARENAS[(ARENAS.indexOf(arenaFor(save.maxTrophies)) + k) % ARENAS.length].id) : null, // from your arena on, then round again
   });
   S.aiLevel = aiLevel(save.trophies);
   S.ticket = mode === 'boss' && useTicket(save); // a boss ticket goes in now: win → a big chest, lose → it's gone
@@ -407,6 +409,8 @@ function beginMatch() {
 function nextRound() {
   S.world = roundWorld(S.match);
   const wave = S.match.mode === 'survival' ? S.match.wave : 0;
+  if (wave) home.look(S.world.map); // the wave's arena paints the floor and the sky
+  for (const e of S.world.ents) warmBall(e); // the 3D pictures get made while you aim
   S.ai = createAI(1, Math.min(30, S.aiLevel + Math.floor(wave / 2)), S.match.seed + S.match.round); // the waves get sharper too
   resetFx();
   const me = S.world.ents.find(e => e.side === 0), foe = S.world.ents.find(e => e.side === 1);
@@ -417,7 +421,7 @@ function nextRound() {
   show(null);
   hud();
   cards(me, foe);
-  banner(wave ? (wave % SURVIVAL.boss ? t('wave', { n: wave }) : t('bossWave')) : t('round', { n: S.match.round }));
+  banner(wave ? `${wave % SURVIVAL.boss ? t('wave', { n: wave }) : t('bossWave')} · ${t('arena_' + S.world.map)}` : t('round', { n: S.match.round }));
   playMusic(null);
   sfx.round();
 }
@@ -821,7 +825,9 @@ function renderWatch() {
 }
 
 function startWatch() {
-  S.world = createWorld({ seed: Math.floor(Math.random() * 1e9), a: { id: S.watch[0] }, b: { id: S.watch[1] }, map: anyMap() });
+  const map = new URLSearchParams(location.search).get('map'); // ?record=a,b&map=jungle: that arena, for a recording
+  S.world = createWorld({ seed: Math.floor(Math.random() * 1e9), a: { id: S.watch[0] }, b: { id: S.watch[1] }, map: MAPS[map] ? map : anyMap() });
+  if (MAPS[map]) home.look(map);
   S.ais = [createAI(0, 20, Math.floor(Math.random() * 1e9)), createAI(1, 20, Math.floor(Math.random() * 1e9))];
   resetFx();
   S.demo = false;
@@ -1287,7 +1293,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.10';
+const VERSION = '1.16';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);
@@ -1296,10 +1302,11 @@ const muteUI = () => {
   $('#set-music').classList.toggle('on', save.music);
   $('#set-music').setAttribute('aria-checked', String(save.music));
   $('#set-emotes').setAttribute('aria-checked', String(save.foeEmotes));
-  for (const [id, on] of [['#set-shake', save.shake], ['#set-vibrate', save.vibrate]]) { $(id).classList.toggle('on', on); $(id).setAttribute('aria-checked', String(on)); }
+  for (const [id, on] of [['#set-shake', save.shake], ['#set-vibrate', save.vibrate], ['#set-3d', get3d()]]) { $(id).classList.toggle('on', on); $(id).setAttribute('aria-checked', String(on)); }
 };
 $('#set-vib-row').hidden = !navigator.vibrate; // phones only
 $('#set-shake').onclick = () => { save.shake = !save.shake; setShakeOn(save.shake); persist(); muteUI(); sfx.click(); };
+$('#set-3d').onclick = () => { set3d(!get3d()); muteUI(); sfx.click(); if (S.mode === 'home') home.render(); }; // weak phones can go back to 2D
 $('#set-vibrate').onclick = () => { save.vibrate = !save.vibrate; persist(); muteUI(); if (save.vibrate) navigator.vibrate?.(40); };
 setShakeOn(save.shake);
 // "Report a problem": what kind, who (for a complaint about a player), what happened. Stored for the team in bb_feedback.
@@ -1331,6 +1338,14 @@ $('#set-music').onclick = () => { save.music = !save.music; setMusicOn(save.musi
 $('#set-emotes').onclick = () => { save.foeEmotes = !save.foeEmotes; setFoeEmotes(save.foeEmotes); persist(); muteUI(); sfx.click(); };
 $('#gear').onclick = () => { sfx.click(); home.settings(); muteUI(); $('#scr-settings').hidden = false; };
 $('#set-close').onclick = () => { $('#scr-settings').hidden = true; };
+// Popups close with a tap on the dim background, like in Supercell games. The press has to start there too,
+// so a drag that begins inside the card and ends outside it doesn't close anything.
+for (const [o, c] of [['scr-ball', 'ball-close'], ['scr-chest', 'ch-close'], ['scr-pchoice', 'pc-close'], ['scr-settings', 'set-close'], ['scr-invite', 'inv-later'],
+  ['scr-report', 'rep-close'], ['scr-parents', 'par-close'], ['scr-modes', 'md-close'], ['scr-slot', 'sl-close'], ['scr-nick', 'nk-close'], ['scr-squad', 's-back']]) {
+  let down = false;
+  $('#' + o).addEventListener('pointerdown', e => { down = e.target === e.currentTarget; });
+  $('#' + o).addEventListener('click', e => { const b = $('#' + c); if (down && e.target === e.currentTarget && !b.hidden && !b.disabled && b.offsetParent) b.click(); down = false; });
+}
 $('#set-account').onclick = () => { $('#scr-settings').hidden = true; if (S.mode === 'home') home.open('profile'); };
 $('#set-version').textContent = `BallBrawl · v${VERSION}` + (save.profileId ? ` · ID ${save.profileId.slice(0, 8).toUpperCase()}` : ''); // the ID helps find a player's report
 setFoeEmotes(save.foeEmotes);
@@ -1348,6 +1363,7 @@ initAds();
 initAudio(save.muted);
 setMusicOn(save.music);
 playMusic('lobby'); // starts with the first tap (browsers keep audio off until then)
+addEventListener('ball3d', () => { if (S.mode === 'home') home.render(); }); // the 3D preview loaded: redraw the menu's balls
 muteUI();
 persist(); // stores the migrated save and the generated nickname right away
 layout();

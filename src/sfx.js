@@ -16,6 +16,7 @@ export function confetti(n = 36) {
 // Tiny WebAudio synth — no audio files. The context starts on the first user gesture (browser rule).
 let ac = null, master = null, muted = false, horn = null, fightVoice = null; // recorded: the train's diesel horn, the announcer's FIGHT!
 let musicBus = null, musicOn = true; // music has its own volume and switch
+const MUSIC_VOL = 0.24;
 
 export function initAudio(isMuted) {
   muted = isMuted;
@@ -28,7 +29,7 @@ export function initAudio(isMuted) {
     master.gain.value = muted ? 0 : 0.5;
     master.connect(ac.destination);
     musicBus = ac.createGain();
-    musicBus.gain.value = musicOn ? 0.32 : 0;
+    musicBus.gain.value = musicOn ? MUSIC_VOL : 0;
     musicBus.connect(master);
     fetch('sfx/train-horn.mp3').then(r => r.arrayBuffer()).then(b => ac.decodeAudioData(b)).then(buf => { horn = buf; }).catch(() => {});
     fetch('sfx/fight.mp3').then(r => r.arrayBuffer()).then(b => ac.decodeAudioData(b)).then(buf => { fightVoice = buf; }).catch(() => {}); // voicebosch, Pixabay licence
@@ -197,7 +198,9 @@ export const sfx = {
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
 };
 
-// ---------- music: little chiptune loops (menus; a tense one in sudden death), scheduled just ahead on the audio clock ----------
+// ---------- music: little chiptune songs (menus; a tense one in sudden death), scheduled just ahead on the audio clock ----------
+// A song is phrases of 4 bars. Its `form` says which parts play in each phrase: d drums, b bass, c chords, l the tune,
+// a a second tune, '' a quiet phrase. So the menu song breathes (and goes quiet for a while) instead of looping 8 seconds forever.
 const NOTE = n => 440 * 2 ** ((n - 69) / 12);
 const m = (f, d, o) => tone(f, d, { ...o, out: musicBus });
 const kick = d => m(130, 0.16, { type: 'sine', vol: 0.5, slide: 0.35, delay: d });
@@ -207,35 +210,43 @@ const LOBBY_LEAD = [
   [72, 0, 0, 76, 0, 0, 79, 0, 76, 0, 74, 0, 72, 0, 0, 0], [69, 0, 0, 72, 0, 0, 76, 0, 74, 0, 72, 0, 69, 0, 0, 0],
   [65, 0, 0, 69, 0, 0, 72, 0, 77, 0, 76, 0, 74, 0, 0, 0], [67, 0, 71, 0, 74, 0, 0, 79, 0, 77, 0, 74, 71, 0, 0, 0],
 ];
+const LOBBY_ALT = [ // the answer tune: lower and softer, over the same chords
+  [64, 0, 67, 0, 72, 0, 0, 0, 71, 0, 67, 0, 64, 0, 0, 0], [64, 0, 69, 0, 72, 0, 0, 0, 71, 0, 69, 0, 64, 0, 0, 0],
+  [65, 0, 69, 0, 72, 0, 0, 0, 74, 0, 72, 0, 69, 0, 0, 0], [67, 0, 71, 0, 74, 0, 72, 0, 71, 0, 67, 0, 62, 0, 0, 0],
+];
+const part = (song, i, p) => song.form[Math.floor(i / 64) % song.form.length].includes(p);
 const SONGS = {
-  lobby: { bpm: 104, step(i, d) { // C, Am, F, G: bouncy and friendly
-    const bar = Math.floor(i / 16) % 4, s = i % 16, ch = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]][bar];
-    if (s === 0 || s === 8) kick(d);
-    if (s === 4 || s === 12) snare(d, 0.07);
-    if (s % 2 === 0) hat(d, s % 4 === 2 ? 0.04 : 0.025);
-    if ([0, 6, 8, 14].includes(s)) m(NOTE(ch[0] - 24), 0.2, { type: 'square', vol: 0.09, delay: d });
-    if (s % 2 === 0) m(NOTE(ch[(s / 2) % 3] + 12), 0.12, { type: 'triangle', vol: 0.07, delay: d });
-    const n = LOBBY_LEAD[bar][s];
-    if (n) m(NOTE(n), 0.24, { type: 'square', vol: 0.05, delay: d });
+  lobby: { bpm: 104, form: ['dbc', 'dbcl', 'dbcl', 'bc', 'dbca', 'dbca', 'c', '', '', ''], step(i, d) { // C, Am, F, G: bouncy and friendly
+    const bar = Math.floor(i / 16) % 4, s = i % 16, ch = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]][bar], on = p => part(this, i, p);
+    if (on('d')) {
+      if (s === 0 || s === 8) kick(d);
+      if (s === 4 || s === 12) snare(d, 0.07);
+      if (s % 2 === 0) hat(d, s % 4 === 2 ? 0.04 : 0.025);
+    }
+    if (on('b') && [0, 6, 8, 14].includes(s)) m(NOTE(ch[0] - 24), 0.2, { type: 'square', vol: 0.09, delay: d });
+    if (on('c') && s % 2 === 0) m(NOTE(ch[(s / 2) % 3] + 12), 0.12, { type: 'triangle', vol: 0.07, delay: d });
+    if (on('l') && LOBBY_LEAD[bar][s]) m(NOTE(LOBBY_LEAD[bar][s]), 0.24, { type: 'square', vol: 0.045, delay: d });
+    if (on('a') && LOBBY_ALT[bar][s]) m(NOTE(LOBBY_ALT[bar][s]), 0.3, { type: 'triangle', vol: 0.09, delay: d });
   } },
-  battle: { bpm: 132, step(i, d) { // D minor, Bb, C, A: a driving fight loop with a hook that climbs
-    const bar = Math.floor(i / 16) % 4, s = i % 16, root = [38, 34, 36, 33][bar];
+  battle: { bpm: 132, shuffle: true, form: ['db', 'dbcl', 'dbcl', 'dbc', 'dbca', 'dbca', 'dbc', 'dbcl'], step(i, d) { // D minor, Bb, C, A: a driving fight song
+    const bar = Math.floor(i / 16) % 4, s = i % 16, root = [38, 34, 36, 33][bar], on = p => part(this, i, p);
     if (s % 4 === 0 || s === 14) kick(d);
     if (s === 4 || s === 12) snare(d, 0.12);
     hat(d, s % 2 ? 0.02 : 0.035);
     if (s % 2 === 0) m(NOTE(root + (s % 8 === 6 ? 7 : 0)), 0.14, { type: 'sawtooth', vol: 0.08, delay: d });
-    if (s === 0 || s === 8) [12, 15, 19].forEach(k => m(NOTE(root + 24 + k - (bar === 3 && k === 15 ? -1 : 0)), 0.5, { type: 'triangle', vol: 0.03, delay: d }));
-    const lead = [[74, 0, 77, 0, 76, 74, 0, 72], [70, 0, 74, 0, 72, 70, 0, 69], [72, 0, 76, 0, 79, 76, 0, 74], [73, 0, 76, 0, 81, 0, 79, 76]][bar][s >> 1];
+    if (on('c') && (s === 0 || s === 8)) [12, 15, 19].forEach(k => m(NOTE(root + 24 + k - (bar === 3 && k === 15 ? -1 : 0)), 0.5, { type: 'triangle', vol: 0.03, delay: d }));
+    const lead = on('l') ? [[74, 0, 77, 0, 76, 74, 0, 72], [70, 0, 74, 0, 72, 70, 0, 69], [72, 0, 76, 0, 79, 76, 0, 74], [73, 0, 76, 0, 81, 0, 79, 76]][bar][s >> 1]
+      : on('a') ? [[69, 0, 0, 74, 0, 0, 77, 0], [70, 0, 0, 74, 0, 0, 77, 0], [72, 0, 0, 76, 0, 0, 79, 0], [73, 0, 0, 76, 0, 79, 0, 81]][bar][s >> 1] : 0;
     if (s % 2 === 0 && lead) m(NOTE(lead), 0.13, { type: 'square', vol: 0.04, delay: d });
   } },
-  boss: { bpm: 112, step(i, d) { // E minor, heavy: low drums, a stomping bass and an alarm-like brass stab
-    const bar = Math.floor(i / 16) % 4, s = i % 16, root = [28, 28, 31, 30][bar];
+  boss: { bpm: 112, shuffle: true, form: ['db', 'dbc', 'dbcl', 'dbcl', 'dbc', 'dbcl'], step(i, d) { // E minor, heavy: low drums, a stomping bass and an alarm-like brass stab
+    const bar = Math.floor(i / 16) % 4, s = i % 16, root = [28, 28, 31, 30][bar], on = p => part(this, i, p);
     if (s === 0 || s === 3 || s === 8 || s === 11) kick(d);
     if (s === 4 || s === 12) snare(d, 0.16);
     if (s % 2 === 0) hat(d, 0.03);
     if (s % 2 === 0) m(NOTE(root + (s % 4 === 2 ? 12 : 0)), 0.18, { type: 'sawtooth', vol: 0.09, delay: d });
-    if (s === 0) [12, 19, 24].forEach(k => m(NOTE(root + 24 + k), 0.45, { type: 'square', vol: 0.03, delay: d }));
-    if (bar % 2 === 1 && (s === 10 || s === 13)) m(NOTE(root + 36 + (s === 13 ? 1 : 0)), 0.16, { type: 'square', vol: 0.05, delay: d });
+    if (on('c') && s === 0) [12, 19, 24].forEach(k => m(NOTE(root + 24 + k), 0.45, { type: 'square', vol: 0.03, delay: d }));
+    if (on('l') && bar % 2 === 1 && (s === 10 || s === 13)) m(NOTE(root + 36 + (s === 13 ? 1 : 0)), 0.16, { type: 'square', vol: 0.05, delay: d });
   } },
   danger: { bpm: 150, step(i, d) { // A minor and F, a pounding pulse: hurry up!
     const bar = Math.floor(i / 16) % 2, s = i % 16, root = bar ? 41 : 45;
@@ -251,12 +262,13 @@ const music = { name: null, step: 0, next: 0 };
 export function playMusic(name) {
   if (music.name === name) return;
   music.name = SONGS[name] ? name : null;
-  music.step = 0;
+  const song = SONGS[music.name]; // fight songs start at a random phrase, so round 2 doesn't open like round 1
+  music.step = song?.shuffle ? 64 * Math.floor(Math.random() * song.form.length) : 0;
   music.next = 0;
 }
 export function setMusicOn(on) {
   musicOn = on;
-  if (musicBus) musicBus.gain.value = on ? 0.32 : 0;
+  if (musicBus) musicBus.gain.value = on ? MUSIC_VOL : 0;
 }
 if (typeof window !== 'undefined') setInterval(() => { // keeps a quarter second of notes queued
   if (!ac || !music.name || muted || !musicOn || document.hidden) return;

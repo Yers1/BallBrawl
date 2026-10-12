@@ -134,3 +134,12 @@ test('football: nobody gets hurt, goals count, the same seed replays the same ma
   assert.ok(a.t <= FOOT.time + FOOT.golden + 0.1, 'never an endless match');
   assert.equal(a.t, b.t);
 });
+
+test('survival travels: each wave in the next arena, a boss wave in its home', () => {
+  const m = createMatch({ squadA: ['basic', 'ninja', 'ice'], squadB: ['turtle', 'cell', 'bomb'], mode: 'survival', seed: 3, map: 'canyon', tour: ['canyon', 'pirate', 'frost'] });
+  assert.equal(roundWorld(m).map, 'canyon');
+  m.wave = 2; assert.equal(roundWorld(m).map, 'pirate');
+  m.wave = 4; assert.equal(roundWorld(m).map, 'canyon');
+  m.wave = 5; assert.equal(roundWorld(m).map, 'jungle'); // King Slime's home
+  m.wave = 10; assert.equal(roundWorld(m).map, 'frost');
+});

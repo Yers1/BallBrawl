@@ -40,10 +40,16 @@ export function applyUpgrade(m, k) {
 }
 export const BOSS = { r: 46, dmgMul: 1.2, speedMul: 0.8 };
 export const bossSpec = (id, mul = 1) => ({ id: BOSSES[id].ball, ...(BOSSES[id].skin && { skin: BOSSES[id].skin }), ...BOSS, hpMul: (BOSSES[id].hp / BALLS[BOSSES[id].ball].hp) * mul, boss: id }); // mul: a bigger party, a tougher boss
-export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null, boss = 'slime', pool = null }) {
+export function createMatch({ squadA, squadB, hpMulB = 1, seed = 1, skinsA = {}, skinsB = {}, mode = 'classic', map = 'night', famA = null, famB = null, boss = 'slime', pool = null, tour = null }) {
   const spec = (skins, fam) => id => ({ id, ...(skins[id] && { skin: skins[id] }), ...(fam && { hpMul: fam.hp, dmgMul: fam.dmg, speedMul: fam.speed, armor: fam.armor, regen: fam.regen }) }); // fam: the familiar's bonus
   return { boosts: [famA, famB], a: squadA.map(spec(skinsA, famA)), b: squadB.map(spec(skinsB, famB)), hpMulB, seed, round: 0, result: null, revived: false, lost: null, mode, map, boss: BOSSES[boss] ? boss : 'slime',
-    ...(mode === 'survival' && { wave: 1, pool: pool?.length ? pool : squadB, ups: { dmg: 0, hp: 0, armor: 0, speed: 0, dash: 0, meter: 0 } }) };
+    ...(mode === 'survival' && { wave: 1, pool: pool?.length ? pool : squadB, tour: tour?.length ? tour : [map], ups: { dmg: 0, hp: 0, armor: 0, speed: 0, dash: 0, meter: 0 } }) };
+}
+// Survival travels: each wave is fought in the next arena of the tour, a boss wave in that boss's home.
+const BOSS_HOME = { slime: 'jungle', frost: 'frost', dragon: 'lava', golem: 'temple' };
+export function waveMap(m) {
+  if (m.wave % SURVIVAL.boss === 0) return BOSS_HOME[BOSS_IDS[(m.wave / SURVIVAL.boss - 1) % BOSS_IDS.length]] ?? m.map;
+  return m.tour[(m.wave - 1) % m.tour.length];
 }
 
 export function roundWorld(m) {
@@ -55,7 +61,7 @@ export function roundWorld(m) {
   if (m.mode === 'survival') {
     const u = m.ups, b0 = boosts?.[0] ?? {};
     const a = m.a.filter(x => !x.dead).map(x => ({ ...x, hpMul: (x.hpMul ?? 1) * (1 + u.hp), dmgMul: (x.dmgMul ?? 1) * (1 + u.dmg), speedMul: (x.speedMul ?? 1) * (1 + u.speed), armor: (x.armor ?? 1) * (1 - u.armor) }));
-    return createWorld({ seed, a, b: waveFoes(m), map, boosts: [{ ...b0, dash: (b0.dash ?? 1) * (1 + u.dash), meter: (b0.meter ?? 1) * (1 + u.meter) }] });
+    return createWorld({ seed, a, b: waveFoes(m), map: waveMap(m), boosts: [{ ...b0, dash: (b0.dash ?? 1) * (1 + u.dash), meter: (b0.meter ?? 1) * (1 + u.meter) }] });
   }
   if (m.mode === 'boss') return createWorld({ seed, a: m.a.slice(0, 3), b: [bossSpec(m.boss)], map, boosts: [boosts?.[0]] }); // its size and attack are the challenge; trophies only sharpen its AI
   return createWorld({ seed, a: m.a[0], b: m.b[0], hpMulB: m.hpMulB, map, boosts });

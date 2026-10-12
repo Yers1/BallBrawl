@@ -1,9 +1,10 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
-import { W, H, SUDDEN, canSuper, FOOT } from './sim.js';
+import { W, H, SUDDEN, canSuper, FOOT, MAPS } from './sim.js';
 import { BALLS, TRAIN, LEECH, POISON, ICE, trainCars } from './balls.js';
 import { SKINS, EMOTE_LIST } from './progress.js';
 import { THEMES } from './themes.js';
+import { ball3d, prop3d, arena3d, warm3d, is3d, FRAME } from './ball3d.js';
 
 export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
 const SIDE_RGB = ['76,201,240', '255,77,94'];
@@ -500,6 +501,16 @@ const FACE_PTS = [ // the corners of each wall face: top, left, right, bottom
   [[W + M, -M], [W + M, H + M], [W, H], [W, 0]],
   [[-M, H + M], [0, H], [W, H], [W + M, H + M]],
 ];
+// A still picture of an arena's battle field (walls, floor, obstacles) for the Glory Road; 3D once the models are in.
+export function arenaThumb(canvas, id, css) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), px = Math.round(css * dpr), keep = [THEME, ARENA, DECOR];
+  canvas.width = canvas.height = px; canvas.style.width = canvas.style.height = css + 'px';
+  setArena(id);
+  const ctx = canvas.getContext('2d'), s = px / (W + 2 * M);
+  ctx.setTransform(s, 0, 0, s, M * s, M * s);
+  arena(ctx, { obstacles: (MAPS[id] ?? []).map(o => ({ ...o })), launched: false, t: 0, ball: null }, 1, 256);
+  [THEME, ARENA, DECOR] = keep; // the fight's arena stays as it was
+}
 export function setArena(id) {
   THEME = THEMES[id] || THEMES.night;
   ARENA = THEMES[id] ? id : 'night';
@@ -742,12 +753,30 @@ function wallScenery(ctx, now, foot = false) {
 
 // Map obstacles, seen from above: boulders, ice crystals, bouncy mushrooms, lava pools, portals.
 const ROCK = { canyon: ['#C98A4B', '#8E5524'], space: ['#7A7F92', '#4A4E5E'] };
+// The 3D model for an obstacle (null: draw it 2D). Pools, portals and the neon jump pads stay 2D: they're light, not things.
+// It comes with how far it's turned: lollipops, the match ball and saws spin.
+function obstacle3d(o, i, now) {
+  if (o.k === 'rock') return ARENA === 'candy' ? [prop3d('lollipop', i), now * 0.6] : [prop3d(ARENA === 'pirate' ? 'barrel' : ARENA === 'temple' ? 'idol' : 'rock', ARENA), 0];
+  if (o.k === 'ice') return [prop3d('ice', 0), 0];
+  if (o.k === 'bumper' && ARENA === 'stadium') return [prop3d('soccer', 0), now];
+  if (o.k === 'bumper' && ARENA !== 'neon') return [prop3d('mushroom', 0), 0];
+  if (o.k === 'spike') return [prop3d('spike', ARENA), 0];
+  if (o.k === 'saw') return [prop3d('saw', i), now * 9 * (i % 2 ? -1 : 1)];
+  return [null, 0];
+}
 function obstacles(ctx, w, now) {
   const P = Math.PI;
   w.obstacles.forEach((o, i) => {
     ctx.save();
     ctx.translate(o.x, o.y);
-    if (o.k === 'rock' && ARENA === 'candy') { // a swirl lollipop seen from above
+    const [model, spin] = obstacle3d(o, i, now);
+    if (model) {
+      const since = now - (fx.bump?.[i] ?? -9), sq = o.k === 'bumper' && since < 0.25 ? 1 + 0.25 * Math.sin((since / 0.25) * P) : 1; // a mushroom squashes when hit
+      ctx.fillStyle = 'rgba(8,16,32,0.35)'; ctx.beginPath(); ctx.ellipse(4, 6, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
+      const s = o.r * FRAME * sq;
+      ctx.rotate(spin);
+      ctx.drawImage(model, -s, -s, s * 2, s * 2);
+    } else if (o.k === 'rock' && ARENA === 'candy') { // a swirl lollipop seen from above
       ctx.fillStyle = 'rgba(8,16,32,0.3)'; ctx.beginPath(); ctx.ellipse(4, 6, o.r, o.r * 0.9, 0, 0, P * 2); ctx.fill();
       ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, P * 2); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = i ? '#FF4D8D' : '#33C7A6'; ctx.lineWidth = 4; ctx.beginPath();
@@ -849,11 +878,11 @@ function obstacles(ctx, w, now) {
   });
 }
 
-function arena(ctx, w, now) {
-  const sudden = w.launched && w.t > SUDDEN;
+function arena(ctx, w, now, px) {
+  const sudden = w.launched && w.t > SUDDEN, walls3d = arena3d(ARENA, THEME.faces[1], W, H, M, px);
   ctx.fillStyle = THEME.faces[3];
   ctx.fillRect(-M - 20, -M - 20, W + 2 * M + 40, H + 2 * M + 40); // oversized: camera shake never shows an edge
-  FACE_PTS.forEach((pts, i) => {
+  if (!walls3d) FACE_PTS.forEach((pts, i) => {
     ctx.beginPath();
     pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.fillStyle = THEME.faces[i];
@@ -866,9 +895,16 @@ function arena(ctx, w, now) {
   ctx.fillStyle = THEME.floor;
   ctx.fillRect(0, 0, W, H);
   floorPattern(ctx, now, !!w.ball);
+  if (walls3d) {
+    ctx.drawImage(walls3d, -M, -M, W + 2 * M, H + 2 * M);
+    if (sudden) { // walls glow red in sudden death
+      ctx.fillStyle = `rgba(255,60,80,${0.3 + 0.3 * Math.sin(now * 9)})`;
+      for (const pts of FACE_PTS) { ctx.beginPath(); pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.fill(); }
+    }
+  }
   obstacles(ctx, w, now);
   wallScenery(ctx, now, !!w.ball);
-  for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
+  if (!walls3d) for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
     const g = ctx.createLinearGradient(0, 0, gx * 18, gy * 18);
     g.addColorStop(0, 'rgba(8,16,32,0.4)');
     g.addColorStop(1, 'rgba(8,16,32,0)');
@@ -1087,6 +1123,7 @@ function bossTop(ctx, e, now) {
     ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, Math.PI * 2); ctx.stroke();
     ctx.shadowBlur = 0;
   }
+  if (is3d()) return ctx.restore(); // the 3D bosses wear their own crowns and horns
   ctx.translate(e.x, e.y - e.r + 2);
   ctx.rotate(Math.sin(now * 2) * 0.1);
   ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -1772,6 +1809,18 @@ function pattern(ctx, e, sk, t) {
   }
 }
 
+// A skin laid flat on a disc, for a 3D ball to wear (ball3d.js maps it on from the front). These ones move all the time.
+const LIVE_SKIN = new Set(['flame', 'aurora', 'storm', 'rainbow', 'stars']);
+// Before a round: the ball's 3D pictures get made while you aim.
+export function warmBall(e) {
+  const sk = e.skin && SKINS[e.skin];
+  warm3d(e, sk && !e.boss ? e.skin : null, sk && ((c, s, tt) => paintSkin(c, s, e, sk, tt)), !!sk && LIVE_SKIN.has(sk.pattern));
+}
+function paintSkin(c, size, e, sk, t) {
+  c.fillStyle = sk.color; c.fillRect(0, 0, size, size);
+  pattern(c, { ...e, x: size / 2, y: size / 2, r: size / 2 }, sk, t);
+}
+
 function legs(ctx, e, t) {
   const { x, y, r } = e, wig = Math.sin(t * 16) * 0.12;
   ctx.strokeStyle = shade(BALLS.spider.color, 0.3);
@@ -1850,10 +1899,10 @@ function trail(ctx, e, t) {
   ctx.globalAlpha = 1;
 }
 
-// HP sits in the middle of the ball, white with a dark outline.
+// HP sits in the middle of the ball, white with a dark outline; on a 3D ball a little lower, so the face shows.
 function hpText(ctx, e) {
-  const { x, y, r } = e, n = Math.ceil(e.hp);
-  ctx.font = `900 ${Math.round(r * 0.78)}px ${FONT}`;
+  const { x, r } = e, n = Math.ceil(e.hp), low = is3d(), y = e.y + (low ? r * 0.36 : 0);
+  ctx.font = `900 ${Math.round(r * (low ? 0.66 : 0.78))}px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
@@ -1865,9 +1914,10 @@ function hpText(ctx, e) {
   if (e.lv) { // the forge's level, in gold under the HP
     ctx.font = `900 ${Math.round(r * 0.4)}px ${FONT}`;
     ctx.lineWidth = Math.max(2, r * 0.1);
-    ctx.strokeText('Lv' + e.lv, x, y + r * 0.62);
+    const ly = y + r * (low ? 0.6 : 0.62);
+    ctx.strokeText('Lv' + e.lv, x, ly);
     ctx.fillStyle = '#FFCC33';
-    ctx.fillText('Lv' + e.lv, x, y + r * 0.62);
+    ctx.fillText('Lv' + e.lv, x, ly);
   }
 }
 
@@ -1879,19 +1929,23 @@ export function drawBall(ctx, e, now, t, { rim = true, aura = null } = {}) {
   if (au) drawAura(ctx, au, x, y, r, now || 0.4);
   ctx.fillStyle = 'rgba(8,16,32,0.42)';
   ctx.beginPath(); ctx.ellipse(x + r * 0.16, y + r * 0.3, r * 0.98, r * 0.86, 0, 0, Math.PI * 2); ctx.fill();
-  if (e.kind === 'spider') legs(ctx, e, t);
-  if (e.kind === 'hedgehog') spikes(ctx, e, t);
   if (e.kind === 'cell' && e.mini && !bubble) cellAura(ctx, e, t);
-  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
-  g.addColorStop(0, shade(color, 0.5));
-  g.addColorStop(0.55, color);
-  g.addColorStop(1, shade(color, -0.5));
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-  if (sk) pattern(ctx, e, sk, t);
-  if (!bubble) deco(ctx, e, t);
-  ctx.fillStyle = 'rgba(255,255,255,0.42)';
-  ctx.beginPath(); ctx.ellipse(x - r * 0.33, y - r * 0.42, r * 0.34, r * 0.19, -0.55, 0, Math.PI * 2); ctx.fill();
+  const model = !bubble && ball3d(e, e.id >= 0 ? fx.face[e.id] ?? null : null, t, sk && !e.boss ? e.skin : null, sk && ((c, s, tt) => paintSkin(c, s, e, sk, tt)), !!sk && LIVE_SKIN.has(sk.pattern));
+  if (model) ctx.drawImage(model, x - r * FRAME, y - r * FRAME, r * FRAME * 2, r * FRAME * 2);
+  else {
+    if (e.kind === 'spider') legs(ctx, e, t);
+    if (e.kind === 'hedgehog') spikes(ctx, e, t);
+    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
+    g.addColorStop(0, shade(color, 0.5));
+    g.addColorStop(0.55, color);
+    g.addColorStop(1, shade(color, -0.5));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    if (sk) pattern(ctx, e, sk, t);
+    if (!bubble) deco(ctx, e, t);
+    ctx.fillStyle = 'rgba(255,255,255,0.42)';
+    ctx.beginPath(); ctx.ellipse(x - r * 0.33, y - r * 0.42, r * 0.34, r * 0.19, -0.55, 0, Math.PI * 2); ctx.fill();
+  }
   if (e.chillUntil > t) frost(ctx, e, t);
   if (e.poisonUntil > t) poisoned(ctx, e, t);
   if (rim) {
