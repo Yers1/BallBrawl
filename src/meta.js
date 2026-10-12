@@ -1397,6 +1397,8 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   // The big-screen lobby: the chests stand on a shelf on the left with the Glory Road under it, the modes as cards and
   // the day's deal on the right, the menu buttons in a short dock under the stage (style.css, body.scene).
   function bigLobby(road, deal) {
+    const lead = save.squad[0];
+    $('#l-shelf .sd-keys').replaceChildren(icon(lead, 58, save.skinOf[lead])); // the keychain's charm is your lead ball
     const boss = BOSS_IDS[(Math.floor(Date.now() / 864e5) + 1) % BOSS_IDS.length]; // the next boss fight's boss (main.js nextBoss)
     const art = m => {
       if (m === 'duel') return el('span', 'lm-ic', $('#l-challenge .ic').innerHTML);
