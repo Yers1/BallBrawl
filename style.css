@@ -1642,9 +1642,10 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .op3d img { display: block; width: 100%; height: auto; }
 .op3d .lid { position: absolute; inset: 0; }
 
-/* ---------- the big-screen lobby (body.scene, set by wings() in meta.js at 1180×680 and up): variant A on the canvas ---------- */
-.l-rail, .l-side, .l-road { display: none; }
+/* ---------- the big-screen lobby (body.scene, set by wings() in meta.js at 1180×680 and up): chests on a shelf like a garage game ---------- */
+.l-side, .l-road, .cslot .ghost { display: none; }
 body.scene { --side: clamp(300px, 26vw, 380px); }
+body.scene #bg-art { filter: blur(7px) saturate(1.1) brightness(0.8); } /* blurred, but you still see the room */
 body.scene .bar { position: fixed; inset: 0 0 auto; width: auto; padding: 18px 28px; pointer-events: none; }
 body.scene .bar > * { pointer-events: auto; }
 body.scene .bar .brand { position: absolute; left: 50%; top: 12px; translate: -50% 0; }
@@ -1653,21 +1654,43 @@ body.scene .page { padding-top: 0; }
 body.scene .page-in { width: 100%; }
 body.scene .lobby-top { position: fixed; left: 28px; top: 16px; z-index: 6; }
 body.scene .lobby-top .me { width: 360px; height: 70px; }
-body.scene .hero-wrap { position: fixed; left: calc(var(--side) + 48px); right: calc(var(--side) + 48px); top: 100px; bottom: 136px; }
-body.scene .hero-wrap .side, body.scene .dock, body.scene #l-modebtn { display: none; }
+body.scene .hero-wrap { position: fixed; left: calc(var(--side) + 60px); right: calc(var(--side) + 48px); top: 100px; bottom: 132px; }
+body.scene #l-modebtn, body.scene .dock #l-challenge { display: none; }
+body.scene .dock { position: fixed; left: calc(50% + 6px); translate: -50% 0; bottom: 24px; z-index: 5; display: flex; gap: 8px; margin: 0; }
+body.scene .dock .sbtn { width: 96px; height: 84px; }
 body.scene .play-line { position: fixed; right: 28px; bottom: 28px; width: var(--side); z-index: 5; }
 body.scene .play { height: 104px; }
 body.scene .pl-txt b { font-size: 40px; }
-body.scene #l-slots { position: fixed; left: 28px; bottom: 28px; width: calc(var(--side) + 30px); z-index: 5; }
-body.scene .l-rail { position: fixed; left: 28px; top: 112px; z-index: 5; display: flex; flex-direction: column; gap: 10px; }
-.rail-btn { position: relative; display: flex; align-items: center; gap: 12px; padding: 0; background: none; border: 0; color: var(--text); cursor: pointer;
-  font: 400 15px var(--display); text-transform: uppercase; text-shadow: var(--stroke-text); }
-.rail-btn .ic { width: 60px; height: 60px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--panel-2);
-  border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
-.rail-btn .ic svg { width: 32px; height: 32px; }
-.rail-btn .ic .hero-svg { width: 54px; height: 62px; margin-top: 12px; }
-.rail-btn .badge { left: 44px; right: auto; top: -3px; }
-.rail-btn:active .ic { transform: translateY(3px); box-shadow: inset 0 2px 0 var(--hi), 0 1px 0 var(--stroke); }
+
+/* the shelf: each chest stands on its own wooden pallet, a cardboard tag with the time above it */
+body.scene #l-slots { position: fixed; left: 28px; top: 108px; bottom: 124px; width: calc(var(--side) + 20px); z-index: 5; box-sizing: border-box; display: grid;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0 18px; padding: 14px 22px 0; border: 4px solid var(--stroke); border-radius: 12px;
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 3px, transparent 3px 58px), linear-gradient(rgba(46, 26, 12, 0.5), rgba(46, 26, 12, 0.3));
+  box-shadow: inset 14px 0 0 #9A6230, inset -14px 0 0 #9A6230, inset 0 14px 0 #B97B42, inset 17px 0 0 var(--stroke), inset -17px 0 0 var(--stroke), inset 0 17px 0 var(--stroke), 0 14px 30px rgba(0, 0, 0, 0.45); }
+body.scene .cslot { height: auto; padding: 0 0 26px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; background: none; border: 0; box-shadow: none; }
+body.scene .cslot::before { content: ''; position: absolute; left: -9px; right: -9px; bottom: 0; height: 30px; border-radius: 4px; border: 3px solid var(--stroke);
+  background: radial-gradient(ellipse 42% 30% at 50% 22%, rgba(0, 0, 0, 0.45), transparent 100%), repeating-linear-gradient(90deg, transparent 0 46px, rgba(60, 30, 8, 0.45) 46px 49px),
+    linear-gradient(#E0A96B 0 34%, #9A6230 34% 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 8px 14px rgba(0, 0, 0, 0.45); }
+body.scene .cslot:nth-child(odd)::before { left: -8px; } body.scene .cslot:nth-child(even)::before { right: -8px; }
+body.scene .cslot .chest-svg { position: relative; z-index: 1; width: min(160px, 100%); margin: 0 0 -26px; filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.35)); }
+body.scene .cslot .cs-top, body.scene .cslot .cs-time, body.scene .cslot .cs-big, body.scene .cslot.empty small { order: -1; z-index: 2; padding: 4px 12px; border-radius: 8px;
+  min-width: 84px; box-sizing: border-box; justify-content: center; text-align: center;
+  border: 3px solid var(--stroke); background: #F2DDB0; color: #3A2200; font: 400 16px var(--display); text-shadow: none; box-shadow: 0 3px 0 var(--stroke); }
+body.scene .cslot.ready .cs-top, body.scene .cslot .cs-now, body.scene .cslot.start .cs-top, body.scene .cslot .sl-plus { display: none; }
+body.scene .cslot.ready .cs-big { background: var(--gold); animation: bob2 1.2s ease-in-out infinite; }
+body.scene .cslot.busy .cs-top { display: flex; align-items: center; gap: 6px; background: #5BD27E; } body.scene .cslot.busy .cs-top span { margin: 0; } body.scene .cslot .cs-clock svg { width: 15px; height: 15px; }
+body.scene .cslot.busy .cs-gems { position: absolute; z-index: 2; bottom: 36px; right: 2px; padding: 2px 8px; font-size: 13px; }
+body.scene .cslot.start .cs-time { background: #8FC7FF; animation: bob2 1.2s ease-in-out infinite; }
+body.scene .cslot.locked::after { display: none; }
+body.scene .side { gap: 18px; } body.scene .side-btn { width: 80px; } body.scene .side-btn .ic { width: 64px; height: 64px; } body.scene .side-btn svg { width: 38px; height: 38px; }
+body.scene .side-btn > span:not(.ic) { max-width: 92px; font-size: 13px; }
+body.scene .dock .sbtn svg { width: 38px; height: 38px; } body.scene .dock .sbtn > span:last-of-type { font-size: 13px; }
+body.scene .cslot.empty { border: 0; }
+body.scene .cslot.empty small { font-size: 14px; background: rgba(242, 221, 176, 0.35); color: rgba(255, 255, 255, 0.85); border-style: dashed; box-shadow: none; }
+body.scene .cslot .ghost { display: block; opacity: 0.3; filter: brightness(0); }
+body.scene .cslot .ghost .chest-svg { filter: none; }
+
 body.scene .l-side { position: fixed; right: 28px; top: 100px; width: var(--side); z-index: 5; display: flex; flex-direction: column; gap: 12px; }
 .l-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .lm-card { position: relative; min-height: 124px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border-radius: 16px;
@@ -1681,9 +1704,13 @@ body.scene .l-side { position: fixed; right: 28px; top: 100px; width: var(--side
 .lm-pic { border-radius: 8px; border: 2px solid var(--stroke); }
 .lm-balls { display: flex; } .lm-balls canvas + canvas { margin-left: -18px; }
 .lm-ic { display: grid; place-items: center; height: 62px; } .lm-ic svg { width: 54px; height: 54px; }
-body.scene .l-road { position: fixed; left: 50%; translate: -50% 0; bottom: 30px; z-index: 5; display: flex; width: min(440px, calc(100vw - 2 * (var(--side) + 80px)));
+body.scene .l-road { position: fixed; left: 28px; bottom: 28px; z-index: 5; display: flex; width: calc(var(--side) + 20px);
   padding: 8px 14px; border-radius: 14px; background: rgba(10, 14, 31, 0.6); border: 0; color: var(--text); cursor: pointer; text-align: left; }
 body.scene .l-road[hidden] { display: none; }
 .l-road .wroad { width: 100%; }
 .l-road .wr-ic { width: 48px; height: 48px; }
-@media (max-height: 820px) { body.scene .l-rail { gap: 6px; } body.scene .rail-btn .ic { width: 52px; height: 52px; } .lm-card { min-height: 104px; } .lm-card canvas { height: 56px !important; width: auto !important; } body.scene #l-deal { display: none; } }
+@media (max-height: 820px) {
+  .lm-card { min-height: 104px; } .lm-card canvas { height: 56px !important; width: auto !important; } body.scene #l-deal { display: none; }
+  body.scene #l-slots { top: 100px; } body.scene .cslot .chest-svg { width: min(124px, 100%); } body.scene .dock .sbtn { height: 72px; }
+  body.scene .side-btn .ic { width: 54px; height: 54px; } body.scene .side { gap: 10px; }
+}

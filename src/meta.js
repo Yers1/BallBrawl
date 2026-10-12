@@ -1086,7 +1086,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   const clock = ms => { const sec = Math.ceil(ms / 1000); return sec >= 3600 ? mmss(ms) : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
   const CLOCK_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="#FFFFFF" stroke="#0A0E1F" stroke-width="2"/><path d="M12 8.5V13l3 2" stroke="#0A0E1F" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M9 2.5h6" stroke="#0A0E1F" stroke-width="2.4" stroke-linecap="round"/></svg>';
   function slots() {
-    const now = Date.now(), busy = unlocking(save, now), none = save.slots.every(sl => !sl);
+    const now = Date.now(), busy = unlocking(save, now), none = save.slots.every(sl => !sl) && !document.body.classList.contains('scene');
     $('#l-slots').classList.toggle('none', none);
     if (none) { // no chests yet: one slim strip that says how to get them, instead of four empty boxes
       const h = el('div', 'slot-hint', chestSvg('box') + '<span></span>');
@@ -1095,7 +1095,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     }
     $('#l-slots').replaceChildren(...save.slots.map((sl, i) => {
       const b = el('button', 'cslot' + (sl ? ' k-' + sl.kind : ' empty'));
-      if (!sl) { b.innerHTML = `<b class="sl-plus">+</b><small>${t('slotFree')}</small>`; b.onclick = () => toast(t('slotEmpty')); return b; }
+      if (!sl) { b.innerHTML = `<b class="sl-plus">+</b><span class="ghost">${chestSvg('box')}</span><small>${t('slotFree')}</small>`; b.onclick = () => toast(t('slotEmpty')); return b; }
       const left = slotLeft(sl, now), ready = sl.at != null && left <= 0, going = sl.at != null && !ready;
       b.classList.add(ready ? 'ready' : going ? 'busy' : 'locked');
       if (!ready && !going && !busy) b.classList.add('start'); // the one you can set unlocking now
@@ -1394,19 +1394,9 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     R.replaceChildren(...(d ? [card(t('shDeals'), () => open('shop'), deal)] : []), card(t('tabFam'), () => open('fam'), cmd), el('div', 'ad-wing'));
   }
 
-  // The big-screen lobby: a rail of round buttons on the left, the modes as cards and the day's deal on the right,
-  // the Glory Road under the stage; the profile, the chests and Play take the corners (style.css, body.scene).
-  const RAIL = ['shop', 'balls', 'quests', 'fam', 'clan', 'friends', 'leaders', 'profile'];
+  // The big-screen lobby: the chests stand on a shelf on the left with the Glory Road under it, the modes as cards and
+  // the day's deal on the right, the menu buttons in a short dock under the stage (style.css, body.scene).
   function bigLobby(road, deal) {
-    $('#l-rail').replaceChildren(...RAIL.map(id => {
-      const src = document.querySelector(`#lobby .dock [data-tab="${id}"], #lobby .side [data-tab="${id}"]`), b = el('button', 'rail-btn');
-      b.dataset.tab = id;
-      b.innerHTML = `<span class="ic">${id === 'fam' ? heroSvg(save.fam.skin) : src.querySelector('.ic').innerHTML.replace(/(id="|url\(#)ic-/g, '$1rl-ic-')}</span><span></span><i class="badge"></i>`;
-      b.children[1].textContent = src.querySelector('[data-t]').textContent;
-      b.lastChild.hidden = src.querySelector('.badge').hidden; // badges() refreshes it right after a render
-      b.onclick = () => { sfx.click(); open(id); };
-      return b;
-    }));
     const boss = BOSS_IDS[(Math.floor(Date.now() / 864e5) + 1) % BOSS_IDS.length]; // the next boss fight's boss (main.js nextBoss)
     const art = m => {
       if (m === 'duel') return el('span', 'lm-ic', $('#l-challenge .ic').innerHTML);
@@ -1430,7 +1420,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#l-road').onclick = () => { sfx.click(); open('path'); };
     $('#l-road').replaceChildren(...(road ? [road] : []));
   }
-  addEventListener('resize', () => { if (!$('#scr-home').hidden) wings(); });
+  addEventListener('resize', () => { if (!$('#scr-home').hidden) { wings(); if (tab === 'lobby') slots(); } });
 
   function lobby() {
     $('#l-fam').innerHTML = heroSvg(save.fam.skin);
