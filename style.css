@@ -1793,3 +1793,12 @@ body.scene #l-deal .wdeal > :is(canvas, .deco-prev, .banner-prev) { grid-row: 1 
 body.scene #l-deal .wdeal b { align-self: end; font-size: 15px; line-height: 1.2; }
 body.scene #l-deal .wdeal .sh-price { justify-self: start; align-self: start; font-size: 15px; padding: 4px 12px; }
 body.scene #l-deal .wdeal .sh-off { top: -6px; left: 50px; right: auto; z-index: 1; border: 2px solid var(--stroke); }
+
+/* the 3D menu icons (meta.js icons3d) */
+.ic3d { display: block; width: 40px; height: 40px; pointer-events: none; }
+.sbtn .ic3d { width: 42px; height: 42px; margin: -4px 0 -2px; }
+.side-btn .ic .ic3d { width: 42px; height: 42px; }
+#gear .ic3d { width: 32px; height: 32px; }
+.lm-ic .ic3d { width: 66px; height: 66px; }
+body.scene .side-btn .ic .ic3d { width: 56px; height: 56px; }
+body.scene .dock .sbtn .ic3d { width: 50px; height: 50px; }
