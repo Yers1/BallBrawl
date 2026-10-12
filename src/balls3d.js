@@ -542,6 +542,101 @@ export function createKit(THREE) {
     g.position.y = -0.75;
     return g;
   }
+  // A crate like a garage game's: planks with dark gaps between them, iron corner posts, a padlock; the lid is a plank top.
+  const grain = canvasTex(128, 128, (c, w) => {
+    c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, w, w);
+    for (let i = 0; i < 22; i++) {
+      c.strokeStyle = `rgba(80, 45, 15, ${0.07 + (i % 4) * 0.05})`; c.lineWidth = 1 + (i % 3);
+      const y = (i * 37) % w; c.beginPath(); c.moveTo(0, y);
+      for (let x = 0; x <= w; x += 16) c.lineTo(x, y + Math.sin(x / 19 + i) * 3);
+      c.stroke();
+    }
+  });
+  const CRATE = {
+    box: { wood: '#C98F52', core: '#4A2A12', iron: '#5E6675', mark: null },
+    big: { wood: '#4383E8', core: '#14306A', iron: '#DDE3EC', mark: '#FFFFFF' },
+    mega: { wood: '#8C52E2', core: '#30155E', iron: '#F2C12E', mark: '#FF4D6D' },
+  };
+  const coins = (g, y, sx, sz) => { for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = 0.2 + (k % 5) * 0.12; const coin = mesh(upZ(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 20)), metal('#FFC93B', { roughness: 0.25, emissive: '#7A4A08', emissiveIntensity: 0.3 })); coin.rotation.set(Math.PI / 2 + Math.sin(k) * 0.4, 0, k); coin.position.set(Math.cos(a) * rr * sx, y + (k % 3) * 0.05, Math.sin(a) * rr * sz); g.add(coin); } };
+  const padlock = (col, p) => group(mesh(rbox(0.36, 0.3, 0.12, 0.06), metal(col, { roughness: 0.4 }), p),
+    mesh(new THREE.TorusGeometry(0.11, 0.035, 8, 20, Math.PI), metal('#C9D1DE', { roughness: 0.3 }), [p[0], p[1] + 0.15, p[2]]),
+    mesh(upZ(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 12)), gloss(INK), [p[0], p[1] - 0.02, p[2] + 0.07]));
+  function crate(kind) {
+    const c = CRATE[kind] ?? CRATE.box, W = 2.1, H = 1.2, D = 1.5, wood = gloss(c.wood, { map: grain }), iron = metal(c.iron, { roughness: 0.45 }), ph = H / 3;
+    const g = group(mesh(new THREE.BoxGeometry(W - 0.1, H - 0.04, D - 0.1), gloss(c.core), [0, H / 2, 0]));
+    for (let i = 0; i < 3; i++) {
+      const y = ph * (i + 0.5);
+      for (const z of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(W - 0.1, ph - 0.07, 0.1), wood, [0, y, z * (D / 2 - 0.05)]));
+      for (const x of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.1, ph - 0.07, D - 0.1), wood, [x * (W / 2 - 0.05), y, 0]));
+    }
+    for (const x of [-1, 1]) for (const z of [-1, 1]) {
+      g.add(mesh(new THREE.BoxGeometry(0.2, H + 0.04, 0.2), iron, [x * (W / 2 - 0.04), H / 2, z * (D / 2 - 0.04)]));
+      for (const y of [0.18, H / 2, H - 0.18]) g.add(sphere(0.04, iron, [x * (W / 2 - 0.04), y, z * (D / 2 + 0.07)]));
+    }
+    if (kind === 'big') { const st = []; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 0.11 : 0.26; st.push([Math.cos(a) * r, -Math.sin(a) * r]); } g.add(mesh(new THREE.ExtrudeGeometry(shape(st), { depth: 0.03, bevelEnabled: false }), gloss(c.mark), [0, H * 0.34, D / 2 + 0.005])); }
+    if (kind === 'mega') g.add(mesh(rbox(0.44, 0.34, 0.06, 0.06), metal(c.iron), [0, H * 0.32, D / 2 + 0.03]), mesh(new THREE.OctahedronGeometry(0.13), gloss(c.mark, { emissive: c.mark, emissiveIntensity: 0.25 }), [0, H * 0.32, D / 2 + 0.11]));
+    g.add(padlock(kind === 'box' ? '#8A93A3' : c.iron, [0, H - 0.2, D / 2 + 0.1]));
+    coins(g, H - 0.02, 1.5, 0.9);
+    const lid = new THREE.Group(); lid.position.set(0, H, -D / 2); g.add(lid);
+    for (let i = 0; i < 3; i++) lid.add(mesh(new THREE.BoxGeometry(W + 0.04, 0.16, D / 3 - 0.05), wood, [0, 0.08, D / 6 + i * D / 3]));
+    for (const x of [-1, 1]) for (const z of [0.1, D - 0.1]) lid.add(mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), iron, [x * (W / 2 - 0.04), 0.1, z]));
+    lid.add(mesh(new THREE.BoxGeometry(0.2, 0.2, 0.05), iron, [0, -0.02, D + 0.04])); // the hasp the padlock hangs on
+    g.userData.lid = lid;
+    g.position.y = -0.8;
+    return g;
+  }
+
+  // A steel safe: a dial, a handle wheel and bolts on a door that swings open on its left hinges; gold bars inside.
+  const SAFE = {
+    box: { paint: '#7D8CA3', door: '#66758C', trim: '#D3D9E3', gem: null },
+    big: { paint: '#2F6FE0', door: '#2457B8', trim: '#E8EEF7', gem: '#FFFFFF' },
+    mega: { paint: '#E2A925', door: '#C48A12', trim: '#FFF0B3', gem: '#FF4D6D' },
+  };
+  function safe(kind) {
+    const c = SAFE[kind] ?? SAFE.box, W = 1.9, H = 1.55, D = 1.45, T = 0.16, paint = metal(c.paint, { roughness: 0.5, metalness: 0.6 }), trim = metal(c.trim, { roughness: 0.35 }), dark = gloss('#1A1F2E');
+    const g = group(mesh(new THREE.BoxGeometry(W, T, D), paint, [0, T / 2, 0]), mesh(new THREE.BoxGeometry(W, T, D), paint, [0, H - T / 2, 0]),
+      mesh(new THREE.BoxGeometry(T, H, D), paint, [-W / 2 + T / 2, H / 2, 0]), mesh(new THREE.BoxGeometry(T, H, D), paint, [W / 2 - T / 2, H / 2, 0]),
+      mesh(new THREE.BoxGeometry(W, H, T), paint, [0, H / 2, -D / 2 + T / 2]), mesh(new THREE.BoxGeometry(W - 2 * T - 0.02, H - 2 * T - 0.02, D - T), gloss('#1A1F2E', { side: THREE.BackSide }), [0, H / 2, T / 2]));
+    for (const x of [-1, 1]) for (const z of [-1, 1]) g.add(mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.12, 16), dark, [x * (W / 2 - 0.22), -0.05, z * (D / 2 - 0.22)]));
+    for (let i = 0; i < 3; i++) g.add(mesh(new THREE.BoxGeometry(0.42, 0.18, 0.5), metal('#FFC93B', { roughness: 0.3, emissive: '#7A4A08', emissiveIntensity: 0.3 }), [-0.42 + i * 0.42, T + 0.09, D / 2 - 0.35]));
+    for (let i = 0; i < 2; i++) g.add(mesh(new THREE.BoxGeometry(0.42, 0.18, 0.5), metal('#FFC93B', { roughness: 0.3, emissive: '#7A4A08', emissiveIntensity: 0.3 }), [-0.21 + i * 0.42, T + 0.27, D / 2 - 0.35]));
+    const lid = new THREE.Group(); lid.position.set(-W / 2 + 0.02, H / 2, D / 2); g.add(lid); // hinged on the left
+    const door = group(mesh(rbox(W - 0.04, H - 0.04, 0.16, 0.1), paint, [W / 2, 0, 0.08]), mesh(rbox(W - 0.4, H - 0.4, 0.06, 0.08), gloss(c.door), [W / 2, 0, 0.18]));
+    for (const y of [-0.45, 0.45]) door.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.28, 16), trim, [-0.02, y, 0.1]));
+    for (const x of [0.3, W - 0.3]) for (const y of [-0.5, 0.5]) door.add(sphere(0.05, trim, [x, y, 0.22]));
+    const dial = group(mesh(upZ(new THREE.CylinderGeometry(0.27, 0.29, 0.08, 40)), trim), mesh(upZ(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 32)), gloss(INK), [0, 0, 0.05]));
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; dial.add(mesh(new THREE.BoxGeometry(0.025, 0.07, 0.02), gloss(INK), [Math.sin(a) * 0.23, Math.cos(a) * 0.23, 0.045]).rotateZ(-a)); }
+    dial.add(c.gem ? mesh(new THREE.OctahedronGeometry(0.08), gloss(c.gem, { emissive: c.gem, emissiveIntensity: 0.25 }), [0, 0, 0.12]) : mesh(new THREE.BoxGeometry(0.04, 0.12, 0.04), trim, [0, 0.05, 0.1]));
+    dial.position.set(W / 2 - 0.3, 0.12, 0.25); door.add(dial);
+    const wheel = group(mesh(upZ(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 16)), trim));
+    for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2; wheel.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 10), trim, [0, 0, 0.04]).rotateZ(a), sphere(0.055, trim, [Math.sin(a) * 0.21, Math.cos(a) * 0.21, 0.04]), sphere(0.055, trim, [-Math.sin(a) * 0.21, -Math.cos(a) * 0.21, 0.04])); }
+    wheel.position.set(W / 2 + 0.38, -0.2, 0.26); door.add(wheel);
+    lid.add(door);
+    g.userData.lid = lid;
+    g.position.y = -0.78;
+    return g;
+  }
+
+  // How a chest is finished: 'gloss' keeps the shiny paint; 'matte' is soft paint and wood that barely reflect;
+  // 'toon' is flat bands of colour with an ink outline, like a cartoon.
+  const ramp = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 190, 190, 190, 255, 255, 255, 255, 255]), 3, 1);
+  ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.needsUpdate = true;
+  const ink = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
+  ink.onBeforeCompile = s => { s.vertexShader = s.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position + normal * 0.035;'); };
+  function finish(g, look) {
+    if (look === 'gloss') return g;
+    const hulls = [];
+    g.traverse(o => {
+      if (!o.isMesh) return;
+      const m = o.material, hard = m.metalness > 0.5, base = { color: m.color, map: m.map, side: m.side, emissive: m.emissive, emissiveIntensity: m.emissiveIntensity };
+      o.material = look === 'toon' ? new THREE.MeshToonMaterial({ ...base, gradientMap: ramp })
+        : new THREE.MeshStandardMaterial({ ...base, roughness: hard ? 0.5 : 0.85, metalness: hard ? 0.35 : 0, envMapIntensity: 0.35 });
+      if (look === 'toon') hulls.push(o);
+    });
+    for (const o of hulls) o.add(new THREE.Mesh(o.geometry, ink));
+    return g;
+  }
+  const LOOK = { matte: 'matte', toon: 'toon', crate: 'matte', safe: 'matte', 'crate-toon': 'toon', 'safe-toon': 'toon' };
   function capsule(kind) {
     const c = CHEST[kind] ?? CHEST.box, top = { box: '#F4EFE6', big: '#EAF2FF', mega: '#FFF0B8' }[kind] ?? '#F4EFE6';
     const g = group(mesh(new THREE.SphereGeometry(1, 64, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), gloss(c.body), [0, 0, 0]));
@@ -561,7 +656,11 @@ export function createKit(THREE) {
 
   return {
     skin, walls,
-    chest: (kind, style = 'classic', open = 0) => { const g = style === 'capsule' ? capsule(kind) : style === 'cube' ? cube(kind) : treasure(kind); g.userData.lid.rotation.x = -open; return g; },
+    chest: (kind, style = 'classic', open = 0) => { // style: classic, matte, toon, crate, safe (crate-toon, safe-toon), cube, capsule
+      const form = { capsule, cube, crate, safe }[style.split('-')[0]] ?? treasure, g = finish(form(kind), LOOK[style] ?? 'gloss');
+      if (form === safe) g.userData.lid.rotation.y = -open * 1.3; else g.userData.lid.rotation.x = -open;
+      return g;
+    },
     prop: (kind, v) => (PROP[kind] ?? PROP.rock)(v),
     ball: id => (B[id] ?? B.basic)(),
     boss: id => { const g = (BOSS[id] ?? BOSS.slime)(); g.scale.setScalar(1.25); return g; },

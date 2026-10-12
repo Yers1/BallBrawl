@@ -103,12 +103,12 @@ export function warm3d(e, skin = null, paint = null, live = false) {
 
 // A chest in 3D (the classic wooden kind) as an image URL for HTML: the whole chest, or its body or lid alone for the
 // opening, where the lid flies off. null until the models are in: then the 2D drawing is used.
-const urls = {};
+const urls = {}, CHEST_STYLE = new URLSearchParams(location.search).get('chest') ?? 'classic'; // ?chest=matte|toon|crate|safe previews a style
 export function chestUrl(kind, part = 'whole') {
   const key = kind + ':' + part;
   if (urls[key]) return urls[key];
   if (!ready()) return null;
-  const m = model('chest:' + kind, () => gl.kit.chest(kind, 'classic'));
+  const m = model('chest:' + kind, () => gl.kit.chest(kind, CHEST_STYLE));
   const c = sprite('chest:' + key, SIZE, () => {
     show(m);
     m.rotation.set(0.42, -0.5, 0);
