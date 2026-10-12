@@ -1,7 +1,7 @@
 // Canvas drawing for the arena + juice (sparks, damage numbers, hit flashes, shake).
 // Visual-only randomness uses Math.random — the simulation itself stays deterministic.
 import { W, H, SUDDEN, canSuper, FOOT, MAPS } from './sim.js';
-import { BALLS, TRAIN, LEECH, POISON, ICE, trainCars } from './balls.js';
+import { BALLS, TRAIN, LEECH, POISON, ICE, pathOf, pathAt } from './balls.js';
 import { SKINS, EMOTE_LIST } from './progress.js';
 import { THEMES } from './themes.js';
 import { ball3d, prop3d, arena3d, warm3d, is3d, FRAME } from './ball3d.js';
@@ -31,6 +31,25 @@ export function bigText(text, color = '#FFFFFF') { // with a shockwave, sparks a
   setTimeout(() => { ring(W / 2, H / 2, 20, 9, 0.6, '255,210,63', 9); ring(W / 2, H / 2, 10, 6, 0.45, '255,255,255', 5); burst(W / 2, H / 2, 46, '#FFD23F', 420, [3, 7]); burst(W / 2, H / 2, 18, '#FFFFFF', 300); fx.shake = 10; }, 180);
 }
 const COMIC = ['BAM!', 'POW!', 'WHAM!', 'BOOM!', 'SMASH!'];
+// The boss's entrance before the first aim: it drops in from above the arena, lands with a quake and swells with a roar.
+let intro = null;
+const DROP = 0.55, INTRO = 2.4;
+export function bossIntro(id) { intro = { id, at: performance.now() / 1000, landed: false }; }
+function introPose(e, now) {
+  if (!intro || e.id !== intro.id) return e;
+  const q = now - intro.at;
+  if (q > INTRO) { intro = null; return e; }
+  if (q < DROP) { const k = (q / DROP) ** 2; return { ...e, y: e.y - (1 - k) * 300, r: e.r * (1.45 - 0.45 * k), falling: k }; } // faster and faster
+  if (!intro.landed) { // the landing: a quake, a dust ring, a red shock ring and debris
+    intro.landed = true;
+    fx.shake = 18;
+    ring(e.x, e.y, e.r, 3.4, 0.6, '255,255,255', 9);
+    ring(e.x, e.y, e.r * 0.9, 2.6, 0.85, '255,77,94', 7);
+    burst(e.x, e.y + e.r * 0.5, 46, '#D9B47A', 420, [3, 8]);
+  }
+  const r = q - DROP, swell = r < 1.3 ? 0.07 * Math.sin(Math.min(1, r / 0.3) * Math.PI) + 0.035 * Math.sin(r * 42) * (1 - r / 1.3) : 0; // the roar
+  return { ...e, r: e.r * (1 + swell) };
+}
 export const setShakeOn = on => { shakeOn = on; }; // settings: some players get dizzy
 export function resetFx() {
   fx.parts.length = fx.floats.length = fx.rings.length = 0;
@@ -944,8 +963,19 @@ function web(ctx, z, t) {
 }
 
 // Rails: wooden sleepers across the path and two steel rails; the expired part stays as faded sleepers.
-function rails(ctx, pts, alpha, steel, side = null) { // side: whose rails — a glow in the team's colour underneath
-  if (pts.length < 2) return;
+// Rails bend round corners like real track: every other recorded point is kept, then the corners are cut three times.
+function curve(pts) {
+  let p = pts.filter((q, i) => i === 0 || i === pts.length - 1 || (q.n ?? i) % 2 === 0);
+  for (let k = 0; k < 3 && p.length > 2; k++) {
+    const out = [p[0]];
+    for (let i = 0; i < p.length - 1; i++) { const a = p[i], b = p[i + 1]; out.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 }, { x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 }); }
+    out.push(p.at(-1)); p = out;
+  }
+  return p;
+}
+function rails(ctx, raw, alpha, steel, side = null) { // side: whose rails — a glow in the team's colour underneath
+  if (raw.length < 2) return;
+  const pts = curve(raw);
   ctx.save();
   ctx.globalAlpha = alpha;
   if (side != null) {
@@ -957,10 +987,10 @@ function rails(ctx, pts, alpha, steel, side = null) { // side: whose rails — a
   }
   ctx.lineCap = 'butt';
   ctx.beginPath();
-  for (let i = 1; i < pts.length; i++) {
+  for (let i = 1, run = 0, next = 4; i < pts.length; i++) { // a sleeper every 9 units along the curve
     const a = pts[i - 1], b = pts[i], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
-    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-    ctx.moveTo(mx + nx * 13, my + ny * 13); ctx.lineTo(mx - nx * 13, my - ny * 13);
+    for (; next <= run + l; next += 9) { const k = (next - run) / l, x = a.x + dx * k, y = a.y + dy * k; ctx.moveTo(x + nx * 13, y + ny * 13); ctx.lineTo(x - nx * 13, y - ny * 13); }
+    run += l;
   }
   ctx.strokeStyle = '#3B2414'; ctx.lineWidth = 7; ctx.stroke();
   ctx.strokeStyle = '#9A6436'; ctx.lineWidth = 4.5; ctx.stroke();
@@ -984,9 +1014,23 @@ function track(ctx, z, t) { // the fresh rails behind the ball (they vanish afte
   for (const tr of z.trains) rails(ctx, tr.path.pts, 1, true, z.side);
 }
 
-// A train: a locomotive with a cab, chimney and headlight, then cars with lit windows, all following the track.
+// Where the cars are drawn: on the rounded rails (the sim's straight ones are a little shorter at the corners, so the
+// distance is scaled to arrive together).
+function carsOn(tr, t) {
+  const sm = (tr.path.sm ??= pathOf(curve(tr.path.pts))), k = sm.len / (tr.path.len || 1), head = (t - tr.go) * tr.speed * k, out = [];
+  for (let i = 0; i < tr.cars; i++) { const d = head - i * TRAIN.spacing * k; if (d >= 0 && d <= sm.len) out.push({ ...pathAt(sm, d), i }); }
+  return out;
+}
+function headlight(ctx, L) {
+  const g = ctx.createRadialGradient(L / 2 + 6, 0, 1, L / 2 + 6, 0, 26);
+  g.addColorStop(0, 'rgba(255,240,180,0.55)');
+  g.addColorStop(1, 'rgba(255,240,180,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(L / 2 + 4, 0); ctx.lineTo(L / 2 + 34, -14); ctx.lineTo(L / 2 + 34, 14); ctx.closePath(); ctx.fill();
+}
+// A train: a locomotive with a cab, chimney and headlight, then cars, all following the track (3D cars when the models are in).
 function trainDraw(ctx, tr, t, side = 0) { // side: the team — its colour glows under every car and paints the locomotive
-  const cars = trainCars(tr, t);
+  const cars = carsOn(tr, t);
   for (const pass of [0, 1]) for (const c of [...cars].reverse()) { // shadows first, then bodies back to front
     ctx.save();
     ctx.translate(c.x, c.y);
@@ -995,6 +1039,13 @@ function trainDraw(ctx, tr, t, side = 0) { // side: the team — its colour glow
     if (!pass) {
       ctx.fillStyle = SIDE[side]; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.roundRect(-L / 2 - 3, -Wd / 2 - 3, L + 6, Wd + 6, 8); ctx.fill(); ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(8,16,32,0.45)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 3, -Wd / 2 + 5, L, Wd, 5); ctx.fill(); ctx.restore(); continue;
+    }
+    const model = prop3d('wagon', c.i === 0 ? (tr.express ? 7 : side ? 6 : 5) : tr.express ? 4 : (c.i - 1) % 4);
+    if (model) { // 1 model unit = 10 arena units
+      const s = 10 * FRAME;
+      ctx.drawImage(model, -s, -s, s * 2, s * 2);
+      if (c.i === 0) headlight(ctx, L);
+      ctx.restore(); continue;
     }
     ctx.strokeStyle = INK;
     ctx.lineWidth = 2;
@@ -1010,11 +1061,7 @@ function trainDraw(ctx, tr, t, side = 0) { // side: the team — its colour glow
       ctx.beginPath(); ctx.arc(L / 2 - 9, 0, 4, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#8E95A8';
       ctx.beginPath(); ctx.moveTo(L / 2, -Wd / 2 + 2); ctx.lineTo(L / 2 + 6, 0); ctx.lineTo(L / 2, Wd / 2 - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
-      const g = ctx.createRadialGradient(L / 2 + 6, 0, 1, L / 2 + 6, 0, 26);
-      g.addColorStop(0, 'rgba(255,240,180,0.55)');
-      g.addColorStop(1, 'rgba(255,240,180,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.moveTo(L / 2 + 4, 0); ctx.lineTo(L / 2 + 34, -14); ctx.lineTo(L / 2 + 34, 14); ctx.closePath(); ctx.fill();
+      headlight(ctx, L);
     } else { // a car: purple with a gem, an orange tank, a green box car, a blue coach — or the express's purple cars
       const kind = tr.express ? 4 : (c.i - 1) % 4, body = ['#8E5BE8', '#F28A1E', '#2FA65A', '#2E86E0', c.i % 2 ? '#7A4FE0' : '#5B3BB0'][kind];
       ctx.fillStyle = body;
@@ -1089,7 +1136,16 @@ function ringZone(ctx, z, t) {
   g.addColorStop(1, 'rgba(197,49,58,0.28)');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(z.x, z.y, r, 0, Math.PI * 2); ctx.fill();
-  chainStroke(ctx, pts, len, len * 0.3, 2.6, 10);
+  const flat = prop3d('link', false), edge = prop3d('link', true);
+  if (flat && edge) {
+    ctx.strokeStyle = SIDE[z.side] ?? '#FF4D5E'; ctx.globalAlpha = Math.max(0, fade) * 0.35; ctx.lineWidth = 12; // the team's colour under the chain
+    ctx.beginPath(); ctx.arc(z.x, z.y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = Math.max(0, fade);
+    const s = len * 0.62 * FRAME; // a link is about 1.6 units long; it overlaps the next one a little
+    pts.forEach((p, i) => { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.drawImage(i % 2 ? edge : flat, -s, -s, s * 2, s * 2); ctx.restore(); });
+    const lock = prop3d('padlock', 0), a = spin - Math.PI / 2, ls = 9 * FRAME;
+    if (lock) ctx.drawImage(lock, z.x + Math.cos(a) * r - ls, z.y + Math.sin(a) * r - ls, ls * 2, ls * 2);
+  } else chainStroke(ctx, pts, len, len * 0.3, 2.6, 10);
   ctx.restore();
 }
 
@@ -2075,7 +2131,14 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
   for (const e of w.ents) if (!e.dead && e.chess) chessLines(ctx, e, w.t);
   for (const e of w.ents) if (!e.dead && e.latch) drain(ctx, w, e, w.t, dt);
   for (const e of w.ents) if (!e.dead) trail(ctx, e, w.t);
-  for (const e of w.ents) if (!e.dead) drawBall(ctx, e, now, w.t);
+  for (const e of w.ents) if (!e.dead) {
+    const p = introPose(e, now);
+    if (p.falling != null) { // where it will land, its shadow grows
+      ctx.fillStyle = `rgba(8,16,32,${0.15 + 0.4 * p.falling})`;
+      ctx.beginPath(); ctx.ellipse(e.x, e.y + e.r * 0.3, e.r * (0.4 + 0.6 * p.falling), e.r * (0.35 + 0.5 * p.falling), 0, 0, Math.PI * 2); ctx.fill();
+    }
+    drawBall(ctx, p, now, w.t);
+  }
   if (ck > 0 && cam.dim > 0) { // the arena goes dark around the moment
     const f = cam.focus != null ? w.ents.find(e => e.id === cam.focus) : null, fx0 = f ? f.x : cam.x, fy0 = f ? f.y : cam.y;
     const g = ctx.createRadialGradient(fx0, fy0, 30, fx0, fy0, 260);
@@ -2090,7 +2153,7 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
     ctx.restore();
   }
   if (w.ball) football(ctx, w.ball);
-  for (const e of w.ents) if (!e.dead && !w.ball) hpText(ctx, e); // numbers last, so a ball never covers another's HP
+  for (const e of w.ents) if (!e.dead && !w.ball && introPose(e, now).falling == null) hpText(ctx, e); // numbers last, so a ball never covers another's HP
   for (const e of w.ents) if (!e.dead && e.chess) chessPiece(ctx, e, w.t);
   for (const z of w.zones) if (z.kind === 'track') for (const tr of z.trains) trainDraw(ctx, tr, w.t, z.side);
   for (const e of w.ents) {
@@ -2185,14 +2248,16 @@ export function draw(ctx, w, s, { aim = null, foeAim = null, now, dt, me = null 
       ctx.fillStyle = '#FFE38A';
       for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18, -260); ctx.lineTo(18, -260); ctx.fill(); }
       ctx.restore();
-      ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.rotate(-0.06);
+      ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.translate(W / 2, H / 2);
       ctx.font = '400 64px "Russo One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      const fit = Math.min(1, (W * 0.7) / ctx.measureText(big.text).width); // a long boss name still fits, even zoomed in
+      ctx.scale(s * fit, s * fit); ctx.rotate(-0.06);
       ctx.lineWidth = 14; ctx.strokeStyle = INK; ctx.strokeText(big.text, 0, 0);
       ctx.fillStyle = big.color; ctx.fillText(big.text, 0, 0);
       ctx.restore();
     }
   }
-  for (const e of w.ents) if (e.boss && !e.dead) bossTop(ctx, e, now);
+  for (const e of w.ents) if (e.boss && !e.dead) bossTop(ctx, introPose(e, now), now);
   bossBar(ctx, w, now);
   const mine = me != null && w.ents.find(e => e.id === me && !e.dead);
   if (mine) { // in a party: a bobbing marker over the ball you steer

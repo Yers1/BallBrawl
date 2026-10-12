@@ -3,7 +3,7 @@ import { createWorld, launch, step, act, canSuper, rng, W, H, SUDDEN, DASH, METE
 import { BALLS, ORDER } from './balls.js';
 import { createMatch, roundWorld, endRound, revive, aiAngle, bossSpec, upgradeChoices, applyUpgrade, SURVIVAL } from './match.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
-import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, spray, drawSpray, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText, warmBall } from './render.js';
+import { draw, drawIcon, fitCanvas, resetFx, M, emote, drawEmote, spray, drawSpray, setAutoEmote, pickMood, setAuras, setFoeEmotes, setBossNames, setShakeOn, cinema, bigText, warmBall, bossIntro } from './render.js';
 import { lang, t, ballName, ballAbout, superName, superAbout, skinName, LANGS, setLang, langChosen, langFromPhone } from './i18n.js';
 const RECORD = new URLSearchParams(location.search).get('record'); // ?record[=a,b]: chrome-free 9:16 spectator page for screen recordings
 import { createAI } from './ai.js';
@@ -421,9 +421,21 @@ function nextRound() {
   show(null);
   hud();
   cards(me, foe);
-  banner(wave ? `${wave % SURVIVAL.boss ? t('wave', { n: wave }) : t('bossWave')} · ${t('arena_' + S.world.map)}` : t('round', { n: S.match.round }));
+  const boss = S.world.ents.find(e => e.boss);
+  if (boss) bossEntrance(boss); // its name in big letters stands for the round banner
+  if (!boss || wave) banner(wave ? `${wave % SURVIVAL.boss ? t('wave', { n: wave }) : t('bossWave')} · ${t('arena_' + S.world.map)}` : t('round', { n: S.match.round }));
   playMusic(null);
   sfx.round();
+}
+
+// The boss's entrance before the first aim: it drops in, lands with a quake, roars and shows its name; the aim clock waits.
+function bossEntrance(b) {
+  bossIntro(b.id);
+  cinema(b.x, b.y, 1.25, 2.4, 0.5, b.id);
+  S.aimLeft += 2.4;
+  sfx.bossFall();
+  setTimeout(() => { sfx.bossLand(); if (save.vibrate) navigator.vibrate?.(120); }, 550);
+  setTimeout(() => { sfx.roar(); bigText(t('boss_' + b.boss), '#FF4D5E'); }, 750);
 }
 
 function fire() {
@@ -1293,7 +1305,7 @@ $('#c-accept').onclick = startChallenge;
 $('#c-skip').onclick = () => goHome();
 $('#super-btn').onclick = useSuper;
 $('#super-btn').dataset.key = t('keySpace'); // shown under the button on computers
-const VERSION = '1.16';
+const VERSION = '1.17';
 // Settings: sound, the opponent's emotes, language, account and privacy. The gear works on every screen.
 const muteUI = () => {
   $('#set-sound').classList.toggle('on', !save.muted);

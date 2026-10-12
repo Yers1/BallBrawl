@@ -235,7 +235,7 @@ export function createKit(THREE) {
         for (let i = 0; i < n; i++) {
           const a = -1.25 + i / (n - 1) * 2.5, p = V(Math.sin(a), 0, Math.cos(a)).multiplyScalar(1.04).applyAxisAngle(V(0, 0, 1), tilt);
           const t = V(Math.cos(a), 0, -Math.sin(a)).applyAxisAngle(V(0, 0, 1), tilt);
-          const link = mesh(new THREE.TorusGeometry(0.075, 0.024, 10, 24), steel);
+          const link = mesh(new THREE.TorusGeometry(0.085, 0.032, 12, 24), steel);
           link.scale.set(1.5, 1, 1); link.position.copy(p);
           link.quaternion.setFromUnitVectors(V(1, 0, 0), t); link.rotateX(i % 2 ? Math.PI / 2 : 0); g.add(link);
         }
@@ -243,7 +243,7 @@ export function createKit(THREE) {
       const gold = metal('#F2C12E', { roughness: 0.3 });
       const lock = group(mesh(new THREE.BoxGeometry(0.4, 0.32, 0.16), gold), mesh(new THREE.TorusGeometry(0.12, 0.035, 12, 24, Math.PI), steel, [0, 0.16, 0]),
         mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 16), gloss(INK), [0, 0.02, 0.085]), mesh(new THREE.BoxGeometry(0.03, 0.08, 0.02), gloss(INK), [0, -0.04, 0.085]));
-      lock.children[2].rotation.x = Math.PI / 2; lock.position.set(0, -0.02, 1.08); g.add(lock);
+      lock.children[2].rotation.x = Math.PI / 2; lock.position.set(0, -0.02, 1.1); lock.scale.setScalar(1.2); g.add(lock);
       return g;
     },
     forge() { // polished gold with a smith's hammer
@@ -412,6 +412,48 @@ export function createKit(THREE) {
         for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 - Math.PI / 2; pent(w / 2 + Math.cos(a) * w * 0.39, w / 2 + Math.sin(a) * w * 0.39, w * 0.1, Math.PI); }
       });
       return group(mesh(front, gloss('#FFFFFF', { map })));
+    },
+    wagon(v) { // a train car seen from above, nose toward +x (1 unit = 10 arena units): 0 purple coach with a gem, 1 orange
+      // tank, 2 green box car, 3 blue coach, 4 the express's car; 5, 6, 7 the locomotive (blue yours, red theirs, gold express)
+      const loco = v >= 5, body = ['#8E5BE8', '#F28A1E', '#2FA65A', '#2E86E0', '#6A45D8', '#2E7BE0', '#D9452B', '#F2B632'][v] ?? '#8E5BE8';
+      const gold = metal('#F2C12E', { roughness: 0.3 }), dark = gloss('#1D2338', { roughness: 0.4 });
+      const slab = (w, h, d, r) => {
+        const s = new THREE.Shape(), x = w / 2, y = h / 2;
+        s.moveTo(-x + r, -y); s.lineTo(x - r, -y); s.quadraticCurveTo(x, -y, x, -y + r); s.lineTo(x, y - r); s.quadraticCurveTo(x, y, x - r, y);
+        s.lineTo(-x + r, y); s.quadraticCurveTo(-x, y, -x, y - r); s.lineTo(-x, -y + r); s.quadraticCurveTo(-x, -y, -x + r, -y);
+        return new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 3 });
+      };
+      const g = group(mesh(new THREE.BoxGeometry(2.8, 1.5, 0.3), gloss('#2A2F3A', { roughness: 0.5 }), [0, 0, 0.15])); // the chassis
+      if (loco) {
+        g.add(mesh(slab(1.7, 1.6, 0.7, 0.45), gloss(body), [0.42, 0, 0.3]), mesh(slab(0.95, 1.7, 1.15, 0.25), dark, [-0.9, 0, 0.3])); // boiler, cab
+        g.add(mesh(new THREE.BoxGeometry(0.7, 1.75, 0.12), gloss(body), [-0.9, 0, 1.6])); // the cab's roof
+        const stack = mesh(upZ(new THREE.CylinderGeometry(0.24, 0.3, 0.7, 24)), dark, [0.85, 0, 1.25]); g.add(stack, mesh(new THREE.TorusGeometry(0.27, 0.06, 10, 24), gold, [0.85, 0, 1.5]));
+        g.add(sphere(0.2, lamp('#FFE27A', 1.8), [1.4, 0, 0.75]), mesh(new THREE.TorusGeometry(0.2, 0.05, 10, 24).rotateY(Math.PI / 2), gold, [1.42, 0, 0.75]));
+        g.add(mesh(new THREE.ConeGeometry(0.62, 0.5, 4).rotateZ(-Math.PI / 2).rotateX(Math.PI / 4), gold, [1.58, 0, 0.32])); // the cow-catcher
+        g.add(mesh(new THREE.BoxGeometry(1.5, 0.12, 0.08), gold, [0.42, 0.62, 1.12]), mesh(new THREE.BoxGeometry(1.5, 0.12, 0.08), gold, [0.42, -0.62, 1.12])); // trim
+      } else if (v === 1) { // a tank lying along the car, a hatch on top
+        g.add(mesh(new THREE.CapsuleGeometry(0.72, 1.2, 8, 24).rotateZ(Math.PI / 2), gloss(body), [0, 0, 0.95]));
+        g.add(mesh(upZ(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 24)), gloss('#7A3A0E'), [0, 0, 1.7]), mesh(new THREE.TorusGeometry(0.72, 0.05, 10, 32).rotateY(Math.PI / 2), dark, [0.7, 0, 0.95]), mesh(new THREE.TorusGeometry(0.72, 0.05, 10, 32).rotateY(Math.PI / 2), dark, [-0.7, 0, 0.95]));
+      } else {
+        g.add(mesh(slab(2.6, 1.6, 0.75, 0.32), gloss(body), [0, 0, 0.3]));
+        if (v === 0) g.add(mesh(new THREE.OctahedronGeometry(0.34), gloss('#FFFFFF', { emissive: '#C9B6FF', emissiveIntensity: 0.4 }), [0, 0, 1.45]));
+        if (v === 2) for (const x of [-0.8, 0, 0.8]) g.add(mesh(new THREE.BoxGeometry(0.08, 1.5, 0.05), gloss('#17572E'), [x, 0, 1.18]));
+        if (v === 3) g.add(mesh(new THREE.BoxGeometry(2.1, 0.26, 0.06), lamp('#FFE08A', 0.9), [0, 0, 1.19]));
+        if (v === 4) g.add(mesh(new THREE.BoxGeometry(2.4, 0.22, 0.06), gold, [0, 0, 1.19]));
+      }
+      return g;
+    },
+    link(edge) { // one steel chain link from above: lying flat (an oval ring) or on its edge (a bar)
+      const l = mesh(new THREE.TorusGeometry(0.62, 0.2, 14, 36), metal('#D5DCE8', { roughness: 0.18 }));
+      l.scale.set(1.45, 1, 1);
+      if (edge) l.rotation.x = Math.PI / 2;
+      return group(l);
+    },
+    padlock() { // the trap's gold padlock, standing up toward you
+      const gold = metal('#F2C12E', { roughness: 0.25 });
+      const g = group(mesh(new THREE.BoxGeometry(1.5, 1.2, 0.6), gold, [0, -0.35, 0]), mesh(new THREE.TorusGeometry(0.5, 0.14, 12, 32, Math.PI), metal('#C9D1DE', { roughness: 0.2 }), [0, 0.25, 0]));
+      g.add(mesh(upZ(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20)), gloss(INK), [0, -0.25, 0.31]), mesh(new THREE.BoxGeometry(0.12, 0.34, 0.1), gloss(INK), [0, -0.5, 0.31]));
+      return g;
     },
   };
 

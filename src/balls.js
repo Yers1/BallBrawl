@@ -302,7 +302,7 @@ export const BALLS = {
     hp: 100, color: '#E02424', price: 250, // the Stitch boiler red
     onTick(w, me) {
       const z = trackOf(w, me), last = z.pts[z.pts.length - 1];
-      if (!last || Math.hypot(me.x - last.x, me.y - last.y) >= TRAIN.gap) z.pts.push({ x: me.x, y: me.y, t: w.t });
+      if (!last || Math.hypot(me.x - last.x, me.y - last.y) >= TRAIN.gap) z.pts.push({ x: me.x, y: me.y, t: w.t, n: (z.n = (z.n ?? 0) + 1) });
       while (z.pts.length > 1 && z.pts[0].t < w.t - TRAIN.life) z.pts.shift();
       if ((!me.boost || me.boost.until <= w.t || me.boost.rails) && onTrack(z, me, TRAIN.warm, w.t)) { // speeds up on its own rails
         me.boost = { until: w.t + 0.1, mul: TRAIN.boostMul, dmg: TRAIN.boostDmg, rails: true };

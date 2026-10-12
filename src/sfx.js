@@ -196,6 +196,17 @@ export const sfx = {
     noise(0.45, { vol: 0.2, freq: 5200, q: 0.6, delay: 0.14, type: 'highpass' });
   },
   coin: () => { tone(988, 0.07, { type: 'square', vol: 0.08 }); tone(1319, 0.12, { type: 'square', vol: 0.08, delay: 0.07 }); },
+  bossFall: () => { tone(1100, 0.55, { type: 'sine', vol: 0.07, slide: 0.3 }); noise(0.5, { vol: 0.08, freq: 3000, sweep: 0.25, q: 1 }); }, // a falling whistle
+  bossLand: () => { // the ground shakes: a deep boom and rumbling rocks
+    tone(55, 1.1, { type: 'sine', vol: 0.6, slide: 0.5 });
+    noise(1, { vol: 0.35, freq: 220, sweep: 0.5, q: 0.7 });
+    noise(0.35, { vol: 0.16, freq: 1300, q: 0.5 });
+  },
+  roar: () => { // the boss roars: a rough growl that drops
+    noise(1.2, { vol: 0.3, freq: 700, sweep: 0.45, q: 2.2 });
+    tone(92, 1.1, { type: 'sawtooth', vol: 0.12, slide: 0.72 });
+    tone(139, 1, { type: 'sawtooth', vol: 0.07, slide: 0.7, delay: 0.05 });
+  },
 };
 
 // ---------- music: little chiptune songs (menus; a tense one in sudden death), scheduled just ahead on the audio clock ----------
