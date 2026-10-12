@@ -158,6 +158,9 @@ export const sfx = {
     tone(131, 1, { type: 'triangle', vol: 0.08, slide: 0.9, delay: 1.08 });
   },
   click: () => tone(700 * J(0.06), 0.05, { type: 'sine', vol: 0.08 }),
+  keys: () => [0, 0.05, 0.11, 0.18, 0.27].forEach((d, i) => tone((2300 + (i % 3) * 420) * J(0.08), 0.1, { type: 'triangle', vol: 0.035, delay: d })), // a keychain's jingle
+  skitter: () => { for (let i = 0; i < 7; i++) noise(0.015, { vol: 0.08, freq: 5200 * J(0.2), q: 6, delay: i * 0.03 }); }, // tiny legs running on wood
+  lamp: (on = true) => noise(0.03, { vol: 0.14, freq: on ? 2600 : 1600, q: 4 }), // the switch's click
   round: () => { tone(880, 0.12, { type: 'square', vol: 0.06 }); tone(1320, 0.18, { type: 'square', vol: 0.06, delay: 0.1 }); },
   count: (last = false) => tone(last ? 1320 : 880, last ? 0.3 : 0.12, { type: 'square', vol: 0.07 }),
   vs: () => { // face to face: a whoosh as the banners fly in, then a drum hit, a cymbal crash and a brass chord as the shield lands

@@ -101,9 +101,9 @@ export function warm3d(e, skin = null, paint = null, live = false) {
   if (idle) requestAnimationFrame(pump);
 }
 
-// A chest in 3D (the classic wooden kind) as an image URL for HTML: the whole chest, or its body or lid alone for the
+// A chest in 3D (a steel safe, the style the user picked) as an image URL for HTML: the whole chest, or its body or lid alone for the
 // opening, where the lid flies off. null until the models are in: then the 2D drawing is used.
-const urls = {}, CHEST_STYLE = new URLSearchParams(location.search).get('chest') ?? 'classic'; // ?chest=matte|toon|crate|safe previews a style
+const urls = {}, CHEST_STYLE = new URLSearchParams(location.search).get('chest') ?? 'safe'; // the user's pick; ?chest=classic|matte|toon|crate|crate-toon previews another style
 export function chestUrl(kind, part = 'whole') {
   const key = kind + ':' + part;
   if (urls[key]) return urls[key];

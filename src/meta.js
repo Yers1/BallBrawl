@@ -1106,7 +1106,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       else if (going) { b.querySelector('.cs-clock span').textContent = clock(left); b.querySelector('.cs-now').textContent = t('slotNow'); }
       else { b.querySelector('.cs-top').textContent = busy ? t('slotLocked') : t('slotTapStart'); b.querySelector('.cs-time').textContent = mmss(CHEST_TIME[sl.kind]); }
       b.onclick = () => {
-        sfx.click();
+        sfx.click(); startle();
         if (ready) return openFromSlot(i, false);
         if (sl.at == null && !unlocking(save, Date.now())) { startUnlock(save, i, Date.now()); persist(); slots(); return; }
         slotCard(i);
@@ -1455,6 +1455,12 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   $('#l-chest').onclick = () => { sfx.click(); chests(); };
   $('#l-squad').onclick = onPlay;
   $('#l-challenge').onclick = onChallenge;
+  // The shelf's little life (big screens): tap the spider, the keychain or the lamp; a tap on a chest startles the first two.
+  function poke(e, ms) { e.classList.remove('go'); void e.offsetWidth; e.classList.add('go'); clearTimeout(e.t); e.t = setTimeout(() => e.classList.remove('go'), ms); }
+  function startle() { if (!document.body.classList.contains('scene')) return; poke($('#l-shelf .sd-spider'), 2000); poke($('#l-shelf .sd-keys'), 1600); }
+  $('#l-shelf .sd-spider').onclick = () => { sfx.skitter(); poke($('#l-shelf .sd-spider'), 2000); };
+  $('#l-shelf .sd-keys').onclick = () => { sfx.keys(); poke($('#l-shelf .sd-keys'), 1600); };
+  $('#l-shelf .sd-lamp').onclick = () => { const off = $('#l-shelf').classList.toggle('dark'); $('#l-slots').classList.toggle('dark', off); sfx.lamp(!off); };
   $('#b-watch').onclick = onWatch;
   $('#h-play').onclick = onPlay;
   $('#sub-back').onclick = () => { sfx.click(); open(tab === 'mail' ? 'profile' : 'lobby'); }; // messages sit inside the profile
