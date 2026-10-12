@@ -5,12 +5,12 @@ description: A chunky, toy-like Supercell-style browser game UI where every butt
 colors:
   primary: "#FFCC33"        # gold: the one main action (PLAY, Claim all) and coins
   on-primary: "#3A2500"
-  surface: "#1E2742"        # panels
-  surface-raised: "#2A3558" # buttons and tiles on a panel
-  surface-edge: "#3A4870"   # the lit top edge of a panel (inset 2px)
+  surface: "#3A2617"        # panels: dark walnut, with a faint plank grain (--grain)
+  surface-raised: "#4B321E" # buttons and tiles on a panel
+  surface-edge: "#6E4B2B"   # the lit top edge of a panel (inset 2px)
   outline: "#0A0E1F"        # every outline and every solid bottom edge
   text: "#FFFFFF"
-  text-muted: "#9DB0D6"
+  text-muted: "#D2BC98"
   success: "#36D27A"        # claim, owned, ready
   on-success: "#06301A"
   gems: "#B44CF0"           # gem prices and gem buttons only
@@ -92,13 +92,14 @@ components:
 **Key characteristics:**
 - Thick dark outline plus a solid bottom edge on every pressable thing; it sinks 3px when pressed.
 - Gold means "press this". Green means "yours / take it". Red means "enemy / something waits".
-- The current arena's sky is the page background; panels stay the same navy everywhere.
+- The current arena's sky is the page background; panels are the same warm wood everywhere (the user's call, 2026-10-13: "this style for the whole game" after the chest shelf).
+- Chests stand on wooden planks (the shelf on big screens, one plank row on phones), each with a cardboard tag for its time.
 - Big numbers: HP, damage, trophies and prices are set in Rubik 900.
 
 ## Colors
 
 **Strategy:** Full palette, and every colour has one job. Gold is reserved for the single main action on a screen and for coins; using it for a secondary button breaks the "gold = press" rule kids learn in Supercell games. Green is for claim/owned/ready, purple only for gems, cyan for the player and red for the enemy, danger and the red dot.
-**Light or dark:** dark navy panels, because the game is played anywhere from a bright classroom to a dark bedroom and the arena art behind it is colourful; navy keeps the art and the gold button the brightest things on screen.
+**Light or dark:** dark walnut-wood panels (since 2026-10-13; navy before), a cozy workshop look like a garage game's: the game is played anywhere from a bright classroom to a dark bedroom and the arena art behind it is colourful; dark wood keeps the art and the gold button the brightest things on screen.
 Rarity uses one set everywhere (ball tiles, skins, familiars, shop tiers, chest cards) through `--rar-*` tokens; a shop tier shows it as the 3px bottom stripe, a tile as its border.
 
 ## Typography
