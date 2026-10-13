@@ -1520,56 +1520,71 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .p-mail svg { width: 26px; height: 26px; flex: none; }
 .p-mail .badge { top: -7px; right: -5px; }
 
-/* ---------- Glory Road: a rail down the left, a compact row per reward, each arena under its own sky ---------- */
+/* ---------- Glory Road: a board-game map. Each arena is a patch of its own ground with its things about and a gate at its
+   start; the rewards stand on plates along one winding path (gold where you've been); your ball stands where you are. ---------- */
+body[data-tab=path] .page-in { width: min(100%, 760px); }
+.road4 { position: relative; margin: 0 -16px; padding-bottom: 96px; }
+.rd-path { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; overflow: visible; }
+.rd-path path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.rd-path .p-edge { stroke: #1A1008; stroke-width: 46px; }
+.rd-path .p-road { stroke: #E9D3A0; stroke-width: 36px; }
+.rd-path .p-done { stroke: #FFCC33; stroke-width: 36px; filter: drop-shadow(0 0 10px rgba(255, 204, 51, 0.6)); }
+.rd-path .p-dash { stroke: rgba(120, 80, 30, 0.35); stroke-width: 4px; stroke-dasharray: 2 16; }
+.rd-zone { position: relative; overflow: hidden; border-top: 5px solid var(--stroke);
+  background: radial-gradient(ellipse 70% 30% at 50% 70%, color-mix(in srgb, var(--zl) 30%, transparent), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 26px), linear-gradient(color-mix(in srgb, var(--zf) 80%, #000), var(--zf)); }
+.rd-zone::before { content: ''; position: absolute; inset: -30px; background: var(--zimg) center / cover; filter: blur(14px) saturate(1.1); opacity: 0.55; pointer-events: none; }
+.rd-zone.locked > :not(.rd-gate) { filter: saturate(0.45) brightness(0.65); }
+.rd-zone.locked { background-color: #000; }
+.rd-zone.locked::after { content: ''; position: absolute; inset: 0; background: rgba(10, 6, 2, 0.35); pointer-events: none; }
+.rd-prop { position: absolute; z-index: 1; width: 64px; height: 64px; translate: -50% 50%; opacity: 0.9; filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.35)); pointer-events: none; }
+.rd-gate { position: absolute; z-index: 3; left: 50%; bottom: 22px; translate: -50% 0; width: min(88%, 400px); box-sizing: border-box; display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px 10px 10px; border-radius: 16px; border: 4px solid var(--stroke); background: var(--grain), var(--panel); box-shadow: inset 0 2px 0 var(--hi), 0 6px 0 var(--stroke); }
+.rd-gate::before { content: ''; position: absolute; left: 50%; top: -34px; translate: -50% 0; width: 70%; height: 46px; border: 5px solid var(--stroke); border-bottom: 0; border-radius: 999px 999px 0 0;
+  background: none; box-shadow: inset 0 3px 0 var(--hi); } /* the arch over the road */
+.rd-zone.cur .rd-gate { box-shadow: 0 0 0 4px var(--gold), 0 6px 0 var(--stroke); }
+.rd-gate canvas { flex: none; display: block; width: 96px; height: 96px; border-radius: 10px; border: 3px solid var(--stroke); }
+.rd-zone.locked .rd-gate canvas { filter: grayscale(0.5) brightness(0.75); }
+.rd-gtxt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rd-gtxt small { display: inline-flex; align-items: center; gap: 4px; font: 400 12px var(--display); text-transform: uppercase; color: var(--gold); }
+.rd-gtxt small .trophy { width: 13px; height: 13px; }
+.rd-gtxt b { font: 400 22px var(--display); line-height: 1.05; }
+.rd-chips { display: flex; gap: 2px; margin-top: 2px; }
+.rd-lock { position: absolute; top: 8px; right: 10px; width: 22px; height: 22px; color: var(--muted); } .rd-lock svg { width: 100%; height: 100%; fill: currentColor; }
+.rd-node { position: absolute; z-index: 2; width: 96px; translate: -50% 50%; display: flex; flex-direction: column; align-items: center; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; }
+.rd-plate { position: relative; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--stroke);
+  background: radial-gradient(circle at 50% 32%, #FFF4D6, #E2BC74 58%, #9A6A2C); box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.2), 0 7px 0 var(--stroke); }
+.rd-plate .coin, .rd-plate .gem { width: 46px; height: 46px; }
+.rd-plate .chest-3d { width: 76px; margin: -6px 0 -2px; }
+.rd-node[class*=' r-'] .rd-plate { box-shadow: 0 0 0 4px var(--rar), inset 0 -7px 0 rgba(0, 0, 0, 0.2), 0 7px 0 var(--stroke); }
+.rd-at { margin-top: -12px; z-index: 1; padding: 1px 9px; border-radius: 999px; background: var(--stroke); border: 2px solid #6E4B2B; font: 900 13px Rubik, sans-serif; color: #F2DDB0; }
+.rd-name { position: absolute; top: 18px; left: calc(100% - 4px); width: 130px; display: flex; flex-direction: column; text-align: left; font-size: 14px; font-weight: 900; line-height: 1.1;
+  text-shadow: 0 2px 0 var(--stroke), 0 0 6px rgba(0, 0, 0, 0.8); pointer-events: none; }
+.rd-name small { font: 400 11px var(--display); text-transform: uppercase; color: var(--gold); }
+.rd-node.flip .rd-name { left: auto; right: calc(100% - 4px); text-align: right; align-items: flex-end; }
+.rd-mark { position: absolute; top: -4px; right: 4px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--stroke); background: #3A2617; color: var(--muted); font-weight: 900; }
+.rd-mark svg { width: 13px; height: 13px; fill: currentColor; }
+.rd-node.done .rd-mark { background: var(--go); color: var(--go-ink); }
+.rd-node.done .rd-plate { filter: saturate(0.55) brightness(0.85); }
+.rd-node.locked .rd-plate { filter: grayscale(0.55) brightness(0.72); }
+.rd-node.ready .rd-plate { background: radial-gradient(circle at 50% 32%, #FFFBE8, #FFD54A 58%, #E09A10); animation: bob2 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 6px rgba(255, 204, 51, 0.45), 0 0 26px rgba(255, 204, 51, 0.7), 0 7px 0 var(--stroke); }
+.rd-claim { position: absolute; top: 72px; padding: 4px 12px; border-radius: 999px; border: 3px solid var(--stroke); background: var(--go); color: var(--go-ink);
+  font: 400 13px var(--display); text-transform: uppercase; box-shadow: 0 3px 0 var(--stroke); z-index: 2; }
+.rd-node.ready .rd-at { display: none; }
+.rd-me { position: absolute; z-index: 4; translate: -50% 50%; pointer-events: none; }
+.rd-me .rd-flag, .rd-me .rd-tonext { position: absolute; left: calc(100% + 8px); } .rd-me .rd-flag { top: 4px; } .rd-me .rd-tonext { top: 40px; }
+.rd-me.flip .rd-flag, .rd-me.flip .rd-tonext { left: auto; right: calc(100% + 8px); }
+.rd-av { display: grid; place-items: center; width: 66px; height: 66px; box-sizing: border-box; border-radius: 50%; border: 5px solid var(--you);
+  background: var(--grain), var(--panel); box-shadow: 0 0 0 4px var(--stroke), 0 0 24px rgba(76, 201, 240, 0.7); animation: bob2 1.6s ease-in-out infinite; }
+.rd-flag { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; padding: 4px 12px; border-radius: 999px; border: 3px solid var(--stroke); background: var(--you);
+  color: var(--stroke); font: 400 14px var(--display); text-transform: uppercase; box-shadow: 0 3px 0 var(--stroke); }
+.rd-flag .trophy, .rd-tonext .trophy { width: 14px; height: 14px; }
+.rd-tonext { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 13px; font-weight: 900; text-shadow: 0 2px 0 var(--stroke), 0 0 6px #000; }
 .path-hero { grid-template-columns: auto 1fr; gap: 14px; padding: 10px 14px 12px; }
 .ph-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .ph-info b { font: 400 15px var(--display); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ph-info small { font-size: 12px; font-weight: 800; color: var(--muted); }
-.road3 { position: relative; padding: 0 0 92px; }
-.r3-rail, .r3-fill { position: absolute; z-index: 1; left: 23px; width: 6px; border-radius: 999px; }
-.r3-rail { top: 0; bottom: 40px; background: var(--stroke); }
-.r3-fill { bottom: 40px; height: 0; background: var(--you); transition: height 0.6s ease-out; }
-.r3-zone { position: relative; display: flex; flex-direction: column; gap: 8px; margin: 0 -16px; padding: 18px 16px 18px 10px; background: var(--zsky); }
-.r3-zone::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(10, 14, 31, 0.3), transparent 50px, transparent calc(100% - 50px), rgba(10, 14, 31, 0.3)); }
-.r3-row { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; min-height: 56px; }
-.r3-left { width: 64px; flex: none; display: grid; place-items: center; align-self: stretch; }
-.r3-at { padding: 2px 8px; border-radius: 999px; background: var(--stroke); border: 2px solid var(--hi); font: 900 13px Rubik, sans-serif; color: var(--muted); }
-.r3-at.on { background: var(--you); border-color: var(--stroke); color: var(--stroke); }
-.r3-at.gold { background: var(--gold); border-color: var(--stroke); color: var(--gold-ink); }
-.r3-tile, .r3-gate { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 10px; border-radius: 12px;
-  background: var(--grain), var(--panel); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 4px 0 var(--stroke); }
-.r3-tile { min-height: 52px; box-sizing: border-box; }
-.r3-ic { flex: none; display: grid; place-items: center; min-width: 40px; }
-.r3-ic .coin, .r3-ic .gem { width: 32px; height: 32px; }
-.r3-ic .chest-ico svg { display: block; width: 44px; height: 40px; }
-.r3-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.r3-txt small { font: 400 11px var(--display); text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
-.r3-txt b { font-size: 16px; font-weight: 900; line-height: 1.15; overflow-wrap: anywhere; }
-.r3-sub { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: var(--muted); }
-.r3-sub .trophy { width: 12px; height: 12px; }
-.r3-rar { align-self: flex-start; padding: 1px 8px; border-radius: 8px; background: var(--rar); color: var(--stroke); font: 400 10px var(--display); text-transform: uppercase; }
-.r3-tile.is-ball { box-shadow: inset 0 2px 0 var(--hi), inset 0 -4px 0 var(--rar), 0 4px 0 var(--stroke); }
-.r3-tile.is-ball b { font: 400 20px var(--display); }
-.r3-state { flex: none; display: grid; place-items: center; width: 30px; height: 30px; color: #6E7FA6; font-size: 18px; font-weight: 900; }
-.r3-state svg { width: 20px; height: 20px; fill: currentColor; }
-.r3-row.done .r3-tile { opacity: 0.6; }
-.r3-row.done .r3-state { color: var(--go); }
-.r3-row.ready .r3-tile { box-shadow: inset 0 2px 0 var(--hi), inset 0 -4px 0 var(--go), 0 4px 0 var(--stroke); }
-.r3-claim { flex: none; margin: 0; padding: 7px 12px; border-radius: 12px; background: var(--go); color: var(--go-ink); box-shadow: 0 3px 0 var(--stroke); font: 400 13px var(--display); text-transform: uppercase; }
-.r3-gate { padding: 8px 10px 8px 8px; border-radius: 16px; background: #16203A; }
-.r3-gate canvas { flex: none; display: block; border-radius: 8px; border: 2px solid var(--stroke); }
-.r3-gate .r3-txt b { font: 400 18px var(--display); line-height: 1.05; white-space: normal; }
-.r3-gate.cur { box-shadow: 0 0 0 3px var(--gold), 0 4px 0 var(--stroke); }
-.r3-gate.locked canvas { filter: grayscale(0.4) brightness(0.8); }
-.r3-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
-.r3-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 2px; border-radius: 999px; background: var(--stroke); border: 1.5px solid var(--rar); font-size: 11px; font-weight: 900; }
-.r3-me { min-height: 64px; }
-.r3-av { display: grid; place-items: center; width: 58px; height: 58px; box-sizing: border-box; border-radius: 50%; background: var(--grain), var(--panel); border: 4px solid var(--you); box-shadow: 0 3px 0 var(--stroke); }
-.r3-here { display: flex; flex-direction: column; gap: 4px; }
-.r3-here b { align-self: flex-start; padding: 4px 12px; border-radius: 999px; background: var(--you); border: 3px solid var(--stroke); box-shadow: 0 3px 0 var(--stroke); font: 400 14px var(--display); color: var(--stroke); text-transform: uppercase; }
-.r3-here small { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 900; color: #DCE6FA; text-shadow: 0 1px 0 var(--stroke); }
-.r3-here .trophy { width: 13px; height: 13px; }
-.r3-start { position: relative; z-index: 2; align-self: flex-start; margin-left: 4px; padding: 5px 14px; border-radius: 999px; background: var(--stroke); color: var(--muted); font: 400 12px var(--display); text-transform: uppercase; }
 .r3-bar { position: sticky; bottom: 8px; z-index: 5; display: flex; align-items: center; gap: 10px; margin-top: -80px; padding: 10px 10px 10px 14px;
   border-radius: 16px; background: var(--grain), var(--panel); border: 3px solid var(--stroke); box-shadow: inset 0 2px 0 var(--hi), 0 5px 0 var(--stroke); }
 .r3-bar > span { flex: 1; min-width: 0; font: 400 13px var(--display); text-transform: uppercase; color: var(--go); }
@@ -1637,7 +1652,6 @@ h2, .sh-sec h3 { font-family: var(--display); font-weight: 400; text-transform: 
 .dcell .d-gift .chest-3d { width: 42px; }
 .wr-ic .chest-ico .chest-3d { width: 58px; }
 .slot-hint .chest-3d { width: 46px; flex: none; opacity: 0.6; filter: grayscale(1); }
-.r3-ic .chest-ico .chest-3d { width: 58px; margin: -8px; }
 .r-art .chest-3d { width: 64px; margin: -9px 0; }
 .r-tile.full .r-art .chest-3d, .r-tile.lost .r-art .chest-3d { filter: grayscale(1) brightness(0.8); }
 .op3d { position: relative; display: block; filter: drop-shadow(0 10px 6px rgba(8, 16, 32, 0.4)); }

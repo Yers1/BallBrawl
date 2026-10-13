@@ -16,6 +16,7 @@ import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
 import { heroSvg, heroLive } from './heroes.js';
 import { setArena, drawEmote, drawFamiliar, drawSpray, arenaThumb, drawIcon } from './render.js';
+import { prop3d } from './ball3d.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
 import { chestUrl, iconUrl } from './ball3d.js';
 import { MAPS } from './sim.js';
@@ -375,87 +376,83 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     return el('i', 'coin big-coin');
   };
 
-  // One road from the bottom up: a rail down the left that glows where you've been, the trophies on it, a compact row
-  // per reward to its right, a card with the arena itself where each arena starts, your ball on the rail where you are,
-  // and a bar to claim everything at once.
+  // The Glory Road as a board-game map, from the bottom up: each arena is its own patch of ground with its things lying
+  // about and a gate where it starts; the rewards stand on round plates along one winding path (gold where you've been),
+  // and your ball stands on it at your trophies. A bar claims everything at once.
   const LOCK_IC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1v11H6V10zm2 0h6V7a3 3 0 0 0-6 0z"/></svg>';
-  const rewardSub = n => (n.ball ? t('rarity_' + RARITY[n.ball]) : n.skin ? ballName(n.skin[0]) : '');
+  const ROAD_STEP = 150, GATE_H = 200, ZONE_TOP = 90, ZONE_ART = new Map(); // each arena's field, blurred under its stretch of road
+  const ZONE_PROP = { night: ['rock', 'night'], candy: ['lollipop', 1], canyon: ['rock', 'canyon'], pirate: ['barrel', 0], frost: ['ice', 0], stadium: ['soccer', 0],
+    jungle: ['mushroom', 0], temple: ['idol', 0], lava: ['rock', 'lava'], chess: ['padlock', 0], space: ['rock', 'space'], neon: ['saw', 1] };
+  const swing = k => 50 + 27 * Math.sin(k * 0.95 + 0.6); // how far across (%) the path is at its k-th stop
+  const rewardLabel = n => (n.gems ? t('gotGems', { n: n.gems }) : n.coins && !n.ball && !n.skin && !n.chest ? `+${n.coins}` : rewardName(n));
   function road() {
     const box = $('#road'), until = Math.max(save.maxTrophies + 500, ARENAS.at(-1).at + 200);
     const ready = claimable(save), readySet = new Set(ready.map(n => n.at));
-    const nodes = pathNodes(until).filter(n => n.at <= until).sort((x, y) => y.at - x.at); // highest first
-    const cur = arenaIndex(arenaFor(save.maxTrophies).id);
-    let marked = false;
-    const pill = (txt, cls) => el('span', 'r3-at ' + cls, txt);
-    const marker = () => {
-      const { next } = nextReward(), m = el('div', 'r3-row r3-me');
-      const ring = el('span', 'r3-av');
-      ring.append(icon(save.avatar, 46, save.skinOf[save.avatar]));
-      const txt = el('div', 'r3-here');
-      txt.append(el('b', '', `${t('arenaHere')} · ${save.trophies}`));
-      if (next) txt.append(el('small', '', `${t('roadToNext', { n: next.at - save.trophies })} <i class="trophy"></i> · +8 ${t('tipWin')}`));
-      m.append(el('span', 'r3-left', ''), txt);
-      m.firstChild.append(ring);
-      return m;
-    };
-    const rewardRow = n => {
-      const state = save.claimed.includes(n.at) ? 'done' : readySet.has(n.at) ? 'ready' : 'locked';
-      const row = el('div', `r3-row ${state}`), tile = el('div', `r3-tile ${n.ball ? 'is-ball r-' + RARITY[n.ball] : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}`);
-      const ic = el('span', 'r3-ic'), txt = el('div', 'r3-txt');
-      ic.append(n.gems ? el('i', 'gem') : n.coins && !n.ball && !n.skin && !n.chest ? el('i', 'coin') : rewardIcon(n, n.ball ? 58 : 40));
-      if (n.ball) txt.append(el('small', '', t('roadNewBall')));
-      txt.append(el('b', ''));
-      txt.lastChild.textContent = n.gems ? t('gotGems', { n: n.gems }) : n.coins && !n.ball && !n.skin && !n.chest ? t('gotCoins', { n: n.coins }) : rewardName(n);
-      if (rewardSub(n)) txt.append(el('span', n.ball ? 'r3-rar' : 'r3-sub', rewardSub(n)));
-      tile.append(ic, txt);
-      if (state === 'ready') {
-        const btn = el('button', 'btn r3-claim', t('claim'));
-        btn.onclick = () => reward(claim(save, n));
-        tile.append(btn);
-      } else tile.append(el('span', 'r3-state', state === 'done' ? '✓' : LOCK_IC));
-      row.append(el('span', 'r3-left', ''), tile);
-      row.firstChild.append(pill(String(n.at), state === 'locked' ? '' : 'on'));
-      return row;
-    };
-    // where an arena starts: the arena itself (the battle field, as you'll fight in it), its name and the balls it brings
-    const gate = (a, i) => {
-      const open = i <= cur, row = el('div', 'r3-row r3-gaterow'), card = el('div', 'r3-gate' + (open ? '' : ' locked') + (i === cur ? ' cur' : ''));
-      const pic = document.createElement('canvas');
-      arenaThumb(pic, a.id, 80);
-      const txt = el('div', 'r3-txt');
-      txt.append(el('small', '', t('arenaN', { n: i + 1 })), el('b', ''), el('span', 'r3-sub', (open ? t('roadOpen', { n: a.at }) : t('roadNeed', { n: a.at })) + ' <i class="trophy"></i>'));
-      txt.children[1].textContent = t('arena_' + a.id);
+    const nodes = pathNodes(until).filter(n => n.at <= until).sort((x, y) => x.at - y.at); // the lowest first
+    const cur = arenaIndex(arenaFor(save.maxTrophies).id), stops = []; // every stop on the path, bottom up: [element, zone]
+    let k = 0, me = null;
+    const zones = ARENAS.map((a, i) => {
+      const hi = ARENAS[i + 1]?.at ?? Infinity, mine = nodes.filter(n => n.at >= a.at && n.at < hi), th = THEMES[a.id] ?? THEMES.night;
+      const zone = el('section', `rd-zone${i > cur ? ' locked' : ''}${i === cur ? ' cur' : ''}`);
+      zone.style.cssText = `--zf:${th.floor};--zl:${th.faces[0]};--zd:${th.faces[3]};height:${GATE_H + mine.length * ROAD_STEP + ZONE_TOP}px`;
+      if (!ZONE_ART.has(a.id)) { const c = document.createElement('canvas'); arenaThumb(c, a.id, 360); ZONE_ART.set(a.id, `url(${c.toDataURL('image/jpeg', 0.8)})`); }
+      zone.style.setProperty('--zimg', ZONE_ART.get(a.id));
+      // the gate where the arena starts: its field, its name, the balls it brings
+      const gate = el('div', 'rd-gate'), pic = document.createElement('canvas');
+      arenaThumb(pic, a.id, 96);
+      const txt = el('div', 'rd-gtxt');
+      txt.append(el('small', '', `${t('arenaN', { n: i + 1 })} · ${a.at} <i class="trophy"></i>`), el('b', ''));
+      txt.lastChild.textContent = t('arena_' + a.id);
       const balls = BY_UNLOCK.filter(id => arenaFor(UNLOCK[id]).id === a.id);
-      if (balls.length) {
-        const chips = el('span', 'r3-chips');
-        chips.append(...balls.map(id => { const c = el('span', 'r3-chip r-' + RARITY[id]); c.append(icon(id, 18, save.skinOf[id]), document.createTextNode(ballName(id))); return c; }));
-        txt.append(chips);
+      if (balls.length) { const chips = el('span', 'rd-chips'); chips.append(...balls.map(id => icon(id, 28, save.skinOf[id]))); txt.append(chips); }
+      gate.append(pic, txt);
+      if (i > cur) gate.append(el('span', 'rd-lock', LOCK_IC));
+      zone.append(gate);
+      stops.push([gate, zone]);
+      // the rewards, each on its plate along the path
+      mine.forEach((n, j) => {
+        const state = save.claimed.includes(n.at) ? 'done' : readySet.has(n.at) ? 'ready' : 'locked', x = swing(k);
+        const nd = el('button', `rd-node ${state} ${n.ball ? 'is-ball r-' + RARITY[n.ball] : n.skin ? 'is-skin' : n.chest ? 'is-chest' : n.gems ? 'is-gems' : 'is-coins'}${x > 50 ? ' flip' : ''}`);
+        nd.style.cssText = `left:${x}%;bottom:${GATE_H + j * ROAD_STEP + 34}px`;
+        const plate = el('span', 'rd-plate');
+        plate.append(n.gems ? el('i', 'gem') : n.coins && !n.ball && !n.skin && !n.chest ? el('i', 'coin') : rewardIcon(n, n.ball || n.skin ? 64 : 52));
+        const name = el('span', 'rd-name');
+        if (n.ball) name.append(el('small', '', t('roadNewBall')));
+        name.append(document.createTextNode(rewardLabel(n)));
+        nd.append(plate, el('b', 'rd-at', `${n.at}`), name, state === 'ready' ? el('span', 'rd-claim', t('claim')) : el('span', 'rd-mark', state === 'done' ? '✓' : LOCK_IC));
+        nd.onclick = () => { sfx.click(); if (state === 'ready') reward(claim(save, n)); else if (state === 'locked') toast(t('roadNeed', { n: n.at })); };
+        zone.append(nd);
+        stops.push([nd, zone]);
+        if (n.at <= save.trophies) me = { zone, j, k, at: n.at, next: nodes[nodes.indexOf(n) + 1] };
+        k++;
+      });
+      // the arena's own things lying about, away from the path
+      const [kind, v] = ZONE_PROP[a.id] ?? ZONE_PROP.night, src = prop3d(kind, v);
+      if (src) for (let j = 0; j <= mine.length; j += 2) {
+        const x = swing(k - mine.length + j), c = document.createElement('canvas');
+        c.width = c.height = 120; c.getContext('2d').drawImage(src, 0, 0, 120, 120);
+        c.className = 'rd-prop';
+        c.style.cssText = `left:${x > 50 ? 6 + (j % 3) * 4 : 80 - (j % 3) * 4}%;bottom:${GATE_H + j * ROAD_STEP + 20}px;rotate:${(j * 47) % 360}deg`;
+        zone.append(c);
       }
-      card.append(pic, txt);
-      if (!open) card.append(el('span', 'r3-state', LOCK_IC));
-      row.append(el('span', 'r3-left', ''), card);
-      row.firstChild.append(pill(String(a.at), open ? 'gold' : ''));
-      return row;
-    };
-    // every arena is its own stretch of road, under its own sky
-    const zones = [];
-    for (let i = ARENAS.length - 1; i >= 0; i--) {
-      const a = ARENAS[i], hi = ARENAS[i + 1]?.at ?? Infinity, zone = el('section', 'r3-zone' + (i > cur ? ' locked' : ''));
-      zone.style.setProperty('--zsky', (THEMES[a.id] ?? THEMES.night).sky);
-      for (const n of nodes) {
-        if (n.at < a.at || n.at >= hi) continue;
-        if (!marked && n.at <= save.trophies) { zone.append(marker()); marked = true; }
-        zone.append(rewardRow(n));
-      }
-      if (!marked && a.at <= save.trophies) { zone.append(marker()); marked = true; }
-      zone.append(gate(a, i));
-      if (!i) zone.append(el('div', 'r3-start', t('roadStart')));
-      zones.push(zone);
-    }
-    const fill = el('i', 'r3-fill');
-    box.className = 'road3';
-    box.replaceChildren(el('i', 'r3-rail'), fill, ...zones);
-    // a bar that claims every waiting reward at once
+      return zone;
+    });
+    // you, standing on the path between the last stop you passed and the next one
+    const pin = el('div', 'rd-me'), ring = el('span', 'rd-av');
+    ring.append(icon(save.avatar, 56, save.skinOf[save.avatar]));
+    const flag = el('span', 'rd-flag', `${t('arenaHere')} · ${save.trophies} <i class="trophy"></i>`);
+    pin.append(ring, flag);
+    const { next } = nextReward();
+    if (next) pin.append(el('small', 'rd-tonext', `${t('roadToNext', { n: next.at - save.trophies })} <i class="trophy"></i>`));
+    if (me) {
+      const f = me.next && me.next.at > (ARENAS.find(a => a.at > me.at)?.at ?? Infinity) ? 0.42 : 0.5; // halfway to the next stop, inside this arena
+      if (swing(me.k + f) > 50) pin.classList.add('flip');
+      pin.style.cssText = `left:${swing(me.k + f)}%;bottom:${GATE_H + (me.j + f) * ROAD_STEP + 34}px`;
+      me.zone.append(pin);
+    } else { pin.style.cssText = `left:50%;bottom:${GATE_H - 14}px`; zones[0].append(pin); }
+    box.className = 'road4';
+    box.replaceChildren(...zones.reverse()); // the highest arena on top
+    // the claim-all bar
     const bar = $('#path-claim');
     bar.hidden = ready.length < 1;
     if (ready.length) {
@@ -469,12 +466,26 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
       };
       bar.append(all);
     }
-    setTimeout(() => { // the rail glows from the bottom up to you, and the page opens on you
-      const me = box.querySelector('.r3-me'), body = $('#tab-body');
-      if (!me) return;
-      fill.style.height = `${box.getBoundingClientRect().bottom - 40 - me.getBoundingClientRect().top - me.offsetHeight / 2}px`; // the rail ends 40px above the box
-      if (tab === 'path') body.scrollTop += me.getBoundingClientRect().top - body.getBoundingClientRect().top - body.clientHeight / 2;
-    }, 0);
+    setTimeout(() => drawPath(box, stops, pin), 0);
+  }
+  // One smooth path through every stop (a Catmull-Rom curve), gold from the start up to you, and the page opens on you.
+  function drawPath(box, stops, pin) {
+    const r0 = box.getBoundingClientRect(), at = e => { const r = e.getBoundingClientRect(); return [r.left - r0.left + r.width / 2, r.top - r0.top + (e.classList.contains('rd-node') ? 42 : r.height / 2)]; };
+    const pts = stops.map(([e]) => at(e)), mine = at(pin.querySelector('.rd-av'));
+    const curve = p => p.map(([x, y], i) => {
+      if (!i) return `M${x},${y}`;
+      const [a, b] = p[i - 2] ?? p[i - 1], [c, d] = p[i - 1], [g, h] = p[i + 1] ?? [x, y];
+      return `C${c + (x - a) / 6},${d + (y - b) / 6} ${x - (g - c) / 6},${y - (h - d) / 6} ${x},${y}`;
+    }).join('');
+    const passed = pts.filter(([, y]) => y >= mine[1]).concat([mine]);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'rd-path');
+    svg.setAttribute('width', box.clientWidth); svg.setAttribute('height', box.scrollHeight);
+    svg.innerHTML = `<path d="${curve(pts)}" class="p-edge"/><path d="${curve(pts)}" class="p-road"/><path d="${curve(passed)}" class="p-done"/><path d="${curve(pts)}" class="p-dash"/>`;
+    box.querySelector('.rd-path')?.remove();
+    box.prepend(svg);
+    const body = $('#tab-body');
+    if (tab === 'path') body.scrollTop += pin.getBoundingClientRect().top - body.getBoundingClientRect().top - body.clientHeight / 2;
   }
 
   // the next road reward and how far along the way to it you are (0–100)
@@ -1532,6 +1543,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
 
   function open(next = tab) {
     tab = next;
+    document.body.dataset.tab = tab; // style.css widens some pages on big screens
     if (tab === 'profile') seen('acct', true);
     for (const name of ['path', 'balls', 'quests', 'leaders', 'profile', 'skins', 'shop', 'mail', 'clan', 'fam', 'friends']) $('#tab-' + name).hidden = name !== tab;
     $('#lobby').hidden = tab !== 'lobby';
