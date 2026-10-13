@@ -118,6 +118,21 @@ export function chestUrl(kind, part = 'whole') {
   return (urls[key] = c.toDataURL('image/png'));
 }
 
+// A commander in 3D as a picture with the drawings' 140:160 shape: the whole figure, or its body and its head apart (the
+// head nods on its own on top of the body). null until the models are in: then the drawing is used.
+export function heroUrl(id, part = 'whole') {
+  const key = `hero:${id}:${part}`;
+  if (urls[key]) return urls[key];
+  if (!ready()) return null;
+  const m = model('hero:' + id, () => { const g = gl.kit.hero(id); g.scale.setScalar(0.8); g.position.y = -0.5; g.rotation.y = -0.3; return g; });
+  const head = m.userData.head;
+  const c = sprite(key, SIZE, () => { show(m); for (const ch of m.children) ch.visible = part === 'whole' || (part === 'head') === (ch === head); });
+  for (const ch of m.children) ch.visible = true;
+  const out = document.createElement('canvas'); out.width = SIZE * 0.875; out.height = SIZE;
+  out.getContext('2d').drawImage(c, -SIZE * 0.0625, 0);
+  return (urls[key] = out.toDataURL('image/png'));
+}
+
 // A menu button's icon in 3D (toon finish, like the buttons' ink outlines) as an image URL; null until the models are in.
 export function iconUrl(kind) {
   const key = 'icon:' + kind;

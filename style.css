@@ -1816,3 +1816,10 @@ body.scene #l-deal .wdeal .sh-off { top: -6px; left: 50px; right: auto; z-index:
 .lm-ic .ic3d { width: 66px; height: 66px; }
 body.scene .side-btn .ic .ic3d { width: 56px; height: 56px; }
 body.scene .dock .sbtn .ic3d { width: 50px; height: 50px; }
+
+/* the 3D commanders (heroes.js): pictures with the drawings' 140:160 shape; the living one is its body with the head on top */
+.hero3d { aspect-ratio: 140 / 160; object-fit: contain; }
+span.hero3d { position: relative; }
+.hero-live.hero3d .h-all { position: absolute; inset: 0; display: block; transform-origin: 50% 99%; }
+span.hero3d img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.hero-live.hero3d .h-head { transform-origin: 50% 62%; }

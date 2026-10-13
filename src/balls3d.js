@@ -860,6 +860,97 @@ export function createKit(THREE) {
       return group(mesh(new THREE.ExtrudeGeometry(s, { depth: 0.35, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 3 }).translate(0, 0, -0.17), metal('#AEB8C8', { roughness: 0.35 })));
     },
   };
+  // ---------- commanders: chibi toy figures (a big head on a small body), each with their own gear ----------
+  // The head is its own group (userData.head), so a picture of the head alone can nod on top of the body.
+  const ell = (r, s, m, p) => { const o = sphere(r, m, p); o.scale.set(...s); return o; };
+  const capsuleM = (r, len, m, p, rz = 0, rx = 0) => { const o = mesh(new THREE.CapsuleGeometry(r, len, 8, 16), m, p); o.rotation.set(rx, 0, rz); return o; };
+  const SKIN = '#FFD3A8';
+  function chibi({ body, trim = body, legs = '#3A2A20', boots = '#2A1A10', hair, eyes = '#2A1A10', skin = SKIN, face = true }) {
+    const g = new THREE.Group(), head = new THREE.Group(), sk = gloss(skin, { roughness: 0.55, clearcoat: 0.2 }), bm = gloss(body, { roughness: 0.5 });
+    g.add(capsuleM(0.62, 0.42, bm, [0, -0.15, 0])); // the body
+    g.add(mesh(new THREE.TorusGeometry(0.6, 0.09, 10, 32).rotateX(Math.PI / 2), gloss(trim, { roughness: 0.45 }), [0, -0.55, 0])); // a belt
+    for (const x of [-0.27, 0.27]) { g.add(capsuleM(0.2, 0.28, gloss(legs), [x, -1.05, 0])); g.add(ell(0.24, [1, 0.7, 1.35], gloss(boots), [x, -1.32, 0.08])); }
+    for (const s of [-1, 1]) { const arm = new THREE.Group(); arm.add(capsuleM(0.17, 0.42, bm, [0, -0.3, 0]), sphere(0.19, sk, [0, -0.62, 0])); arm.position.set(s * 0.68, 0.18, 0); arm.rotation.z = s * 0.35; arm.name = s < 0 ? 'armL' : 'armR'; g.add(arm); }
+    head.add(sphere(0.92, sk, [0, 0, 0]));
+    if (face) {
+      for (const x of [-0.3, 0.3]) {
+        head.add(ell(0.15, [0.85, 1.15, 0.5], gloss(eyes, { roughness: 0.2 }), [x, 0.02, 0.83]), sphere(0.05, gloss('#FFFFFF', { emissive: '#FFFFFF', emissiveIntensity: 0.4 }), [x - 0.04, 0.09, 0.9]));
+        head.add(ell(0.13, [1.2, 0.6, 0.3], gloss('#FF8FA3', { transparent: true, opacity: 0.6 }), [x * 1.55, -0.24, 0.76]));
+      }
+      const smile = mesh(new THREE.TorusGeometry(0.13, 0.035, 8, 16, Math.PI), gloss('#7A2A2A'), [0, -0.28, 0.86]); smile.rotation.z = Math.PI; head.add(smile);
+    }
+    if (hair) head.add(ell(0.96, [1, 0.75, 1], gloss(hair, { roughness: 0.45 }), [0, 0.32, -0.06]));
+    head.position.set(0, 1.0, 0.05);
+    g.add(head);
+    g.userData.head = head;
+    return g;
+  }
+  // Held things stand beside the body by the right hand (the arm reaches out to them), so they show next to the big head.
+  const holding = g => { const arm = g.getObjectByName('armR'); arm.rotation.z = 0.62; return (o, y = 0) => { o.position.set(1.06, y, 0.18); g.add(o); }; };
+  const heldStick = (len, col, top, y0 = -0.95) => { const o = new THREE.Group(); o.add(mesh(new THREE.CylinderGeometry(0.06, 0.07, len, 10), gloss(col), [0, y0 + len / 2, 0])); top.position.y += y0 + len; o.add(top); return o; };
+  const HERO = {
+    king() { // a young king: a crown, a red robe with a fur collar, a cape, a sceptre
+      const g = chibi({ body: '#D8323C', trim: '#FFC93B', hair: '#7A4A22' }), gold = metal('#FFC93B', { roughness: 0.25 });
+      g.add(mesh(new THREE.TorusGeometry(0.55, 0.16, 12, 32).rotateX(Math.PI / 2), gloss('#FFFFFF', { roughness: 0.8 }), [0, 0.22, 0]));
+      g.add(mesh(new THREE.CylinderGeometry(0.7, 0.95, 1.5, 32, 1, true, Math.PI * 0.6, Math.PI * 0.8), gloss('#A3152A', { side: THREE.DoubleSide }), [0, -0.45, -0.05]));
+      const crown = new THREE.Group(); crown.add(mesh(new THREE.CylinderGeometry(0.52, 0.48, 0.3, 32, 1, true), gold));
+      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; crown.add(mesh(new THREE.ConeGeometry(0.12, 0.32, 10), gold, [Math.sin(a) * 0.5, 0.28, Math.cos(a) * 0.5]), sphere(0.07, gloss('#FF4D6D'), [Math.sin(a) * 0.52, 0.02, Math.cos(a) * 0.52])); }
+      crown.position.set(0, 0.88, 0); crown.rotation.x = -0.12; g.userData.head.add(crown);
+      holding(g)(heldStick(1.75, '#FFC93B', group(sphere(0.2, gloss('#FF4D6D', { emissive: '#FF4D6D', emissiveIntensity: 0.25 })), mesh(new THREE.TorusGeometry(0.2, 0.05, 8, 20).rotateX(Math.PI / 2), gold, [0, -0.1, 0])), -0.85));
+      return g;
+    },
+    dragon() { // a knight: a steel helmet with a red plume, armour, a sword held up and a round shield
+      const g = chibi({ body: '#AEB8C8', trim: '#5A6478', legs: '#5A6478', boots: '#3A4152', eyes: '#1E4FB0' }), steel = metal('#C9D1DE', { roughness: 0.3 });
+      const helm = mesh(new THREE.SphereGeometry(1.0, 40, 20, 0, Math.PI * 2, 0, Math.PI * 0.55), steel, [0, 0.05, 0]); helm.rotation.x = -0.3; g.userData.head.add(helm);
+      g.userData.head.add(ell(0.34, [0.5, 1.1, 1.7], gloss('#E0303A'), [0, 1.08, -0.15]));
+      for (const s of [-1, 1]) g.add(ell(0.3, [1, 0.6, 1], steel, [s * 0.62, 0.32, 0]));
+      const sword = new THREE.Group(); sword.add(mesh(new THREE.BoxGeometry(0.16, 1.5, 0.06), steel, [0, 0.62, 0]), mesh(new THREE.ConeGeometry(0.11, 0.24, 4).rotateY(Math.PI / 4), steel, [0, 1.48, 0]), mesh(new THREE.BoxGeometry(0.62, 0.12, 0.14), metal('#FFC93B'), [0, -0.15, 0]), capsuleM(0.07, 0.22, gloss('#5A3A22'), [0, -0.35, 0]), sphere(0.09, metal('#FFC93B'), [0, -0.52, 0]));
+      holding(g)(sword, 0.02);
+      const shield = group(mesh(upZ(new THREE.CylinderGeometry(0.56, 0.56, 0.12, 32)), gloss('#2F6FE0')), mesh(new THREE.TorusGeometry(0.56, 0.07, 8, 32), metal('#FFC93B'), [0, 0, 0.06]), mesh(new THREE.ExtrudeGeometry(star5(0.26, 0.11), { depth: 0.05, bevelEnabled: false }), metal('#FFC93B'), [0, 0, 0.07]));
+      shield.position.set(-0.86, -0.35, 0.42); shield.rotation.y = 0.35; g.add(shield);
+      return g;
+    },
+    cat() { // a ninja: a dark hood over the head, a mask over the mouth, a red headband with tails, a katana at the hip
+      const g = chibi({ body: '#252B48', trim: '#E0303A', legs: '#1A1F36', boots: '#111528', hair: '#252B48', eyes: '#1A1A1A' }), dark = gloss('#252B48', { roughness: 0.55 }), h = g.userData.head;
+      h.add(ell(0.95, [1.02, 1, 0.9], dark, [0, -0.02, -0.18])); // the hood's back and sides
+      h.add(ell(0.68, [1.4, 0.68, 0.8], dark, [0, -0.44, 0.36])); // the mask, nose to chin
+      h.add(mesh(new THREE.TorusGeometry(0.97, 0.08, 10, 40).rotateX(Math.PI / 2), gloss('#E0303A'), [0, 0.36, 0]));
+      for (const s of [-1, 1]) h.add(capsuleM(0.07, 0.6, gloss('#E0303A'), [0.25 * s, 0.2, -1.05], s * 0.5, -0.9));
+      const kat = group(mesh(new THREE.BoxGeometry(1.5, 0.1, 0.06), metal('#E6EDF7', { roughness: 0.2 }), [0.55, 0, 0]), mesh(new THREE.BoxGeometry(0.08, 0.3, 0.14), metal('#FFC93B'), [-0.22, 0, 0]), capsuleM(0.07, 0.36, gloss('#E0303A'), [-0.48, 0, 0], Math.PI / 2));
+      kat.position.set(-0.55, -0.62, 0.55); kat.rotation.z = 0.35; g.add(kat);
+      return g;
+    },
+    owl() { // a wizard: a tall starry hat, pink hair, a purple robe, a staff with a glowing orb
+      const g = chibi({ body: '#7A44D0', trim: '#FFC93B', hair: '#FF7AB8', legs: '#4A2A86', boots: '#3A1F6E', eyes: '#4A2A86' });
+      const hat = new THREE.Group(), pm = gloss('#5A2FB0', { roughness: 0.45 });
+      hat.add(mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.1, 40), pm, [0, 0, 0]), mesh(new THREE.ConeGeometry(0.75, 1.2, 32), pm, [0, 0.6, 0]));
+      for (const [x, y, z, r] of [[0.25, 0.45, 0.48, 0.13], [-0.2, 0.75, 0.36, 0.1], [0.12, 0.98, 0.2, 0.08]]) hat.add(mesh(new THREE.ExtrudeGeometry(star5(r, r * 0.45), { depth: 0.03, bevelEnabled: false }), gloss('#FFD23F', { emissive: '#FFD23F', emissiveIntensity: 0.3 }), [x, y, z]));
+      hat.position.set(0, 0.72, -0.02); hat.rotation.set(-0.12, 0, 0.12); g.userData.head.add(hat);
+      for (const s of [-1, 1]) g.userData.head.add(ell(0.35, [0.7, 1.4, 0.8], gloss('#FF7AB8'), [s * 0.82, -0.2, -0.1]));
+      holding(g)(heldStick(2.5, '#8A5A2B', group(sphere(0.26, gloss('#7FE8FF', { emissive: '#4CC9F0', emissiveIntensity: 0.9, roughness: 0.1 })), mesh(new THREE.TorusGeometry(0.3, 0.05, 8, 24), metal('#FFC93B'), [0, -0.05, 0]))));
+      return g;
+    },
+    robot() { // an engineer: a yellow hard hat with goggles, orange overalls, a big wrench held up
+      const g = chibi({ body: '#F08A24', trim: '#5A6478', hair: '#3A2A20', legs: '#2F5FA8', boots: '#2A1A10' });
+      const hat = new THREE.Group(), ym = gloss('#FFCC33', { roughness: 0.35 });
+      hat.add(mesh(new THREE.SphereGeometry(0.98, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), ym, [0, 0, 0]), mesh(new THREE.CylinderGeometry(1.12, 1.12, 0.08, 40), ym, [0, 0, 0.12]), mesh(new THREE.BoxGeometry(0.16, 0.08, 1.9), ym, [0, 0.9, 0]));
+      for (const x of [-0.28, 0.28]) hat.add(mesh(upZ(new THREE.CylinderGeometry(0.2, 0.2, 0.12, 24)), gloss('#4CC9F0', { roughness: 0.05 }), [x, 0.35, 0.86]), mesh(new THREE.TorusGeometry(0.2, 0.05, 8, 24), metal('#5A6478'), [x, 0.35, 0.92]));
+      hat.position.set(0, 0.25, 0); hat.rotation.x = -0.15; g.userData.head.add(hat);
+      const st = metal('#AEB8C8', { roughness: 0.3 }), wrench = group(mesh(new THREE.BoxGeometry(0.16, 1.5, 0.09), st, [0, 0.35, 0]), mesh(new THREE.TorusGeometry(0.26, 0.1, 8, 20, Math.PI * 1.45).rotateZ(-Math.PI * 0.22), st, [0, 1.2, 0]));
+      holding(g)(wrench, -0.25);
+      return g;
+    },
+    ghost() { // a healer: a white robe with a green cross, a mint cap, a staff with a heart
+      const g = chibi({ body: '#F4F6FA', trim: '#2FB85A', hair: '#8A5A2B', legs: '#DCE3EE', boots: '#2FB85A', eyes: '#2A6E4A' });
+      const crossM = gloss('#2FB85A');
+      g.add(mesh(new THREE.BoxGeometry(0.42, 0.13, 0.05), crossM, [0, -0.05, 0.62]), mesh(new THREE.BoxGeometry(0.13, 0.42, 0.05), crossM, [0, -0.05, 0.62]));
+      const capH = new THREE.Group(); capH.add(mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.42, 32), gloss('#7FE0B0'), [0, 0, 0]), mesh(new THREE.BoxGeometry(0.3, 0.09, 0.05), gloss('#FF4D5E'), [0, 0.02, 0.66]), mesh(new THREE.BoxGeometry(0.09, 0.3, 0.05), gloss('#FF4D5E'), [0, 0.02, 0.66]));
+      capH.position.set(0, 0.8, 0.05); capH.rotation.x = -0.18; g.userData.head.add(capH);
+      const heart = new THREE.Shape(); heart.moveTo(0, -0.3); heart.bezierCurveTo(-0.42, 0, -0.3, 0.36, 0, 0.15); heart.bezierCurveTo(0.3, 0.36, 0.42, 0, 0, -0.3);
+      holding(g)(heldStick(2.3, '#F2EEE6', mesh(new THREE.ExtrudeGeometry(heart, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3 }), gloss('#FF4D6D', { emissive: '#FF4D6D', emissiveIntensity: 0.3 }), [0, 0.22, -0.06])));
+      return g;
+    },
+  };
   function capsule(kind) {
     const c = CHEST[kind] ?? CHEST.box, top = { box: '#F4EFE6', big: '#EAF2FF', mega: '#FFF0B8' }[kind] ?? '#F4EFE6';
     const g = group(mesh(new THREE.SphereGeometry(1, 64, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), gloss(c.body), [0, 0, 0]));
@@ -886,6 +977,7 @@ export function createKit(THREE) {
     },
     prop: (kind, v) => (PROP[kind] ?? PROP.rock)(v),
     icon: (kind, look = 'gloss') => finish((ICON[kind] ?? ICON.balls)(), look),
+    hero: id => (HERO[id] ?? HERO.king)(),
     ball: id => (B[id] ?? B.basic)(),
     boss: id => { const g = (BOSS[id] ?? BOSS.slime)(); g.scale.setScalar(1.25); return g; },
     stage, shadow,
