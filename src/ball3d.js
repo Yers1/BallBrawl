@@ -139,13 +139,16 @@ export function prop3d(kind, v) {
 // own canvas covering -M..W+M. The floor's pattern and the wall decorations stay 2D on top, so they keep moving.
 // Small ones (Glory Road pictures) are kept for every arena; full-size ones only for the last two arenas fought in.
 const layers = new Map();
-export function arena3d(id, color, W, H, M, px = 1296) {
+let fence = new URLSearchParams(location.search).get('walls') ?? 'arena'; // each arena's own fence (?walls=plain|cushion|stone|posts|bumper previews a shared one)
+export function setFence(style) { fence = style; layers.clear(); }
+export const fenceStyle = () => fence;
+export function arena3d(id, color, W, H, M, px = 1296, accent = null) {
   if (!ready()) return null;
-  const key = id + ':' + px;
+  const key = id + ':' + px + ':' + fence;
   if (layers.has(key)) return layers.get(key);
   const big = [...layers.keys()].filter(k => !k.endsWith(':256'));
   if (px > 256 && big.length >= 2) layers.delete(big[0]);
-  const { scene, camera } = gl.kit.walls({ W, H, M, color });
+  const { scene, camera } = gl.kit.walls({ W, H, M, color, accent, style: fence, id });
   gl.r.setSize(px, px, false); gl.r.render(scene, camera);
   const c = document.createElement('canvas'); c.width = c.height = px; c.getContext('2d').drawImage(gl.canvas, 0, 0);
   gl.r.setSize(SIZE, SIZE, false);

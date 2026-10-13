@@ -459,14 +459,172 @@ export function createKit(THREE) {
 
   // ---------- the arena walls: a raised, bevelled frame round the field, casting its shadow on the floor ----------
   // Built in arena units, x right and y up the screen (arena y negated); the floor is z = 0 and the walls come up toward the camera.
-  function walls({ W, H, M, color }) {
-    const scene = new THREE.Scene(), b = 7, P = (x, y) => [x, -y];
-    const out = shape([P(-M + b, -M + b), P(W + M - b, -M + b), P(W + M - b, H + M - b), P(-M + b, H + M - b)]);
+  // ---------- the arena's fence: a few styles around the 0..W × 0..H field, M wide, seen from straight above ----------
+  const band = (W, H, a, b, depth, bev, mat) => { // a frame around the field from a to b outside its edge, rounded by `bev`
+    const P = (x, y) => [x, -y], s = bev;
+    const out = shape([P(-b + s, -b + s), P(W + b - s, -b + s), P(W + b - s, H + b - s), P(-b + s, H + b - s)]);
     const hole = new THREE.Path();
-    [P(-b, -b), P(-b, H + b), P(W + b, H + b), P(W + b, -b)].forEach(([x, y], i) => (i ? hole.lineTo(x, y) : hole.moveTo(x, y)));
+    [P(-a - s, -a - s), P(-a - s, H + a + s), P(W + a + s, H + a + s), P(W + a + s, -a - s)].forEach(([x, y], i) => (i ? hole.lineTo(x, y) : hole.moveTo(x, y)));
     hole.closePath(); out.holes.push(hole);
-    const frame = mesh(new THREE.ExtrudeGeometry(out, { depth: 12, bevelEnabled: true, bevelThickness: 6, bevelSize: b, bevelSegments: 5, curveSegments: 4 }), new THREE.MeshStandardMaterial({ color, roughness: 0.62 }));
-    frame.castShadow = true; scene.add(frame);
+    const m = mesh(new THREE.ExtrudeGeometry(out, { depth, bevelEnabled: bev > 0, bevelThickness: bev, bevelSize: bev, bevelSegments: 4, curveSegments: 4 }), mat);
+    m.castShadow = true; m.receiveShadow = true;
+    return m;
+  };
+  const around = (W, H, d, step, fn) => { // points every `step` on a rectangle d outside the field; fn(x, y, along x?, corner?)
+    const sides = [[-d, -d, W + d, -d], [W + d, -d, W + d, H + d], [W + d, H + d, -d, H + d], [-d, H + d, -d, -d]];
+    for (const [ax, ay, bx, by] of sides) {
+      const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / step));
+      for (let i = 0; i < n; i++) fn(ax + ((bx - ax) * i) / n, ay + ((by - ay) * i) / n, ay === by, i === 0);
+    }
+  };
+  let woodTex = null;
+  const wood = (col, o = {}) => {
+    if (!woodTex) { woodTex = grain.clone(); woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping; woodTex.repeat.set(1 / 40, 1 / 40); woodTex.needsUpdate = true; }
+    return new THREE.MeshStandardMaterial({ color: col, map: woodTex, roughness: 0.7, ...o });
+  };
+  const tint = (c, k) => new THREE.Color(c).lerp(new THREE.Color(k > 0 ? '#FFFFFF' : '#000000'), Math.abs(k)); // lighter (+) or darker (−)
+  const FENCE = {
+    plain(g, { W, H, M, color }) { g.add(band(W, H, 0, M, 12, 6, new THREE.MeshStandardMaterial({ color, roughness: 0.62 }))); },
+    cushion(g, { W, H, M, color, accent }) { // a pool table's rail: a wooden rail, a soft rubber cushion inside it, brass studs
+      g.add(band(W, H, M * 0.4, M, 16, 5, wood('#8A5428', { roughness: 0.45 })));
+      g.add(band(W, H, 0, M * 0.46, 10, 4.5, new THREE.MeshPhysicalMaterial({ color: accent ?? color, roughness: 0.4, clearcoat: 0.6, clearcoatRoughness: 0.3 })));
+      for (const [x, y] of [[-M, -M], [W, -M], [W, H], [-M, H]]) g.add(mesh(rbox(M + 4, M + 4, 18, 7), metal('#E8C066', { roughness: 0.28 }), [x + M / 2 + (x < 0 ? -2 : 2), -(y + M / 2 + (y < 0 ? -2 : 2)), 12]));
+      around(W, H, M * 0.7, W / 4, (x, y, flat, corner) => { if (!corner) g.add(mesh(new THREE.OctahedronGeometry(2.6).scale(1, 1.6, 0.4), gloss('#F4EEDC', { roughness: 0.2 }), [x, -y, 21.5])); });
+    },
+    stone(g, { W, H, M, color }) { // big rounded stones in a row, each a little different
+      g.add(band(W, H, 0, M, 4, 1, new THREE.MeshStandardMaterial({ color: tint(color, -0.45), roughness: 0.9 })));
+      let k = 0;
+      around(W, H, M / 2, 33, (x, y, flat, corner) => {
+        const w = corner ? M + 4 : 30, h = corner ? M + 4 : M - 4, c = tint(color, ((k++ * 37) % 7 - 3) * 0.05 + 0.08);
+        const b = mesh(rbox(flat ? w : h, flat ? h : w, 14 + (k % 3) * 3, 6), new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 }), [x, -y, 9]);
+        b.castShadow = true; b.receiveShadow = true; g.add(b);
+      });
+    },
+    posts(g, { W, H, M, color, accent }) { // a fence: round posts with two rails between them
+      g.add(band(W, H, 0, M, 3, 1, new THREE.MeshStandardMaterial({ color: tint(color, -0.4), roughness: 0.9 })));
+      const railM = wood(tint(accent ?? '#C98A4B', -0.1).getStyle()), postM = wood('#7A4A22');
+      g.add(band(W, H, M * 0.3, M * 0.66, 6, 1.6, railM).translateZ(12));
+      around(W, H, M * 0.48, 44, (x, y) => { const p = mesh(upZ(new THREE.CylinderGeometry(7.5, 8, 26, 20)), postM, [x, -y, 13]); p.castShadow = true; g.add(p); g.add(mesh(upZ(new THREE.SphereGeometry(7.5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2)), postM, [x, -y, 26])); });
+    },
+    bumper(g, { W, H, M, color, accent }) { // an arcade table: a dark steel frame, a glowing strip, a rubber bumper inside
+      g.add(band(W, H, M * 0.45, M, 12, 3, metal('#3A4152', { roughness: 0.45, metalness: 0.6 })));
+      g.add(band(W, H, M * 0.62, M * 0.78, 2, 0.8, new THREE.MeshStandardMaterial({ color: accent ?? '#4CC9F0', emissive: accent ?? '#4CC9F0', emissiveIntensity: 1.1 })).translateZ(13));
+      g.add(band(W, H, 0, M * 0.5, 9, 3.6, new THREE.MeshStandardMaterial({ color: tint(color, 0.15), roughness: 0.5 })));
+      around(W, H, M * 0.88, 40, (x, y) => g.add(mesh(upZ(new THREE.CylinderGeometry(1.4, 1.4, 1, 12)), metal('#C9D1DE'), [x, -y, 15])));
+    },
+  };
+  // Each arena's own fence: built from a few pieces (a base band, round rails, blocks, posts, corner ornaments).
+  const stripeTex = (cols, n = 6) => {
+    const t = canvasTex(64, 64, (c, w) => { const s = w / n; for (let i = -n; i < 2 * n; i++) { c.fillStyle = cols[((i % cols.length) + cols.length) % cols.length]; c.beginPath(); c.moveTo(i * s, 0); c.lineTo(i * s + s, 0); c.lineTo(i * s + s + w, w); c.lineTo(i * s + w, w); c.fill(); } });
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return t;
+  };
+  const rails = (g, W, H, d, r, mat, z, texLen = 0) => { // a round rail on all four sides, d outside the field
+    for (const [x, y, len, vert] of [[W / 2, -d, W + 2 * d, 0], [W / 2, H + d, W + 2 * d, 0], [-d, H / 2, H + 2 * d, 1], [W + d, H / 2, H + 2 * d, 1]]) {
+      const geo = new THREE.CylinderGeometry(r, r, len, 28);
+      if (!vert) geo.rotateZ(Math.PI / 2);
+      let m = mat;
+      if (texLen && mat.map) { m = mat.clone(); m.map = mat.map.clone(); m.map.repeat.set(1, len / texLen); m.map.needsUpdate = true; }
+      const o = mesh(geo, m, [x, -y, z]); o.castShadow = true; g.add(o);
+    }
+  };
+  const corners = (W, H, M, fn) => [[-M / 2, -M / 2], [W + M / 2, -M / 2], [W + M / 2, H + M / 2], [-M / 2, H + M / 2]].forEach(([x, y], i) => fn(x, -y, i));
+  const blocks = (g, W, H, M, step, make) => { let k = 0; around(W, H, M / 2, step, (x, y, flat, corner) => { const b = make(k++, flat, corner); b.position.set(x, -y, b.position.z); b.castShadow = true; b.receiveShadow = true; g.add(b); }); };
+  const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.75, ...o });
+  const glow = (color, k = 1) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: k, roughness: 0.4 });
+  const leafy = (g, x, y, s, cols = ['#2E8B3E', '#3FA34D', '#256F33']) => { // a bush: a cluster of flattened leaves, a flower on top
+    for (let k = 0; k < 7; k++) { const a = k * 2.4, r = k ? s * 0.55 : 0, l = sphere(s * (k ? 0.55 : 0.7), mat(cols[k % 3], { roughness: 0.6 }), [x + Math.cos(a) * r, y + Math.sin(a) * r, 10 + (k % 2) * 3]); l.scale.z = 0.55; l.castShadow = true; g.add(l); }
+    g.add(sphere(s * 0.22, gloss('#FF6FA8'), [x + s * 0.2, y - s * 0.1, 18]));
+  };
+  const ARENA_FENCE = {
+    night(g, { W, H, M }) { // a castle wall: stone blocks, lanterns, round towers with blue roofs
+      g.add(band(W, H, 0, M, 5, 1, mat('#262B44')));
+      blocks(g, W, H, M, 34, (k, flat, corner) => mesh(rbox(flat ? 31 : M - 5, flat ? M - 5 : 31, 15 + (k % 2) * 3, 5), mat(tint('#5A6385', ((k * 29) % 5 - 2) * 0.06).getStyle()), [0, 0, 9]));
+      around(W, H, M / 2, W / 4, (x, y, flat, corner) => { if (!corner) { g.add(sphere(4.2, glow('#FFD66B', 1.6), [x, -y, 24])); g.add(mesh(upZ(new THREE.CylinderGeometry(5.5, 5.5, 2, 6)), metal('#2A2F45'), [x, -y, 20])); } });
+      corners(W, H, M, (x, y) => { g.add(mesh(upZ(new THREE.CylinderGeometry(M * 0.46, M * 0.5, 22, 24)), mat('#6B7596'), [x, y, 11])); g.add(mesh(upZ(new THREE.ConeGeometry(M * 0.52, 18, 24)), gloss('#3A55C8'), [x, y, 31])); });
+    },
+    candy(g, { W, H, M }) { // pink icing, a candy-cane rail, gumdrops, swirl lollipops in the corners
+      g.add(band(W, H, 0, M, 7, 5, gloss('#FFB8D6', { roughness: 0.3 })));
+      rails(g, W, H, M * 0.5, M * 0.28, gloss('#FFFFFF', { map: stripeTex(['#F2384E', '#FFFFFF'], 4), roughness: 0.25 }), 16, 26);
+      const gum = ['#FF5E8A', '#FFD23F', '#5EE07A', '#4CC9F0', '#B05CFF'];
+      around(W, H, M * 0.86, 30, (x, y, flat, corner, i) => { if (!corner) { const d = mesh(new THREE.SphereGeometry(4.5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(Math.PI / 2), gloss(gum[((Math.round(x + y) % 5) + 5) % 5], { roughness: 0.2, transparent: true, opacity: 0.92 }), [x, -y, 7]); g.add(d); } });
+      corners(W, H, M, (x, y, i) => { g.add(mesh(upZ(new THREE.CylinderGeometry(M * 0.5, M * 0.5, 5, 40)), gloss('#FFFFFF', { map: stripeTex([['#FF5E8A', '#FFFFFF'], ['#5EE07A', '#FFFFFF'], ['#4CC9F0', '#FFFFFF'], ['#FFD23F', '#FFFFFF']][i], 3) }), [x, y, 24])); });
+    },
+    canyon(g, { W, H, M }) { // a wall of piled sandstone boulders, cacti in the corners
+      g.add(band(W, H, 0, M, 4, 1, mat('#9A6236')));
+      around(W, H, M / 2, 19, (x, y, flat, corner) => {
+        const geo = new THREE.IcosahedronGeometry(1, 1), p = geo.attributes.position, s = 9 + ((x * 7 + y * 3) % 5);
+        for (let i = 0; i < p.count; i++) { const a = p.getX(i), b = p.getY(i), c = p.getZ(i), k = 0.85 + 0.15 * Math.sin(a * 5 + b * 3 + x); p.setXYZ(i, a * k, b * k, c * k * 0.8); }
+        geo.computeVertexNormals();
+        const r = mesh(geo, mat(tint('#C98A4B', (((x + y) * 13) % 5 - 2) * 0.07).getStyle(), { flatShading: true, roughness: 0.85 }), [x, -y, s * 0.6]); r.scale.setScalar(s); r.rotation.z = x + y; r.castShadow = true; g.add(r);
+      });
+      corners(W, H, M, (x, y) => { const c = mat('#3E9B4F', { roughness: 0.6 }); g.add(mesh(upZ(new THREE.CylinderGeometry(6, 7, 30, 12)), c, [x, y, 15]), sphere(6, c, [x, y, 30]), mesh(new THREE.CylinderGeometry(3.5, 3.5, 14, 10).rotateZ(Math.PI / 2), c, [x + 8, y, 20]), sphere(3.5, c, [x + 15, y, 20]), sphere(2.2, gloss('#FF6FA8'), [x, y, 36])); });
+    },
+    pirate(g, { W, H, M }) { // a deck rail: planks, a thick rope cushion, barrels in the corners
+      g.add(band(W, H, M * 0.35, M, 12, 3, wood('#7A4A22')));
+      rails(g, W, H, M * 0.22, M * 0.26, mat('#D9B77A', { map: stripeTex(['#C9A15E', '#E8CC8E'], 6), roughness: 0.9 }), 9, 10);
+      corners(W, H, M, (x, y) => { g.add(mesh(upZ(new THREE.CylinderGeometry(M * 0.46, M * 0.46, 26, 24)), wood('#9A6230'), [x, y, 13])); for (const z of [6, 20]) g.add(mesh(new THREE.TorusGeometry(M * 0.47, 1.4, 8, 32), metal('#5A6478'), [x, y, z])); g.add(mesh(upZ(new THREE.CylinderGeometry(M * 0.38, M * 0.38, 1, 24)), wood('#B97F48'), [x, y, 26.5])); });
+    },
+    frost(g, { W, H, M }) { // snow, glassy ice blocks with snow caps, ice crystals in the corners
+      g.add(band(W, H, 0, M, 6, 4, mat('#F2F8FF', { roughness: 0.9 })));
+      blocks(g, W, H, M, 31, (k, flat) => { const b = mesh(rbox(flat ? 26 : M - 7, flat ? M - 7 : 26, 13, 3), gloss('#BFEFFF', { roughness: 0.08, transparent: true, opacity: 0.85, emissive: '#5FC8F0', emissiveIntensity: 0.15 }), [0, 0, 10]); if (k % 2) b.add(mesh(new THREE.SphereGeometry(9, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(Math.PI / 2).scale(1, 0.8, 0.4), mat('#FFFFFF', { roughness: 0.9 }), [0, 0, 6])); return b; });
+      corners(W, H, M, (x, y) => { for (let k = 0; k < 3; k++) { const c = mesh(new THREE.OctahedronGeometry(7 - k * 1.5).scale(0.55, 0.55, 1.4), gloss('#DFF8FF', { roughness: 0.05, emissive: '#7FD8FF', emissiveIntensity: 0.3 }), [x + (k - 1) * 5, y + (k % 2) * 4, 16]); c.rotation.set(0.3 * (k - 1), 0.2, k); g.add(c); } });
+    },
+    stadium(g, { W, H, M }) { // advertising boards in team colours, corner flags
+      g.add(band(W, H, 0, M, 3, 1, mat('#2E8B3E')));
+      blocks(g, W, H, M, 50, (k, flat) => mesh(rbox(flat ? 46 : 12, flat ? 12 : 46, 16, 2), gloss(['#2F6FE0', '#FFFFFF', '#FF4D5E', '#FFD23F'][k % 4], { roughness: 0.35 }), [0, 0, 10]));
+      corners(W, H, M, (x, y, i) => { g.add(mesh(upZ(new THREE.CylinderGeometry(1.4, 1.4, 34, 8)), mat('#FFFFFF'), [x, y, 17])); const f = mesh(new THREE.ExtrudeGeometry(shape([[0, 0], [16, 5], [0, 10]]), { depth: 1, bevelEnabled: false }), gloss(i % 2 ? '#FF4D5E' : '#FFD23F', { side: THREE.DoubleSide }), [x, y - 5, 30]); g.add(f); });
+    },
+    jungle(g, { W, H, M }) { // a bamboo fence: two green poles with nodes, leafy bushes with pink flowers
+      g.add(band(W, H, 0, M, 4, 1, mat('#3A2A18')));
+      const bam = gloss('#7CC24A', { roughness: 0.45 });
+      rails(g, W, H, M * 0.3, M * 0.17, bam, 12);
+      rails(g, W, H, M * 0.68, M * 0.17, bam, 12);
+      for (const d of [M * 0.3, M * 0.68]) around(W, H, d, 38, (x, y, flat) => { const n = mesh(new THREE.TorusGeometry(M * 0.18, 1.2, 8, 20), gloss('#4E8A2A'), [x, -y, 12]); n.rotation[flat ? 'y' : 'x'] = Math.PI / 2; g.add(n); });
+      around(W, H, M / 2, W / 4, (x, y, flat, corner) => leafy(g, x, -y, corner ? 14 : 13));
+    },
+    temple(g, { W, H, M }) { // carved sandstone with gold trim, pillars with torches in the corners
+      g.add(band(W, H, 0, M, 14, 2, mat('#C9A86A', { roughness: 0.8 })));
+      g.add(band(W, H, M * 0.12, M * 0.22, 1.5, 0.5, metal('#FFC93B', { roughness: 0.3 })).translateZ(16));
+      g.add(band(W, H, M * 0.78, M * 0.88, 1.5, 0.5, metal('#FFC93B', { roughness: 0.3 })).translateZ(16));
+      around(W, H, M / 2, 40, (x, y, flat, corner) => { if (!corner) g.add(mesh(new THREE.OctahedronGeometry(3.4).scale(1, 1, 0.5), gloss('#2EC4B6', { roughness: 0.2 }), [x, -y, 18])); });
+      corners(W, H, M, (x, y) => { g.add(mesh(upZ(new THREE.CylinderGeometry(M * 0.36, M * 0.4, 26, 16)), mat('#E0C48A'), [x, y, 13]), mesh(upZ(new THREE.CylinderGeometry(M * 0.48, M * 0.48, 4, 16)), metal('#FFC93B'), [x, y, 27]), mesh(upZ(new THREE.ConeGeometry(5, 12, 12)), glow('#FF8A1A', 1.4), [x, y, 34])); });
+    },
+    lava(g, { W, H, M }) { // dark basalt slabs, magma glowing in the gaps, obsidian spikes
+      g.add(band(W, H, 0, M, 4, 1, glow('#E8550F', 0.5)));
+      blocks(g, W, H, M, 30, (k, flat) => mesh(rbox(flat ? 28 : M - 3, flat ? M - 3 : 28, 14 + (k % 3) * 2, 3), mat(tint('#3B302C', ((k * 31) % 5 - 2) * 0.06).getStyle(), { flatShading: true, roughness: 0.9 }), [0, 0, 9]));
+      corners(W, H, M, (x, y) => { for (let k = 0; k < 4; k++) { const a = k * 1.7, s = mesh(new THREE.ConeGeometry(3.6, 22 - k * 3, 6), gloss('#1A1020', { roughness: 0.15 }), [x + Math.cos(a) * 4, y + Math.sin(a) * 4, 12]); s.rotation.set(Math.PI / 2 + Math.sin(a) * 0.3, 0, Math.cos(a) * 0.3); g.add(s); } });
+    },
+    chess(g, { W, H, M }) { // a checkered border, a rook in every corner
+      g.add(band(W, H, 0, M, 4, 1, mat('#1A1A1A')));
+      blocks(g, W, H, M, M, k => mesh(rbox(M - 3, M - 3, 12, 3), gloss(k % 2 ? '#F2EEE6' : '#202020', { roughness: 0.25 }), [0, 0, 8]));
+      corners(W, H, M, (x, y, i) => {
+        const c = gloss(i % 2 ? '#F2EEE6' : '#202020', { roughness: 0.25 }), rook = group(mesh(upZ(new THREE.CylinderGeometry(M * 0.34, M * 0.44, 26, 24)), c, [0, 0, 13]), mesh(upZ(new THREE.CylinderGeometry(M * 0.46, M * 0.46, 7, 24)), c, [0, 0, 29]));
+        for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; rook.add(mesh(new THREE.BoxGeometry(5.5, 5.5, 6), c, [Math.cos(a) * M * 0.32, Math.sin(a) * M * 0.32, 35])); }
+        rook.position.set(x, y, 0); g.add(rook);
+      });
+    },
+    space(g, { W, H, M }) { // hull panels with bolts, blinking lights, radar dishes in the corners
+      g.add(band(W, H, 0, M, 4, 1, metal('#3A4152', { roughness: 0.5 })));
+      blocks(g, W, H, M, 48, (k, flat) => { const p = mesh(rbox(flat ? 44 : M - 6, flat ? M - 6 : 44, 11, 2), metal('#AEB8C8', { roughness: 0.35, metalness: 0.7 }), [0, 0, 8]); p.add(sphere(2.2, glow(k % 3 ? '#4CFF8A' : '#FF4D5E', 2), [0, 0, 6.5])); return p; });
+      corners(W, H, M, (x, y) => { g.add(mesh(new THREE.SphereGeometry(M * 0.48, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2.4).rotateX(-Math.PI / 2), metal('#E6EDF7', { roughness: 0.3, side: THREE.DoubleSide }), [x, y, 22]), mesh(upZ(new THREE.CylinderGeometry(2, 2, 22, 8)), metal('#5A6478'), [x, y, 11]), sphere(2.6, glow('#FF4D5E', 2), [x, y, 22])); });
+    },
+    neon(g, { W, H, M }) { // a black frame with two glowing tubes
+      g.add(band(W, H, 0, M, 10, 3, metal('#14141F', { roughness: 0.4 })));
+      rails(g, W, H, M * 0.3, M * 0.1, glow('#00F0FF', 2), 14);
+      rails(g, W, H, M * 0.72, M * 0.1, glow('#FF3DF2', 2), 14);
+      corners(W, H, M, (x, y, i) => g.add(mesh(new THREE.TorusGeometry(M * 0.34, 2.2, 10, 28), glow(i % 2 ? '#00F0FF' : '#FF3DF2', 2), [x, y, 15])));
+    },
+    ocean(g, { W, H, M }) { // a pier: planks, a rope, life rings in the corners
+      g.add(band(W, H, 0, M, 10, 2, wood('#B98A5A')));
+      rails(g, W, H, M * 0.5, M * 0.18, mat('#E8D2A0', { map: stripeTex(['#D9B77A', '#F2E2B8'], 6) }), 14, 10);
+      corners(W, H, M, (x, y) => { const t = new THREE.TorusGeometry(M * 0.55, M * 0.22, 14, 32); for (let k = 0; k < 4; k++) g.add(mesh(new THREE.TorusGeometry(M * 0.55, M * 0.23, 14, 8, Math.PI / 4).rotateZ(k * Math.PI / 2), gloss('#FFFFFF'), [x, y, 14])); g.add(mesh(t, gloss('#FF4D5E', { roughness: 0.3 }), [x, y, 13.5])); });
+    },
+  };
+  function walls({ W, H, M, color, accent, style = 'arena', id = null }) {
+    const scene = new THREE.Scene(), g = new THREE.Group();
+    (style === 'arena' ? ARENA_FENCE[id] ?? FENCE.cushion : FENCE[style] ?? FENCE.plain)(g, { W, H, M, color, accent });
+    scene.add(g);
     const floor = mesh(new THREE.PlaneGeometry(W + 2 * M, H + 2 * M), new THREE.ShadowMaterial({ opacity: 0.5 }), [W / 2, -H / 2, 0]);
     floor.receiveShadow = true; scene.add(floor);
     scene.add(new THREE.HemisphereLight('#E4EEFF', '#3A3550', 1.0));

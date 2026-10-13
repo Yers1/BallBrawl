@@ -4,13 +4,13 @@ import { W, H, SUDDEN, canSuper, FOOT, MAPS } from './sim.js';
 import { BALLS, TRAIN, LEECH, POISON, ICE, pathOf, pathAt } from './balls.js';
 import { SKINS, EMOTE_LIST } from './progress.js';
 import { THEMES } from './themes.js';
-import { ball3d, prop3d, arena3d, warm3d, is3d, FRAME } from './ball3d.js';
+import { ball3d, prop3d, arena3d, warm3d, is3d, FRAME, fenceStyle } from './ball3d.js';
 
 export const SIDE = ['#4CC9F0', '#FF4D5E']; // you · opponent
 const SIDE_RGB = ['76,201,240', '255,77,94'];
 const FONT = 'Nunito, system-ui, sans-serif';
 const INK = '#0A0F1C'; // outline for numbers and small shapes
-export const M = 16; // wall thickness drawn around the 400×400 field (arena units)
+export const M = 28; // wall thickness drawn around the 400×400 field (arena units)
 const fx = { parts: [], floats: [], rings: [], flash: {}, shake: 0, face: {}, drain: {}, frozen: {}, emotes: {}, bump: {}, sprays: {} };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -898,7 +898,7 @@ function obstacles(ctx, w, now) {
 }
 
 function arena(ctx, w, now, px) {
-  const sudden = w.launched && w.t > SUDDEN, walls3d = arena3d(ARENA, THEME.faces[1], W, H, M, px);
+  const sudden = w.launched && w.t > SUDDEN, walls3d = arena3d(ARENA, THEME.faces[1], W, H, M, px, THEME.faces[0]);
   ctx.fillStyle = THEME.faces[3];
   ctx.fillRect(-M - 20, -M - 20, W + 2 * M + 40, H + 2 * M + 40); // oversized: camera shake never shows an edge
   if (!walls3d) FACE_PTS.forEach((pts, i) => {
@@ -922,7 +922,7 @@ function arena(ctx, w, now, px) {
     }
   }
   obstacles(ctx, w, now);
-  wallScenery(ctx, now, !!w.ball);
+  if (!walls3d || fenceStyle() === 'plain') wallScenery(ctx, now, !!w.ball); // a 3D fence brings its own detail
   if (!walls3d) for (const [gx, gy] of [[0, 1], [1, 0]]) { // the top and left walls shade the floor
     const g = ctx.createLinearGradient(0, 0, gx * 18, gy * 18);
     g.addColorStop(0, 'rgba(8,16,32,0.4)');
