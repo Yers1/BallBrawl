@@ -795,71 +795,8 @@ export function createKit(THREE) {
     return g;
   }
   const LOOK = { matte: 'matte', toon: 'toon', crate: 'matte', safe: 'matte', 'crate-toon': 'toon', 'safe-toon': 'toon' };
-  // ---------- menu icons: chunky toy-like objects for the buttons (shop, balls, clan, profile, quests, leaders, friends, duel, gear) ----------
-  const toyBall = (col, r, p) => { const b = group(sphere(r, gloss(col)), mesh(new THREE.SphereGeometry(r * 0.32, 20, 12), gloss('#FFFFFF', { transparent: true, opacity: 0.7 }), [-r * 0.38, r * 0.42, r * 0.72])); b.children[1].scale.set(1, 0.6, 0.4); b.position.set(...p); return b; };
-  const bust = (shirt, skin = '#FFD7B0', hair = '#5A3A22', p = [0, 0, 0], s = 1) => {
-    const g = group(mesh(new THREE.SphereGeometry(1, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), gloss(shirt), [0, -1.05, 0]));
-    g.children[0].scale.set(1.05, 0.8, 0.8);
-    g.add(sphere(0.62, gloss(skin, { roughness: 0.6, clearcoat: 0.2 }), [0, 0.2, 0]));
-    const cap = mesh(new THREE.SphereGeometry(0.66, 40, 20, 0, Math.PI * 2, 0, Math.PI * 0.42), gloss(hair), [0, 0.24, -0.02]); cap.rotation.x = -0.25; g.add(cap);
-    for (const x of [-0.22, 0.22]) g.add(sphere(0.08, gloss(INK), [x, 0.22, 0.56]));
-    g.position.set(...p); g.scale.setScalar(s);
-    return g;
-  };
+  // a five-pointed star (the knight's shield, the wizard's hat)
   const star5 = (r, inner) => { const st = []; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? inner : r; st.push([Math.cos(a) * q, -Math.sin(a) * q]); } return shape(st); };
-  const ICON = {
-    shop() { // a market stall: a counter, two posts, a red-and-white striped awning, a gold coin sign
-      const wood = gloss('#C98A4B', { roughness: 0.55, clearcoat: 0.2 }), dark = gloss('#8A5A2B', { roughness: 0.6 });
-      const g = group(mesh(rbox(2.3, 1.0, 1.0, 0.12), wood, [0, -0.85, 0]), mesh(new THREE.BoxGeometry(2.45, 0.16, 1.15), dark, [0, -0.3, 0.02]));
-      for (const x of [-1.05, 1.05]) g.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 12), dark, [x, 0.38, 0.2]));
-      for (let i = 0; i < 6; i++) {
-        const w = 2.6 / 6, x = -1.3 + w * (i + 0.5), m = gloss(i % 2 ? '#FFFFFF' : '#FF4D5E');
-        const strip = mesh(new THREE.BoxGeometry(w + 0.01, 0.12, 0.95), m, [x, 1.12, 0.12]); strip.rotation.x = 0.5; g.add(strip);
-        g.add(mesh(new THREE.CylinderGeometry(w / 2, w / 2, 0.12, 20, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2), m, [x, 0.9, 0.56]));
-      }
-      g.add(mesh(upZ(new THREE.CylinderGeometry(0.34, 0.34, 0.1, 32)), metal('#FFC93B', { roughness: 0.3 }), [0, -0.78, 0.55]), mesh(new THREE.ExtrudeGeometry(star5(0.2, 0.09), { depth: 0.04, bevelEnabled: false }), gloss('#F08A00'), [0, -0.78, 0.6]));
-      return g;
-    },
-    balls() { return group(toyBall('#FF4D5E', 0.85, [0.45, 0.45, -0.2]), toyBall('#4CC9F0', 0.95, [-0.4, -0.35, 0.3])); },
-    clan() { // a blue flag with a gold star on a wooden pole
-      const g = group(mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.7, 14), gloss('#8A5A2B'), [-1.1, -0.15, 0]), sphere(0.18, metal('#FFC93B'), [-1.1, 1.25, 0]));
-      const cloth = new THREE.PlaneGeometry(2.2, 1.5, 20, 6), p = cloth.attributes.position;
-      for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, Math.sin((x + 1) * 2.2) * 0.16 * (x + 1)); }
-      cloth.computeVertexNormals();
-      g.add(mesh(cloth, gloss('#4CC9F0', { side: THREE.DoubleSide }), [0.02, 0.38, 0]));
-      g.add(mesh(new THREE.ExtrudeGeometry(star5(0.44, 0.19), { depth: 0.04, bevelEnabled: false }), gloss('#FFCC33'), [0.02, 0.38, 0.22]));
-      return g;
-    },
-    profile() { return bust('#4CC9F0', undefined, undefined, [0, -0.05, 0], 1.25); },
-    friends() { return group(bust('#FFCC33', '#F2C29A', '#2A1A10', [0.62, 0.05, -0.3], 0.95), bust('#4CC9F0', '#FFD7B0', '#7A4A22', [-0.55, -0.15, 0.3], 1.0)); },
-    quests() { // a clipboard with a paper and a big green tick
-      const g = group(mesh(rbox(1.9, 2.4, 0.16, 0.18), gloss('#C98A4B', { roughness: 0.55 }), [0, -0.1, 0]), mesh(rbox(1.55, 1.95, 0.05, 0.06), gloss('#FFFFFF', { roughness: 0.7 }), [0, -0.2, 0.11]));
-      g.add(mesh(rbox(0.9, 0.42, 0.22, 0.1), metal('#C9D1DE', { roughness: 0.3 }), [0, 1.05, 0.06]));
-      const tick = new THREE.Shape(); tick.moveTo(-0.55, 0); tick.lineTo(-0.3, 0.25); tick.lineTo(-0.1, 0.02); tick.lineTo(0.42, 0.62); tick.lineTo(0.66, 0.38); tick.lineTo(-0.1, -0.48); tick.closePath();
-      g.add(mesh(new THREE.ExtrudeGeometry(tick, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 2 }), gloss('#2FB85A'), [0, -0.25, 0.14]));
-      return g;
-    },
-    leaders() { // a gold crown with a ruby
-      const gold = metal('#FFC93B', { roughness: 0.25 }), g = group(mesh(new THREE.CylinderGeometry(1.0, 0.92, 0.7, 48, 1, true), gold.clone(), [0, -0.5, 0]));
-      g.children[0].material.side = THREE.DoubleSide;
-      for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2 + Math.PI / 2, pt = mesh(new THREE.ConeGeometry(0.3, 0.95, 16), gold, [Math.cos(a) * 0.93, 0.1, Math.sin(a) * 0.93]); g.add(pt, sphere(0.13, metal('#FFE27A', { roughness: 0.2 }), [Math.cos(a) * 0.93, 0.6, Math.sin(a) * 0.93])); }
-      g.add(mesh(new THREE.OctahedronGeometry(0.26), gloss('#FF4D6D', { emissive: '#FF4D6D', emissiveIntensity: 0.2 }), [0, -0.45, 1.0]));
-      g.add(mesh(new THREE.TorusGeometry(0.97, 0.07, 10, 48).rotateX(Math.PI / 2), gold, [0, -0.85, 0]));
-      g.rotation.x = 0.25;
-      return g;
-    },
-    duel() { // two crossed swords
-      const sword = a => { const s = group(mesh(new THREE.BoxGeometry(0.22, 2.4, 0.08), metal('#E6EDF7', { roughness: 0.2 }), [0, 0.45, 0]), mesh(new THREE.ConeGeometry(0.16, 0.36, 4), metal('#E6EDF7', { roughness: 0.2 }), [0, 1.82, 0]),
-        mesh(rbox(0.95, 0.2, 0.18, 0.06), metal('#FFC93B'), [0, -0.78, 0]), mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.6, 12), gloss('#8A5A2B'), [0, -1.18, 0]), sphere(0.15, metal('#FFC93B'), [0, -1.5, 0])); s.rotation.z = a; return s; };
-      return group(sword(0.75), sword(-0.75));
-    },
-    gear() { // a chunky steel cog
-      const s = new THREE.Shape(), n = 8;
-      for (let k = 0; k < n * 4; k++) { const a = (k / (n * 4)) * Math.PI * 2, r = (k % 4 === 1 || k % 4 === 2) ? 1.3 : 1.0; k ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
-      s.holes.push(new THREE.Path().absarc(0, 0, 0.42, 0, Math.PI * 2, true));
-      return group(mesh(new THREE.ExtrudeGeometry(s, { depth: 0.35, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 3 }).translate(0, 0, -0.17), metal('#AEB8C8', { roughness: 0.35 })));
-    },
-  };
   // ---------- commanders: chibi toy figures (a big head on a small body), each with their own gear ----------
   // The head is its own group (userData.head), so a picture of the head alone can nod on top of the body.
   const ell = (r, s, m, p) => { const o = sphere(r, m, p); o.scale.set(...s); return o; };
@@ -976,7 +913,6 @@ export function createKit(THREE) {
       return g;
     },
     prop: (kind, v) => (PROP[kind] ?? PROP.rock)(v),
-    icon: (kind, look = 'gloss') => finish((ICON[kind] ?? ICON.balls)(), look),
     hero: id => (HERO[id] ?? HERO.king)(),
     ball: id => (B[id] ?? B.basic)(),
     boss: id => { const g = (BOSS[id] ?? BOSS.slime)(); g.scale.setScalar(1.25); return g; },

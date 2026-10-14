@@ -14,11 +14,11 @@ import {
 } from './progress.js';
 import { THEMES } from './themes.js';
 import { DECO_ART } from './decos.js';
-import { heroSvg, heroLive } from './heroes.js';
+import { heroSvg, heroLive, heroDrawing } from './heroes.js';
 import { setArena, drawEmote, drawFamiliar, drawSpray, arenaThumb, drawIcon } from './render.js';
 import { prop3d } from './ball3d.js';
 import { BOSSES, BOSS_IDS } from './boss.js';
-import { chestUrl, iconUrl } from './ball3d.js';
+import { chestUrl } from './ball3d.js';
 import { MAPS } from './sim.js';
 import { PAY } from './config.js';
 import { offerReward } from './ads.js';
@@ -1436,7 +1436,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
   addEventListener('resize', () => { if (!$('#scr-home').hidden) { wings(); if (tab === 'lobby') slots(); } });
 
   function lobby() {
-    $('#l-fam').innerHTML = heroSvg(save.fam.skin);
+    $('#l-fam').innerHTML = heroDrawing(save.fam.skin); // a button keeps the flat drawing
     const [lead, l, r] = save.squad, sk = id => save.skinOf[id];
     $('#l-trio').replaceChildren(icon(l, 136, sk(l)), icon(lead, 232, sk(lead), save.wear.aura), icon(r, 136, sk(r)));
     const a = arenaFor(save.maxTrophies).id;
@@ -1508,21 +1508,7 @@ export function createHome({ save, persist, el, icon, coinsUI, toast, onPlay, on
     $('#bg-art').innerHTML = arenaSvg(a, 'bg'); // wide screens: the arena, big and blurred, fills the sides
   }
 
-  // The menu buttons' icons in 3D once the models are in (the drawn ones stay while 3D loads or when it's off).
-  const ICON_OF = { shop: '.dock [data-tab=shop]', balls: '.dock [data-tab=balls]', clan: '.dock [data-tab=clan]', profile: '.dock [data-tab=profile]',
-    quests: '[data-tab=quests]', leaders: '[data-tab=leaders]', friends: '[data-tab=friends]', duel: '#l-challenge', gear: '#gear' };
-  function icons3d() {
-    for (const [kind, sel] of Object.entries(ICON_OF)) {
-      const b = document.querySelector(sel), ic = b?.querySelector('.ic') ?? b; // the gear button holds its icon directly
-      if (!ic || ic.querySelector('.ic3d')) continue;
-      const url = iconUrl(kind);
-      if (!url) return;
-      ic.innerHTML = `<img class="ic3d" src="${url}" alt="">`;
-    }
-  }
-
   function render() {
-    icons3d();
     applyArena();
     top();
     wings();

@@ -133,15 +133,6 @@ export function heroUrl(id, part = 'whole') {
   return (urls[key] = out.toDataURL('image/png'));
 }
 
-// A menu button's icon in 3D (toon finish, like the buttons' ink outlines) as an image URL; null until the models are in.
-export function iconUrl(kind) {
-  const key = 'icon:' + kind;
-  if (urls[key]) return urls[key];
-  if (!ready()) return null;
-  const m = model(key, () => { const g = gl.kit.icon(kind, 'toon'); g.rotation.x += 0.12; g.rotation.y -= 0.35; return g; });
-  return (urls[key] = sprite(key, SPRITE, () => show(m)).toDataURL('image/png'));
-}
-
 // An obstacle seen from above (rocks, crystals, mushrooms, spike traps, saws, lollipops, barrels, idols, the stadium's
 // match ball) as a picture; the caller turns it for the ones that spin.
 export function prop3d(kind, v) {
